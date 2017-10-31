@@ -1,0 +1,38 @@
+{% extends "report_att.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+
+
+{% block line %}
+
+{% endblock %}
+{% block getDateUrl %}
+
+function getDateUrl()
+{
+	var condition=$("#id_conditions").val();
+        
+        var ComeTime=$("#"+g_activeTabID+" #id_ComeTime").val();
+	var EndDate=$("#"+g_activeTabID+" #id_EndTime").val();
+	var isError=validate_form_att();
+	$.cookie("ComeTime",ComeTime, { expires: 7 });
+	$.cookie("EndDate",EndDate, { expires: 7 });
+	$("#id_con_error").css("display","none");
+
+	var urlStr=g_urls[g_activeTabID]
+	
+	if(!isError){
+		if(urlStr.indexOf("?")!=-1)
+			urlStr+="&startDate="+ComeTime+"&endDate="+EndDate
+		else
+			urlStr+="?startDate="+ComeTime+"&endDate="+EndDate
+                urlStr+="&condition="+condition
+
+	}else{
+		alert(gettext("请检查时间格式是否正确，且最多查询31天！"));
+		urlStr='';
+	}
+	return urlStr
+
+}
+{% endblock %} 

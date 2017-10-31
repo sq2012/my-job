@@ -1,0 +1,134 @@
+{% extends "data_edit.html" %}
+{% load i18n %}
+{% block SynCard %}
+{% endblock %}
+{% block form %}
+{% autoescape off %}
+
+
+<tr valign="top">
+    <td colspan=3>
+    <fieldset style='border:1px solid #dddddd;width:250px;'><legend><a onclick='get_Media()' title='' id='id_open_video' href='#' style="color: green;text-decoration: underline;">{% trans '开启视频' %}</a></legend><table border-collapse: collapse;border: 1px border:1px solid #77B7DE;><tbody>        
+        <tr>
+		<p id="status" style="color:#c00;font-weight:bold;"></p>
+		<video width="240px" height="180px" autoplay="autoplay"></video>
+	</tr>
+    </tbody></table></fieldset>   
+
+    <fieldset style='border:1px solid #dddddd;width:250px;height: 200px;'><legend><a onclick='get_Photo()' title='' id='id_read' href='#' style="color: green;text-decoration: underline;">{%trans '抓拍照片'%}</a></legend><table border-collapse: collapse;border: 1px border:1px solid #77B7DE;><tbody>        
+        <tr>
+		<p id="status" style="color:#c00;font-weight:bold;"></p>
+
+		{{ form.Photourlz.as_hidden }}
+		<canvas id="canvas_photo" width="240px" height="180px"></canvas>
+	</tr>
+    </tbody></table></fieldset>   
+ 
+    </td>
+
+
+    <td colspan=2 style="height: 100%;">
+        <fieldset style='width:560px;border:1px solid #dddddd;'><legend><a onclick='ReadCard_onclick()' title='' id='id_read' href='#'>{%trans '(读取访客信息)'%}</a></legend><table><tbody>    
+            <th>
+		<tr>
+			<th>{{ form.Photourl.label_tag }} </th>  <td style='vertical-align:top;'>{{ form.Photourl.as_hidden }} <img height='126px' width='102px' id='id_Photourlimg' src=''/> </td>
+		</tr>
+	    </th>
+	    <th>
+		<tr>
+			<th> <font color='red'>*</font>{{ form.VisempName.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.VisempName.as_widget }}</td>
+			<th>{{ form.VisGender.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.VisGender.as_widget }} </td>
+			
+		</tr>
+	    </th>
+	    <th>
+		<tr>
+			<th>{{ form.CertificateType.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.CertificateType.as_widget }} </td>
+			<th><font color='red'>*</font>{{ form.SSN.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.SSN.as_widget }} </td>
+			
+		</tr>
+	    </th>
+	    <th>
+		<tr>
+			<th> {{ form.National.label_tag }} </th><td style='vertical-align:top;'> {{ form.National.as_widget }} </td>
+			<th> {{ form.ValidDate.label_tag }} </th><td style='vertical-align:top;'> {{ form.ValidDate.as_widget }} </td>
+			<td style='vertical-align:top;'> {{ form.Birthday.as_hidden }} </td>
+			<td style='vertical-align:top;'> {{ form.LicenseOrg.as_hidden }} </td>
+			<td style='vertical-align:top;'> {{ form.Address.as_hidden }} </td>
+			
+		</tr>
+	    </th>
+
+        </tbody></table></fieldset>   
+
+    <fieldset style='border:1px solid #dddddd;'><legend>{%trans '进入信息'%}</legend><table border-collapse: collapse;border: 1px border:1px solid #77B7DE;><tbody>        
+        <tr>
+          <th>{{ form.VisCompany.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.VisCompany.as_widget }} </td>
+	  <th>{{ form.VisReason.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.VisReason.as_widget }} </td>
+	  
+        </tr>
+	<tr>
+          <th>{{ form.VisitingNum.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.VisitingNum.as_widget }} </td>
+	  <th>{{ form.InterviewedempName.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.InterviewedempName.as_widget }}<img  style='float:auto;' alt='{%trans 'open department tree'%}' src='/media/img/sug_down_on.gif' onclick='createQueryDlg_InterviewedempName()' id='id_drop_Authed_dept'/></td>
+
+        </tr>
+	<tr>
+	  <th>{{ form.VisitedCompany.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.VisitedCompany.as_widget }}<img  style='float:auto;' alt='{%trans 'open department tree'%}' src='/media/img/sug_down_on.gif' onclick='createQueryDlg_VisitedCompany()' id='id_drop_Authed_dept'/></td>
+	  <th>{{ form.Tele.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.Tele.as_widget }} </td>
+	</tr>
+	<tr>
+	    <th>{{ form.EnterArticles.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.EnterArticles.as_widget }} </td>
+
+	    <th>{{ form.Card.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.Card.as_widget }} </td>
+
+</tr>
+	<tr>
+
+	    <th>{{ form.EnterTime.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.EnterTime.as_widget }} </td>
+	    <th>{{ form.ExitTime.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.ExitTime.as_widget }} </td>
+        </tr>
+    </tbody></table></fieldset>   
+ 
+    </td>
+
+    <td colspan=3 style="height: 100%;">
+
+<div style='width:300px;height: 400px;border: 1px solid #dddddd;'>
+    <div class='alert alert-info' style='height: 20px;margin-left: 0px;margin-top: 0px;'>门禁设置</div>
+    
+    <table>
+                    <tr>
+                        <th >{% trans "权限组:" %}</th>
+                        <td >
+                            <div>
+                                 <input type="checkbox" id="id_select_all" name="level_name" size="1"/>全选
+                                
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>&nbsp;</th>
+                        <td>
+                            <div id="id_level" style="border:1px solid #dddddd;height:190px;overflow: auto;width: 240px;background: #FFFFFF;">{{level_html}}</div></div>
+                        </td>
+                    </tr>
+        
+        
+        
+        
+       
+       
+    </table>
+   
+</div>
+
+
+    </td>
+
+
+</tr>
+
+
+
+{% endautoescape %}
+{% endblock %}

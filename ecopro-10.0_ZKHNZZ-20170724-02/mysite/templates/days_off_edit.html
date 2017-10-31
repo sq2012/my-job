@@ -1,0 +1,32 @@
+{% load iclock_tags %}
+{% load i18n %}
+{% autoescape off %}
+
+<div id="id_form" >
+
+<form method="post" id="id_edit_form" enctype="multipart/form-data">
+<table>
+<tr><th></th><td>
+	<span  style="display:none" id="id_span_title">
+		{% if add %}{% trans "Add" %}  {% else %} {% trans "Edit" %} {% endif %} {{ dataOpt.verbose_name|escape }}</span>
+</td></tr>
+	<tr><th><font color='red'>*</font><label for="id_DeptID">{% trans "department" %}:</label></th><td style='vertical-align:top;'><input id="id_DeptID" name="DeptID" type="text" readOnly='readOnly' value={{ DeptID_name }}/></td></tr>
+	<tr><th><font color='red'>*</font><label for="id_UserID">{% trans "employee" %}:</label></th><td style='vertical-align:top;'><input id="id_UserID" name="UserID" type="text" readOnly='readOnly' value={{ UserID_name }} /></td></tr>
+	<tr>{{form.FromDate|field_as_td_h:1 }}</tr>
+	<tr>{{form.ToDate|field_as_td_h:1 }}</tr>
+	<tr>{{form.ApplyDate|field_as_td_h:1 }}</tr>
+	<tr><span  style="display:none" id="id_span_DeptID">
+	{{ DeptID_name }}</span>
+	<span  style="display:none" id="id_span_UserID">
+		{{ UserID_name }}</span>
+	</tr>
+</td>
+</tr>
+</table>
+</form>
+{% endautoescape %}
+
+<div id="id_error"></div>
+
+</div>
+ 

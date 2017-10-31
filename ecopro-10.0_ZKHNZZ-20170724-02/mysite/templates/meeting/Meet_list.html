@@ -1,0 +1,452 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+//var jqOptions=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{ colModel }}
+tblName[g_activeTabID]='Meet';
+jqOptions[g_activeTabID].sortname='id';
+jqOptions[g_activeTabID].pager='id_pager_'+tblName[g_activeTabID];
+
+function datas(id){
+	var r=$("#id_grid_"+tblName[g_activeTabID]).jqGrid("getRowData",id);
+	var id=id
+	var Name=r.conferenceTitle
+	var data=[id,Name];
+	return data
+}
+function beforePost_Meet(obj,actionName)
+{
+    if($("#id_Starttime",obj).val() > $("#id_Endtime",obj).val())
+        {
+                $("#id_error",obj).html('会议开始时间不能大于结束时间，保存失败').css('color','red').show()
+                return false
+        }
+	if($("#id_lunchtimestr",obj).val() > $("#id_lunchtimeend",obj).val())
+        {
+                $("#id_error",obj).html('午餐开始时间不能大于结束时间，保存失败').css('color','red').show()
+                return false
+        }
+   return true;
+	
+}
+
+function afterPost_Meet(flag,obj){
+	ShowMeetData(g_activeTabID,true)
+        loadNULLPage('#id_grid_'+tblName[g_activeTabID]);
+	var zTree = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+	zTree.setting.check.enable = false;
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		var deptID=treeNode.id;
+		var deptName=treeNode.name;
+                if (deptID==0)
+                    var urlStr="/meeting/data/Meet/"
+                else
+                    var urlStr="/meeting/data/Meet/?id="+deptID
+                
+		savecookie("search_urlstr",urlStr);
+		 $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+	}
+
+}
+
+
+function ShowMeetData(page,tag,isDiy)
+{
+	var setting = {
+            check: {enable: !tag,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},          
+	    async: {
+			    enable: true,
+			    url: "/meeting/getData/?func=meets",
+			    autoParam: ["id"]
+		    }
+	};
+	$.fn.zTree.init($("#showTree_"+page), setting,null);	
+}
+
+function strOfData_Meet(data)
+{
+	return stripHtml(data.MeetID)+" "+data.conferenceTitle;
+}
+
+function doAction_Meet(url, action)
+{
+	var result=getSelected(0,"true");
+	selected_data=datas(result.ss);
+	var shift_id=selected_data[0]
+	if (action == 'meet_add_participants')
+		createDlgmeet_Meet();
+        if (action == 'meet_show_participants')
+                showmeethtml();
+}
+
+function showmeethtml(id)
+{
+        if(typeof id=='undefined')
+	{
+		var result=getSelected(0,"true");
+		if (result.ss.length>1){
+			alert(gettext("仅允许选择一个会议"));
+			return;
+		}else
+			selected_data=datas(result.ss);
+	}
+	else
+        {
+		  var result={ss:id}
+		  selected_data=datas(id);
+                  
+         }
+	 window.open("/meeting/photolocation/?id="+selected_data[0])
+}
+
+function createDlgmeet1(id)
+{
+
+    createDlgmeet(id)
+}
+
+
+function createDlgmeet_Meet(id)
+{
+        if(typeof id=='undefined')
+	{
+		var result=getSelected(0,"true");
+		if (result.ss.length>1){
+			alert(gettext("仅允许选择一个会议"));
+			return;
+		}else
+			selected_data=datas(result.ss);
+	}
+	else
+        {
+		  var result={ss:id}
+		  selected_data=datas(id);
+         }
+	 
+	 createQueryDlg_Meet()
+	 
+}
+
+function searchbydept_Meet(page,selected_data){
+    var dept_ids=getSelected_dept("showTree_"+page)
+    var ischecked=0;
+    if($("#id_cascadecheck_"+page).prop("checked"))
+    	ischecked=1;
+    urlStr="deptIDs="+dept_ids+"&isContainChild="+ischecked
+    var emp=getSelected_emp_ex("sel_meet");
+    if(emp.length>0){
+	urlStr="UserIDs="+emp
+    } else{
+		alert('请选择人员')
+		return
+	}
+    var selectitem=[]
+    $.each($(".class_select_schClass"),function(){
+            if (this.checked==true){
+                    selectitem.push(this.value)
+            }
+	});
+    if(selectitem.length>0)
+    {
+      tpls=selectitem.join(",")
+        urlStr+='&meet_tpl='+tpls
+    }
+    $.ajax({type: "POST",
+                url: "/meeting/employeeformeet/?meetid="+selected_data[0],
+                data: urlStr,
+                dataType:"json",
+                success: function(){alert('添加成功');$.unblockUI();reloadData('Meet')},
+                error: function(request){alert("保存失败")}
+                });
+    
+    
+    
+    
+    
+    
+}
+function createQueryDlg_Meet(id){
+
+       if(typeof id=='undefined')
+	{
+		var result=getSelected(0,"true");
+		if (result.ss.length>1){
+			alert(gettext("仅允许选择一个会议"));
+			return;
+		}else
+			selected_data=datas(result.ss);
+	}
+	else
+        {
+		  var result={ss:id}
+		  selected_data=datas(id);
+         }
+
+
+
+	createDlgdeptfor10('meet',1)
+	$('#dlg_for_query_meet').dialog({
+	buttons:[{id:"btnShowOK",text:gettext('确定'),
+	  click:function(){searchbydept_Meet('meet',selected_data);$(this).dialog("destroy"); }},
+	 {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+	}] ,width:'1020',height:'550'})
+         $.ajax({type: "POST",
+                        url: "/meeting/data/participants_tpl/",
+                        data:{sidx:'id'},
+                        dataType:"json",
+                        success: function(json){
+				var html='<fieldset style="border:1px solid #e9e9e9;padding: 10px;height: 68px;overflow:auto"><legend><font size="4">会议组</font></legend>'
+                                    for(var i=0;i< json['rows'].length;i++){
+                                        html+="<span style='padding-top:2px;padding-left:5px;padding-right:5px;height: 8px;display:inline-block;'><input type='checkbox'  value='"+json['rows'][i]['id']+"'  class='class_select_schClass'>"+json['rows'][i]['Name']+"</span>"
+                                    }
+                                html+='</fieldset>'
+                                
+	        
+        
+                                $('#dlg_other_meet').css('display','block')
+                                $("#dlg_other_meet").css("width","1013px")
+                                $("#dlg_other_meet").css("height","100px")
+                                $('#dlg_other_meet').html(html)
+                                $("#dlg_other_meet").position({
+                                    my: "left top",
+                                    at: "left bottom",
+                                    of: "#dlg_dept_meet"
+                                  });
+			},
+                        error: function(request){
+                                alert($.validator.format(gettext('{0} failed!\n\n{1}'), opName, request.statusText)); $.unblockUI(); 
+                                }
+                        });
+        
+}
+function Check_meet(id)
+{
+    createDataDialog('Meet_details', "{%trans '参会人员名单' %}",  1024,'/meeting/data/Meet_details/?MeetID='+id+'&UserID__DelTag=0')
+
+
+
+
+}
+
+function getLog_Meet(id)
+{
+    createDataDialog_ex("{%trans '实际参会人员' %}",  1024,'/meeting/meetDell/?tag=0&MeetID='+id)
+}
+function getLeaves(id)
+{
+    createDataDialog_ex("{%trans '请假人员名单' %}",  1024,'/meeting/meetDell/?tag=1&MeetID='+id)
+}
+function getAbsent(id)
+{
+    createDataDialog_ex("{%trans '缺席人员名单' %}",  1024,'/meeting/meetDell/?tag=2&MeetID='+id)
+}
+
+
+function createDataDialog_ex(title,  width,actionUrl)
+{
+	dataDialog(title, width);
+	procSimpleData_ex(actionUrl)
+}
+
+function procSimpleData_ex(actionUrl)
+{
+		var jqOptions_mini=copyObj(jq_Options);
+		var miniDataUrl=actionUrl
+		$.ajax({
+			type:"GET",
+			url:miniDataUrl,
+			dataType:"json",
+			data:'',
+			success:function(json){
+				jqOptions_mini.colModel=json['colModel']
+				jqOptions_mini.height=400
+				jqOptions_mini.url=miniDataUrl
+				jqOptions_mini.pager="#id_pager_mini";
+				jqOptions_mini.gridComplete=null;
+				
+				renderGridData("mini",jqOptions_mini)
+			}
+		});
+}
+
+function del_meet(id)
+{
+        $.ajax({type: "POST",
+                        url: "/meeting/data/Meet_details/?action=del",
+                        data: 'K='+id,
+                        dataType:"json",
+                        success: function(){
+				$("#id_grid_mini").jqGrid("delRowData",id);
+
+			
+			},
+                        error: function(request){
+                                alert($.validator.format(gettext('{0} failed!\n\n{1}'), opName, request.statusText)); $.unblockUI(); 
+                                }
+                        });
+}
+function processDlgMeetStatus(obj,LocationID){
+	$('#id_meeting_status',obj).fullCalendar('destroy')
+	if ($('#id_meeting_status').hasClass('fc'))
+		$('#id_meeting_status').fullCalendar('destroy')
+
+	$('#id_meeting_status',obj).fullCalendar({
+			       header: {
+				       left: 'prev,next,today',
+				       center: 'title',
+				       right: 'agendaDay'
+			       },		
+			       buttonText:{
+				       prev:'向前',
+				       next:'向后',
+				       today:'今天',
+				       month:'按月',
+				       agendaWeek:'按周',
+				       agendaDay:'按天'
+			       },
+			       defaultView: 'agendaDay',
+			       titleFormat:'MM-DD',
+			       allDayText:'整天',
+			       aspectRatio:1,
+			       timeFormat: 'H:mm',
+			       axisFormat:'H(:mm)',
+			       theme:true,
+			       selectable: true,
+			       unselectCancel:'',
+			       eventBackgroundColor:'#ff0000',
+			       unselectAuto:false,
+			       dayNames:['周日','周一','周二','周三','周四','周五','周六'],
+			       dayNamesShort:['周日','周一','周二','周三','周四','周五','周六'],
+			       editable: false,
+			       droppable: false,
+			       diableResizing:false,
+			       	events: {
+				url: '/meeting/getData/?func=latestmeeting&roomNo='+LocationID
+				}
+
+							       
+			       
+			       
+			       
+			       
+	   })
+
+}
+function process_dialog_Meet(obj)
+{
+	$(obj).dialog({resizable:false,modal:true})
+	$("#id_Endtime",obj).datetimepicker(datetimepickerOptions);
+	$("#id_Starttime",obj).datetimepicker(datetimepickerOptions);
+	$("#id_Enrolmenttime",obj).datetimepicker(datetimepickerOptions);
+	$("#id_LastEnrolmenttime",obj).datetimepicker(datetimepickerOptions);
+	$("#id_EarlySignOfftime",obj).datetimepicker(datetimepickerOptions);
+	$("#id_LastSignOfftime",obj).datetimepicker(datetimepickerOptions);
+    $("#id_lunchtimestr",obj).datetimepicker(datetimepickerOptions);
+	$("#id_lunchtimeend",obj).datetimepicker(datetimepickerOptions);
+
+        $("#id_LocationID",obj).change(function(){
+				$('#id_meeting_status',obj).empty();
+				$('#id_meeting_status',obj).removeAttr('class')
+                processDlgMeetStatus(obj,$('#id_LocationID',obj).val())
+        });
+	f=$(obj).find("#id_edit_form").get(0)
+	$(f).validate({
+			rules: {
+					"id_Endtime": {"required":true},
+					"conferenceTitle":{string:true,"maxlength":20},
+					"id_Starttime": {"required":true},
+					"MeetID": {"alnum":true}
+				}
+			});
+
+}
+
+//会议安排模糊查询
+function searchShowMeet_Meet(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+    var url="/meeting/data/Meet/?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+
+$(function(){
+
+        $("#"+g_activeTabID+" #queryButton").hide()
+    
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+            processNewModel();
+	});
+
+
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	   searchShowMeet_Meet();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	   if(event.keyCode==13)
+	  searchShowMeet_Meet();
+	});
+
+});
+extraBatchOp=[
+    {caption:'{%trans "有关会议相关操作"%}',
+        submenu:[
+        {action:{% if user|HasPerm:"meeting.add_meet" %} function(url){doAction_Meet(url, "meet_add_participants")}{% else %}''{% endif %}, title: '{%trans "添加参会人员"%}'},
+        {action:{% if user|HasPerm:"meeting.add_meet" %} '"?action=meet_participants_del"'{% else %}''{% endif %}, title: '{%trans "清除参会人员"%}'},
+        {action:{% if user|HasPerm:"meeting.add_meet" %} '"?action=meet_participants_sync"'{% else %}''{% endif %}, title: '{%trans "同步参会人员到设备"%}'},
+        ]}
+];
+
+
+
+{% endblock %}
+
+
+{% block loadData %}
+	//html="<span id=id_opt_tree><input type='checkbox' id='id_cascadecheck_' checked/>{%trans '级联下级部门' %}</span>"
+	//$("#id_west .ui-widget-header").html(html)
+	html="<div id='show_dept_tree_'>"
+		+"<ul id='showTree_"+g_activeTabID+"' class='ztree' style='margin-left: 0px;height:100%;'></ul>"
+		+"</div>"   
+	$("#west_content_tab_meeting_Meet").html(html)
+
+//	var h=$("#"+g_activeTabID+" #west_content").height()-20
+//	$('#showTree_'+g_activeTabID).css('height',h)
+
+        ShowMeetData(g_activeTabID,true)
+        loadNULLPage('#id_grid_'+tblName[g_activeTabID]);
+	var zTree = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+	zTree.setting.check.enable = false;
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		var deptID=treeNode.id;
+		var deptName=treeNode.name;
+                if (deptID==0)
+                    var urlStr="/meeting/data/Meet/"
+                else
+                    var urlStr="/meeting/data/Meet/?id="+deptID
+                
+		savecookie("search_urlstr",urlStr);
+		 $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+	}
+
+
+{% endblock %}
+
+
+{% block extractButton %}
+<!--
+<LI id="mPause" class="button-mpause"  onclick="batchOp('?action=roomPause',null,'{%trans "暂停使用"%}');"><SPAN></SPAN>{%trans "暂停使用"%}</LI>
+<LI id="mReset" class="button-mreset"  onclick="batchOp('?action=roomReset',null,'{%trans "恢复使用"%}');"><SPAN></SPAN>{%trans "恢复使用"%}</LI>
+<LI id="mUpload" class="button-mupload"  onclick="batchOp('?action=roomUpload',null,'{%trans "上传会议室平面图"%}');"><SPAN></SPAN>{%trans "上传会议室平面图"%}</LI>
+-->
+    <LI id="id_add_participants"  onclick='batchOp(function(url){doAction_Meet(url, "meet_add_participants")},undefined,"{%trans '添加参会人员' %}");'><SPAN class='icon iconfont icon-tianjiarenyuan'></SPAN>{%trans "添加参会人员"%}</LI>
+    <LI id="id_delete_participants"   onclick="batchOp('?action=meet_participants_del',null,'{%trans "清除参会人员"%}');"><SPAN class='icon iconfont icon-qingchurenyuan'></SPAN>{%trans "清除参会人员"%}</LI>
+    <LI id="id_show_participants"  onclick='batchOp(function(url){doAction_Meet(url, "meet_show_participants")},undefined,"{%trans '显示未参会人员照片' %}");'><SPAN class='icon iconfont icon-tupian'></SPAN>{%trans "显示未参会人员照片"%}</LI>
+	
+{% endblock %}

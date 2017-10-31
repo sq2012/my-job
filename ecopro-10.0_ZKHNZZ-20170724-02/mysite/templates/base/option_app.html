@@ -1,0 +1,72 @@
+{% load i18n %}
+{% load iclock_tags %}
+<script>
+{% autoescape off %}
+	var apps={{ app }}
+{% endautoescape %}
+
+	var html="<div id='id_option1' style='padding:20px;'>"
+        +"<form id='id_edit_form' method='post'>"
+
+            +"<div class='alert alert-info' style='width:500px;margin-left: 150px;margin-top: 20px;'>{%trans 'APP功能设置'%}</div>"
+            +"<table style='margin-left: 150px;margin-top: 20px;'><tr>"
+			    +"<th><label for='id_distance' >{%trans '允许考勤离目标的距离范围(米)'%}</label></th>"
+			    +"<td><input type='text' maxlength='30'  id='id_distance' value='"+apps.distance+"' name='distance'/></td>"
+			+"</tr>"
+
+
+			+"<tr><td><input  type='checkbox' maxlength='30'  id='id_checkin' name='checkin'/>{%trans '允许考勤'%}</td></tr>"
+			+"<tr><td><input  type='checkbox' maxlength='30'  id='id_wifi' name='wifi'/>{%trans '仅允许使用wifi通讯方式考勤'%}</td></tr>"
+			+"<tr><td><input  type='checkbox' maxlength='30'  id='id_face' name='face'/>{%trans '允许不使用面部识别可以考勤'%}</td></tr>"
+			+"<tr><td><input  type='checkbox' maxlength='30'  id='id_self_speday' name='speday'/>{%trans '允许个人使用APP请假'%}</td></tr>"
+			+"<tr><td><input  type='checkbox' maxlength='30'  id='id_Review' name='review'/>{%trans '允许管理员使用APP审批请假'%}</td></tr>"
+			
+			+"</table>"
+		+"</form>"
+
+	{% if user|HasPerm:"iclock.sys_app_setting" %}
+	+"<div style='margin-left: 150px;margin-top: 20px;'><input id='id_options_save' type='button' class='m-btn  blue rnd' value='{%trans 'Save' %}'/></div>"
+	{% endif %}
+	+"</div>"
+	+"<div id='option_deldata_id_error'style='margin-left: 170px;margin-top: 10px;width:500px;'></div>"
+
+var SaveOptions=function(obj,keys){
+	$("#option_deldata_id_error").html('')
+	var formStr=formToRequestString(obj.get(0));
+	var url='/base/isys/options/'
+	$.post(url+'?action='+keys, 
+		formStr,
+		function (ret, textStatus) {		
+				$("#option_deldata_id_error").css("display","block");
+				$("#option_deldata_id_error").html("<div style='background:red;width:300px;font-size:12px;'><img src='../media/img/icon_alert.gif'/>"+ret.message+"</div>");
+					
+		},
+		"json");
+	
+
+}
+	
+$(function(){
+	$('#id_content').html(html)
+	
+        if(apps.checkin=='1'){ $("#id_checkin").attr("checked","checked");}  
+        if(apps.wifi=='1'){ $("#id_wifi").attr("checked","checked");}  
+	if(apps.face=='1'){ $("#id_face").attr("checked","checked");} 
+	if(apps.speday=='1'){ $("#id_self_speday").attr("checked","checked");} 
+	if(apps.review=='1'){ $("#id_Review").attr("checked","checked");} 
+
+	
+	$("button").button({
+            icons: {primary: "ui-icon-check"}
+       });
+	$('#id_options_save').click(function(){
+		SaveOptions($('#id_edit_form'),'app')
+	});
+
+	
+});	
+	
+	
+	
+</script>
+

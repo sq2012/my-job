@@ -1,0 +1,144 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+hasImport={% if user|HasPerm:"ipos.import_meal" %}true{% else %}false{% endif %}
+//jqOptions=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='Meal';
+jqOptions[g_activeTabID].pager = "id_pager_"+tblName[g_activeTabID];
+jqOptions[g_activeTabID].sortname='code,name';
+options[g_activeTabID].dlg_width=600;
+options[g_activeTabID].dlg_height=480;
+
+$(function(){
+	$("#"+g_activeTabID+" #queryButton").hide()
+        var info='<div class="west_info"><p>1.系统默认具有8个餐别资料，用户可以通过“餐别名称”对其进行编辑，但不可删除</p>' +
+                '<p>2.“餐别编号”：不可修改</p>'+
+                '<p>3.“餐别名称”：根据需要修改餐别名称</p>'+
+                '<p>4.“是否有效”：默认为“否”，选择为“是”该分段定值才有效，否则，为无效</p>'+
+                '<p>5.“开始时间”、“结束时间”：设置该餐别的开始和结束时间</p>'+
+                '<p>6.餐别资料中有效的餐别信息将用于卡类资料</p></div>'
+
+        renderLeftInformation(info);
+        smenu="<ul><li  class='subnav_on' onclick=submenuClick('/ipos/data/meal/',this);><a href='#'>餐别资料</a></li></ul>"
+        //$("#menu_div").html(smenu)
+        $("#"+g_activeTabID+" #id_newrec").click(function(event){
+                processNewModel();
+	});
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowDep_Meal();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowDep_Meal();
+	});
+	$("#"+g_activeTabID+" #id_export").css('display','none');
+	$("#"+g_activeTabID+" #id_third").html("");
+
+});
+
+
+function process_dialog_Meal(obj,flag)
+{
+    $(obj).dialog({resizable:false,modal:true})
+	$("#id_endtime",obj).timepicker(timepickerOptions);
+	$("#id_starttime",obj).timepicker(timepickerOptions);
+    if(flag=='edit')
+    {$("#id_code",obj).attr('readonly','True')}
+        $("#id_remark",obj).parent().parent().after(
+         "<th><label for='id_use_meal_machine'>{%trans '可用设备'%}:</label></th>"
+        +"<td>"
+        +"<div id='dlg_for_query_use_mechine' style='overflow:hidden;'>"
+	+"<div id='dlg_dept_use_mechine' class='dlgdiv'>"
+   	+"<div id='dlg_dept_body_use_mechine' style='overflow:auto;'>"
+	+"<ul id='showTree_use_meal_machine' class='ztree' style='height:123px;overflow:auto;'></ul>"
+	+"</div></div></div>"
+        +"<div style='display:none;'><input id='id_use_meal_machine' name='use_machine' type='hidden' value=''/></div>"
+        +"</td>"
+        );
+   
+}
+function process_dialog_again_Meal(obj){
+        var code=$("#id_code",obj).val()
+        ShowTreeData("use_meal_machine",code)
+}
+
+function istimeture(){
+    var st=$("#"+g_activeTabID+" #id_starttime").val()
+    alert(st)
+}
+function searchShowDep_Meal(){
+    var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+    var url="/ipos/data/meal/?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function editDefineclick(key)
+{
+	var Href=g_urls[g_activeTabID].split("?")[0]+key+'/'+"?stamp="+new Date().toUTCString();
+	$.ajax({
+		type:"GET",
+		url:Href,
+		dataType:"html",
+		async:false,
+		success:function(msg){
+                        msg=$.trim(msg)
+			processDefineEdit(msg, Href,key);
+		}
+	});
+}
+
+function strOfData_Meal(data)
+{
+	return data[1];
+}
+function ShowTreeData(page,code){
+        var setting = {
+            check: {enable: true,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},          
+	    async: {
+			    enable: true,
+			    url: "/ipos/getData/?func="+page+"&code="+code,
+			    autoParam: ["id"]
+		    }
+	};
+	$.fn.zTree.init($("#showTree_"+page), setting,null);	
+}
+
+function beforePost_Meal(obj,actionName)
+{
+	st=$('#id_starttime',obj).val()
+	et=$('#id_endtime',obj).val()
+        if(st>et){
+        $("#id_error",obj).html('开始时间大于结束时间，保存失败').css('color','red').show();
+            return false;
+        }
+        var treeids=getSelected_dept("showTree_use_meal_machine");
+        if(treeids.length>0)
+        {
+                $("#id_use_meal_machine",obj).val(treeids);
+        }
+        else
+        {
+                $("#id_use_meal_machine",obj).val('');
+        }
+
+
+
+
+
+
+}
+
+{% endblock %}
+{% block newrec %}
+{% endblock %}
+{% block aDelete %}
+{% endblock %}

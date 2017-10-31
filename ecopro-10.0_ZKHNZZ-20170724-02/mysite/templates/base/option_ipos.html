@@ -1,0 +1,257 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+	<div class='alert' style='height: 20px;margin-left: 5px;margin-top: 5px;'>系统使用前,请先设置参数,发卡成功后,参数已经正式生效,不可以再修改！发卡证书文件下载后复制到发卡电脑的C盘根目录,没有证书一切卡操作功能无法使用</div>
+
+<div id='id_option' style='padding: 10px;'>
+	<form id='id_edit_form_ipos' method='post'><table width='90%' id='tbl'><tbody>
+		<tr><th style="text-align: right;">消费卡类型</th><td style="vertical-align: top;text-align: left;">
+
+			<input type="radio" name="cardtype"  value='1' id="r_ID" />{%trans "ID卡"%}
+			<input type="radio" name="cardtype" value='2' id="r_IC" checked='checked'/>{%trans "IC卡"%}
+	{% if user|HasPerm:"iclock.sys_pos_setting" %}
+			    &nbsp;&nbsp;&nbsp;&nbsp;<label for='id_pass' >{%trans '卡功能操作证书KEY'%}</label>
+			    <input type='text' maxlength='30' name='pass_key' id='id_pass_key' value=''/>(6-10位,仅允许字母或数字)
+	{% endif %}
+				
+				
+
+		</td></tr>
+		<tr><td colspan=2>
+			<div class='ui-widget-header' style='width:700px;height: 28px;margin-left: 10px;margin-top: 10px;'><h3 style="padding-top: 6px;padding-left: 10px"><a>基础设置</a></h3></div>
+		</td></tr>
+		
+			<tr>
+			    <th style="text-align: right;"><label for='id_max_money' >{%trans '卡余额上限'%}</label></th>
+			    <td><input type='text' maxlength='30' name='max_money' id='id_max_money' value=''/></td>
+			</tr>
+			<tr>
+			    <th><label for='id_main_area' >{%trans '发卡主扇区'%}</label></th>
+			    <td><select name='main_area' id='id_main_area' value='' onchange='show_minor_text(this);'></select></td>
+			</tr>
+			<tr>
+			    <th><label for='id_minor_area' >{%trans '发卡次扇区'%}</label></th>
+			    <td><input type="text" value="" id="minor_area_text" readonly="true" name="minor_fan_area_text" maxlength="10" style="background-color: scrollbar;"/></td>
+			</tr>
+		<tr><td colspan=2>
+			<div class='ui-widget-header' style='width:700px;height: 28px;margin-left: 10px;margin-top: 10px;'><h3 style="padding-top: 8px;padding-left: 10px"><a>消费卡密码，密码长度必须为6且为数字。此密码用于加密所有的卡数据。</a></h3></div>
+		</td></tr>
+
+			<tr>
+			    <th><label for='id_pass' >{%trans '卡密码'%}</label></th>
+			    <td><input type='password' maxlength='30' name='pass' id='id_pass' value=''/></td>
+			</tr>
+			<tr>
+			    <th><label for='id_repass' >{%trans '确认密码'%}</label></th>
+			    <td><input type='password' maxlength='30' name='repass' id='id_repass' value=''/></td>
+			</tr>
+            <!--<tr><th><input type="checkbox" name="chkItem" id="chpass" ></th><td><label for="chpass">显示密码</label></td></tr>
+		-->
+        <tr><td colspan=2>
+			<div class='ui-widget-header' style='width:700px;height: 28px;margin-left: 10px;margin-top: 10px;'><h3 style="padding-top: 8px;padding-left: 10px"><a>配置好卡成本、管理费之后，发卡时直接调用</a></h3></div>
+		</td></tr>
+			<tr>
+			    <th><label for='id_card_cost' >{%trans '卡成本'%}</label></th>
+			    <td><input type='text' maxlength='30' name='card_cost' id='id_card_cost' value=''/></td>
+			</tr>
+			<tr>
+			    <th><label for='id_mng_cost' >{%trans '管理费'%}</label></th>
+			    <td><input type='text' maxlength='30' name='mng_cost' id='id_mng_cost' value=''/></td>
+			</tr>
+
+		</tbody></table>
+	</form>
+<div><ul class='errorlist'><li id='option_ipos_id_error' style='display:none;'></li></ul></div>
+</div>
+	{% if user|HasPerm:"iclock.sys_pos_setting" %}
+	<div style="margin-left: 100px;margin-top: 5px;">
+		<input id='id_submit' type='button' class='m-btn  zkgreen rnd' value='{%trans "Save" %}'/>
+		<input id='id_submit_download' type='button' class='m-btn  zkgreen rnd' value='{%trans "下载证书" %}'/>
+	
+	</div>
+	{% endif %}
+
+
+<script>
+{% autoescape off %}
+var _data1={{ params }}
+var has_card={{ has_card }}
+{% endautoescape %}
+var is_super={% if request.user.is_superuser %}true{% else %}false{% endif %}
+
+function get_options()
+{
+	option_html=''
+	for(var i=1;i<15;i++)
+		option_html+='<option value='+i+'>第'+i+'扇区</option>'
+	return option_html
+	
+}
+
+function show_minor_text(obj)
+{
+
+	var val=$(obj).val()
+	$("#"+g_activeTabID+" #minor_area_text").val('第'+(parseInt(val)+1)+'扇区')
+	
+}
+$(function(){
+		if(has_card==1){
+			$('#tab_base_options #r_ID').attr('disabled',true)
+			$('#tab_base_options #r_IC').attr('disabled',true)
+			$('#tab_base_options #id_main_area').attr('disabled',true)
+			$('#tab_base_options #id_pass').attr('disabled',true)
+			$('#tab_base_options #id_repass').attr('disabled',true)
+		}
+        if(_data1.itype=='1'){ $("#"+g_activeTabID+" #r_ID").prop("checked","checked");}
+        //if(_data1.itype=='2'){ $("#r_IC").prop("checked","checked");}
+	$("#"+g_activeTabID+" #id_main_area").html(get_options())
+	$("#"+g_activeTabID+" #id_max_money").val(_data1.max_money)
+	$("#"+g_activeTabID+" #id_main_area").val(_data1.main)
+	$("#"+g_activeTabID+" #minor_area_text").val(_data1.minor)
+	$("#"+g_activeTabID+" #id_pass").val(_data1.pwd)
+	$("#"+g_activeTabID+" #id_repass").val(_data1.pwd)
+	$("#"+g_activeTabID+" #id_card_cost").val(_data1.card_cost)
+	$("#"+g_activeTabID+" #id_mng_cost").val(_data1.mng_cost)
+	$("#"+g_activeTabID+" #id_pass_key").val(_data1.pass_key)
+    isCheck=0;
+    $("[name = chkItem]:checkbox").bind("click", function () {
+        isCheck = !isCheck
+        if (isCheck){
+        $("input[name='pass']").attr("type","text")
+        $("input[name='repass']").attr("type","text")
+        }else{
+        $("input[name='pass']").attr("type","password")
+        $("input[name='repass']").attr("type","password")
+        }
+     })
+
+
+
+
+	f=$("#"+g_activeTabID+" #id_edit_form_ipos")
+	f.validate({
+			rules: {
+					"id_pass": {"required":true,"minlength":6,"digits":true},
+					"max_money":{"digits":true,'max':100000},
+					"main_area":{"required":true},
+					"pass_key":{"minlength":6,"maxlength":10,"alnum":true}
+				}
+			});
+	
+
+        $("#"+g_activeTabID+" #id_submit").click(function(){
+			if (has_card==1){
+				$('#tab_base_options #r_ID').attr('disabled',false)
+				$('#tab_base_options #r_IC').attr('disabled',false)
+				$('#tab_base_options #id_main_area').attr('disabled',false)
+				$('#tab_base_options #id_pass').attr('disabled',false)
+				$('#tab_base_options #id_repass').attr('disabled',false)
+			}
+			$('#option_ipos_id_error').html('')
+			if (!is_super) {
+				alert('此页面的参数仅允许超级管理员修改')
+				return;
+			}
+			
+				f=$("#"+g_activeTabID+" #id_edit_form_ipos")
+				if (!f.valid()) {
+					return;
+				}
+			
+			
+				if($("#"+g_activeTabID+" #r_IC").prop('checked'))
+				{
+				if($("#"+g_activeTabID+" #id_pass").val().length!=6)
+				{
+					$("#option_ipos_id_error").html("密码不能为空且长度为6").show();
+					return 
+				}
+				if($("#"+g_activeTabID+" #id_pass").val()!=$("#"+g_activeTabID+" #id_repass").val())
+				{
+					$("#option_ipos_id_error").html("密码密码和确认密码不符").show();
+					return 
+				}
+				
+				
+				if($("#"+g_activeTabID+" #r_No").prop('checked'))
+				{
+					$("#option_ipos_id_error").html("必须选择卡类型").show();
+					return 
+					
+					
+				}
+				}
+         			var queryStr=$("#"+g_activeTabID+" #id_edit_form_ipos").formSerialize();
+        			$.ajax({ 
+        				type: "POST",
+        				url:"/base/isys/option_ipos/",
+        				data:queryStr,
+        				dataType:"json",
+        				success:function(retdata){
+                                                        var message=retdata.message
+        						$("#option_ipos_id_error").html(message).show();
+								if (has_card==1){
+									$('#tab_base_options #r_ID').attr('disabled',true)
+									$('#tab_base_options #r_IC').attr('disabled',true)
+									$('#tab_base_options #id_main_area').attr('disabled',true)
+									$('#tab_base_options #id_pass').attr('disabled',true)
+									$('#tab_base_options #id_repass').attr('disabled',true)
+								}
+        					}
+        				});
+        		});
+
+
+        $("#"+g_activeTabID+" #id_submit_download").click(function(){
+			if (!is_super) {
+				alert('此页面的参数仅允许超级管理员修改')
+				return;
+			}
+			
+				f=$("#"+g_activeTabID+" #id_edit_form_ipos")
+				if (!f.valid()) {
+					return;
+				}
+			
+			
+				if($("#"+g_activeTabID+" #r_IC").prop('checked'))
+				{
+					if($("#"+g_activeTabID+" #id_pass_key").val().length<6)
+					{
+						$("#option_ipos_id_error").html("密码不能为空且长度为6-10").show();
+						return 
+					}
+				
+				
+				}
+				else
+				{
+						$("#option_ipos_id_error").html("没有选择IC卡，不用下载证书").show();
+						return 
+					
+				}
+				window.location.href="/base/isys/option_key/"
+				
+        			//$.ajax({ 
+        			//	type: "POST",
+        			//	url:"/base/isys/option_key/",
+        			//	data:{key:$("#id_pass_key").val()},
+        			//	dataType:"text/html",
+        			//	success:function(retdata){
+							//if (retdata.ret==0) {
+							//		 window.location.href=retdata.message;
+							//	}
+							//	else{
+                             //   var message=retdata.message
+        						//$("#"+g_activeTabID+" #id_error").html("<ul class='errorlist'><li>"+message+"</li></ul>").show();
+								//}
+						//	}
+        				//});
+        		});
+	
+	
+});
+
+</script>
+

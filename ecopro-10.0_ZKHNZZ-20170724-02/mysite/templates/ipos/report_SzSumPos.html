@@ -1,0 +1,97 @@
+{% extends "report_ipos.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+
+{% block search %}
+
+{% endblock %}	
+
+{% block getDateUrl %}
+
+function getDateUrl(pos_start_date,pos_end_date)
+{
+
+	$("#id_con_error").css("display","none");
+
+	var urlStr=g_urls[g_activeTabID]
+	
+	var st=moment().startOf('month').format('YYYY-MM-DD')
+	var et=moment().endOf('month').format('YYYY-MM-DD')
+         if(pos_start_date) st=pos_start_date
+        if(pos_end_date) et=pos_end_date
+	
+	if(urlStr.indexOf("?")!=-1){
+		urlStr=urlStr+"&StartDate="+st+"&EndDate="+et;
+	}
+	else{
+		urlStr=urlStr+"?StartDate="+st+"&EndDate="+et;
+	}
+    
+	return urlStr
+
+}
+{% endblock %} 
+
+
+{% block date_set_range %}
+
+   if (pos_start_date)
+        $('#'+g_activeTabID+' #id_StartDate').val(pos_start_date)
+    else
+        $('#'+g_activeTabID+' #id_StartDate').val(moment().startOf('month').format('YYYY-MM-DD'))
+     if(pos_end_date)    
+        $('#'+g_activeTabID+' #id_EndDate').val(pos_end_date)
+    else
+        $('#'+g_activeTabID+' #id_EndDate').val(moment().endOf('month').format('YYYY-MM-DD'))
+	$("#"+g_activeTabID+" #id_StartDate").datepicker(datepickerOptions);
+        $("#"+g_activeTabID+" #id_EndDate").datepicker(datepickerOptions);
+        $("#"+g_activeTabID+" #id_search").click(function(){
+                var check_opreate=""
+                if($("#check_opreate").prop("checked")){
+                    check_opreate="checked"
+                }        
+                var isError=validate_form_ipos();
+                var urlstr="";
+                if(isError){
+         
+                        var st=$("#"+g_activeTabID+" #id_StartDate").val();
+                        var et=$("#"+g_activeTabID+" #id_EndDate").val();
+        
+                        urlstr=g_urls[g_activeTabID]+"?StartDate="+st+"&EndDate="+et+"&check_opreate="+check_opreate
+                        }
+                else
+                {
+                    alert('请检查时间格式是否正确，且最多查询100天！')
+                    return;
+                }
+                pos_start_date=st
+                pos_end_date=et
+		
+		savecookie("search_urlstr",urlstr);
+		$("#id_grid_report").jqGrid('setGridParam',{url:urlstr,datatype:"json"}).trigger("reloadGrid");
+	});
+
+    function validate_form_ipos(){   
+	var st=$("#"+g_activeTabID+" #id_StartDate").val();
+	var et=$("#"+g_activeTabID+" #id_EndDate").val();
+        return (moment(st,'YYYY-MM-DD').isValid()&&moment(et,'YYYY-MM-DD').isValid()&&(moment(et,'YYYY-MM-DD').diff(moment(st,'YYYY-MM-DD'), 'days')<=100))
+    }
+{% endblock %}
+
+
+{% block date_range %}
+
+<div id="search_Time" class='left' style="width:630px;">
+        <span>
+                    <label  >{%trans '起始日期'%}</label>
+			<input type='text' name='StartDate'  id='id_StartDate' style='width:110px;'/>
+                    <label  >{%trans '结束日期'%}</label>
+			<input type='text' name='EndDate'  id='id_EndDate' style='width:110px;'/>
+        </span>
+        <span>
+                <input type="checkbox" name="check_opreate" id="check_opreate" />{%trans "按操作员汇总"%}
+        </span>        
+        <span id='id_search' ><a class='m-btn  zkgreen rnd mini'>{%trans 'Query'%}</a></span>
+</div>
+
+{% endblock %}

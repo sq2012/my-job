@@ -1,0 +1,112 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+hasImport={% if user|HasPerm:"ipos.import_keyvalue" %}true{% else %}false{% endif %}
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='KeyValue';
+jqOptions[g_activeTabID].pager = "id_pager_"+tblName[g_activeTabID];
+jqOptions[g_activeTabID].sortname='code';
+options[g_activeTabID].dlg_width=400;
+options[g_activeTabID].dlg_height=380;
+
+$(function(){
+	$("#"+g_activeTabID+" #queryButton").hide()
+
+        var info='<div class="west_info"><p>1.该页面的操作主要包括键值资料的新增、编辑、删除、查询</p>' +
+                '<p>2.在键值资料页面，单击“键值编号”，进入编辑键值资料页面</p>'+
+                '<p>3.新增键值资料后，系统会自动生成一条命令。若设备已联接到系统中，则直接接收该命令，然后以系统中的键值资料为准，同步设备与系统中的键值资料；若设备尚未联接到系统，则待其联接到系统后，会实时获取命令并执行</p></div>'
+
+        renderLeftInformation(info);
+        smenu="<ul><li  class='subnav_on' onclick=submenuClick('/ipos/data/keyvalue/',this);><a href='#'>键值资料</a></li></ul>"
+        //$("#menu_div").html(smenu)
+    $("#"+g_activeTabID+" #id_newrec").click(function(event){
+                processNewModel();
+	});
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowDep_KeyValue();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowDep_KeyValue();
+	});
+	$("#"+g_activeTabID+" #id_export").css('display','none');
+	$("#"+g_activeTabID+" #id_third").html("");
+});
+
+function searchShowDep_KeyValue(){
+    var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+    var url="/ipos/data/keyvalue/?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function editDefineclick(key)
+{
+	var Href=g_urls[g_activeTabID].split("?")[0]+key+'/'+"?stamp="+new Date().toUTCString();
+	$.ajax({
+		type:"GET",
+		url:Href,
+		dataType:"html",
+		async:false,
+		success:function(msg){
+                        msg=$.trim(msg)
+			processDefineEdit(msg, Href,key);
+		}
+	});
+}
+
+function strOfData_KeyValue(data)
+{
+	return stripHtml(data.code)+" "+data.money;
+}
+
+function process_dialog_KeyValue(obj,flag)
+{
+	  $(obj).dialog({resizable:false,modal:true})
+    if(flag=='edit')
+    {$("#id_code",obj).attr('readonly','True')}
+	$("#id_error",obj).hide()
+    var value=$("#id_"+flag,obj).val()
+        $("#addition_fields",obj).after().html(
+        "<th><label for='id_use_mechine'>{%trans '可用设备'%}:</label></th>"
+        +"<td>"
+        +"<div id='dlg_for_query_use_mechine' style='overflow:hidden;'>"
+	+"<div id='dlg_dept_use_mechine' class='dlgdiv'>"
+   	+"<div id='dlg_dept_body_use_mechine' style='overflow:auto;'>"
+	+"<ul id='showTree_kv_use_mechine' class='ztree' style='height:123px;overflow:auto;'></ul>"
+	+"</div></div></div>"
+        +"<div style='display:none;'><input id='id_use_mechine' name='use_mechine' type='hidden' value=''/></div>"
+        +"</td>"
+        );
+}
+function process_dialog_again_KeyValue(obj){
+        var code=$("#id_code",obj).val()
+        ShowTreeData("kv_use_mechine",code)
+}
+function ShowTreeData(page,code){
+        var setting = {
+            check: {enable: true,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},
+	    async: {
+			    enable: true,
+			    url: "/ipos/getData/?func="+page+"&code="+code,
+			    autoParam: ["id"]
+		    }
+	};
+	$.fn.zTree.init($("#showTree_"+page), setting,null);
+}
+function beforePost_KeyValue(obj,actionName)
+{
+     var treeids=getSelected_dept("showTree_kv_use_mechine");
+      if(treeids.length>0)
+      {$("#id_use_mechine",obj).val(treeids);}
+      else
+      { $("#id_use_mechine",obj).val('');}
+}
+{% endblock %}

@@ -1,0 +1,839 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+<script>
+{% block tblHeader %}
+        hasImport={% if user|HasPerm:"iclock.import_checkexact" %}true{% else %}false{% endif %}
+       // jqOptions=copyObj(jq_Options)
+        jqOptions[g_activeTabID].colModel={{colModel}}
+        tblName[g_activeTabID]='checkexact';
+        jqOptions[g_activeTabID].sortname='CHECKTIME';
+        jqOptions[g_activeTabID].sortorder="desc";
+		jqOptions[g_activeTabID].pager="id_pager_"+tblName[g_activeTabID]
+        //dtFields = "{{ dtFields }}"
+		app='{{app}}'
+        var leaveClass=[]
+        var Leave_Status=['{%trans "Apply"%}','{%trans "Accepted"%}','{%trans "Refused"%}','{%trans "Again"%}']
+        var Leave_Status_Code=[0,2,3,6]
+	options[g_activeTabID].edit_col=1
+    var time_pickerOptions=copyObj(timepickerOptions)
+    time_pickerOptions.showSecond=true
+    time_pickerOptions.timeFormat='HH:mm:ss'
+	function getOptions_checkexact()
+	{
+		var options_html_checkexact=""
+		for(var i=0;i<states_checkexact.length;i++){
+			options_html_checkexact+="<option value='"+states_checkexact[i].symbol+"'>"+states_checkexact[i].pName+"</option>"
+		}
+		return options_html_checkexact;
+	}
+	
+        function createNewDlg_checkexact(){
+                var title="{%trans '新增记录' %}";
+                createDlgdeptfor('checkexact_add',1)
+                $('#dlg_for_query_checkexact_add').dialog(
+                        {title:title,
+                        buttons:[
+                                {id:"btnShowOK",text:"{% trans "save and return" %}",click:function(){ if($.isFunction(window['beforePost_checkexact'])){if(window['beforePost_checkexact'](this,"_new_")==false) return ;}  SaveFormData(this,g_urls[g_activeTabID]+"_new_/",'addandcontinue','checkexact_add');  }},
+                                {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}
+                        ]
+                })
+                createDlgother_checkexact('checkexact_add')
+
+
+ 	var currDate=new Date();
+	var dateTime=currDate.getFullYear()
+		+"-"
+		+(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+		+"-"
+		+(currDate.getDate()<10?"0"+currDate.getDate():currDate.getDate())
+		
+	$("#id_checkdate_a").val(dateTime);
+	$("#id_checkdate_a").datepicker(datepickerOptions);
+	$("#id_checkdate_b").val(dateTime);
+	$("#id_checkdate_b").datepicker(datepickerOptions);
+	$("#id_checktime").val();
+	$("#id_checktime").timepicker(time_pickerOptions);
+
+	var f=$("#id_conditions_check").find("#id_edit_form").get(0)
+	$(f).validate({
+		rules: {
+			"checkdate": {"required":true,"dateISO":true},
+			"checktime": {"required":true}
+		}
+	});
+         }
+
+        function getAudit(isAudit){
+            html="";
+            if(isAudit=="" || isAudit==0)
+                html+="<option value='0' selected>{%trans 'No'%}</option>"
+            else
+                html+="<option value='0'>{%trans 'No'%}</option>"
+            if(isAudit==1)
+                html+="<option value='1' selected>{%trans 'Yes'%}</option>"
+            else
+                html+="<option value='1'>{%trans 'Yes'%}</option>"
+            return html;
+        }
+
+        function createDlgother_checkexact(page){
+                var html="<div class='module' style='position:relative;'>"
+                        +"<table id='id_checkexact'><tr>"
+                        +"<td style='vertical-align:top;color:black;'></td><td style='vertical-align:top;'><div id='id_conditions_check'><form id='id_edit_form' method='POST'><table id='id_setField' style='margin-top: 0px;'>"
+//开始和结束时间
+		+"<tr>"
+            +"<td style='width: 160px;'>"
+                +"<label for='id_checkdate_a' class='required'><font color='#0000CC'>{% trans 'Beginning date'%}</font></label>"
+            +"</td>"
+            +"<td>"
+                +"<label for='id_checkdate_b'><font color='#990000'>{% trans 'finish day'%}</font></label>"
+                +"<input id='id_checkdate_bs' type='checkbox' alt='' name='id_checkdate_bs' value = '1' />"
+            +"</td>"
+        +"</tr>"
+		+"<tr>"
+            +"<td><input type='none' id='id_checkdate_a' name='checkdate_a' value='' size='11' maxlength='10'  /></td>"
+            +"<td><input type='none' id='id_checkdate_b' name='checkdate_b' value='' size='11' maxlength='10'  /></td>"
+        +"</tr>"
+
+//记录类型
+        +"<tr>"
+            +"<td style='width: 160px;'>"
+                +"<label for='id_checktype' >{% trans 'Checkinout type:'%}</label>"
+            +"</td>"
+        +"</tr>"
+		+"<tr>"
+            +"<td><select style='width:120px !important;' id='id_checktype' name='checktype'>"+getOptions_checkexact()+"</select></td>"
+        +"</tr>"
+
+//补签时间
+		+"<tr>"
+            +"<td style='width: 160px;'>"
+                +"<label for='id_checktime' class='required'>{% trans 'Time:'%}</label>"
+           +"</td>"
+        +"</tr>"
+		+"<tr>"
+            +"<td><input type='none' id='id_checktime' name='checktime' value='' size='9' maxlength='8' class='vTimeField' /></td>"
+        +"</tr>"
+//设备
+         +"<tr><td>"
+            +"<label for='id_SN' >{% trans 'device'%}:</label>"
+            +"<span style='float:left;'>"
+            +"<input alt='Authed_device' type='text' id='Authed_device'/></span>"
+            +"<span style='float:left;'>"
+            +"<img id='id_drop_Authed_device' src='/media/img/sug_down_on.gif' title='选择设备'></span>"
+            +"<input id='id_SN' type='hidden' name='SN' />"
+        +"</td></tr>"
+
+//原因
+		+"<tr><td>"
+            +"<label for='id_reason'>{% trans '补签原因:'%}</label>"
+            +"<span style='float:left;'>"
+            +"<input id='id_reson' type='text' name='reson' /></span>"
+            +"<span style='float:left;'>"
+            +"<img id='id_drop_causeadd' src='/media/img/sug_down_on.gif' title='选择原因'></span>"
+        +"</td></tr>"
+//是否需要审批
+
+
+		+"<input type='hidden' id='id_hidden_emp' value='' name='UserIDs' />"
+		+"<input type='hidden' id='id_hidden_depts' value='' name='deptIDs' />"
+		+"<input type='hidden' id='id_audit' value='' name='audit' />"
+		+"<input type='hidden' id='isContainChild' value='0' name='isContainChild' />"
+		+"<tr><th> </th></tr>"
+		+"<tr><th> </th></tr>"
+		+"<tr><td colspan='2'><span id='id_error' style='margin-top:-15px'></span></td></tr>"
+		+"</table></form></div></td>"
+		+"</tr></table></div>"
+        +"<div>"
+        +"1.{%trans '  When part or all of employee from one department come late or leave early with reasons employee of clock-in or clock-out time can be changed, and the changes can be searched  by using Modify Log from Employee Attendance Records Search Module.' %}"
+        +"<br />2.{% trans 'Click department and do not select employe that will be add transaction for the whole department,otherwise for selected employee' %}"
+		+"<br/>3.{% trans '结束日期选中指连续补签开始至结束日期的记录' %}"
+        +"</div>"
+                $("#dlg_other_body_"+page).html(html)
+                $("#dlg_other_"+page).css("width",'300')
+                $("#dlg_emp_"+page).css("width",'470')
+                $("#dlg_emp_"+page).css("height",'370')
+                $("#dlg_other_"+page).css("height",$("#dlg_emp_"+page).height())
+                $("#dlg_other_"+page).addClass('dlgempdiv')
+                $("#dlg_for_query_"+page).dialog({dialogClass: "",width:'1050',height:'480'})
+                $("#dlg_other_"+page).position({
+                        my: "left top",
+                        at: "right top",
+                        of: "#dlg_emp_"+page
+                });
+                $("#id_drop_Authed_device").click(function(){
+				    createQueryDlgbypage1('auth_device',true,false)})
+                $("#id_drop_causeadd").click(function(){
+						if ($('#dlg_for_query_forgetcause').length>0) {
+							$('#dlg_for_query_forgetcause').parent().remove()
+						}
+                        forgetcause_html = "<div id='dlg_for_query_forgetcause' style='overflow:hidden;'>"
+                                                    +"<div style='width:440px;'><table id='id_forgetcause_list' ></table><div id='id_pager_forgets' style='width:430px;'></div></div>"
+                                                        +"<div id='forgetcause_form'><form id='dlg_forgetcause'><table>"
+                                                        +"<tr><td><label>{% trans '新增原因描述'%}</label></td>"
+                                                        +"<tr><td><input id='forget_cause' name='cause_Name'/></td>"
+                                                        +"</table></form></div>"
+                                                +"<div>"
+                                                +"<button id='id_check_add'>{%trans 'Add' %}</button>"
+                                                +"<button id='id_check_delete' >{%trans 'delete' %}</button>"
+                                                +"<div id='id_message'></div>"
+                                                +"</div>"
+                                                +"</div>"
+                        $(forgetcause_html).dialog({modal:true,
+                                title:'补签记录原因维护',
+                                buttons:[{id:"btnShowOK",text:"{% trans "确认" %}",click:function(){
+                                                var ids=$('#id_forgetcause_list').jqGrid('getGridParam','selrow');
+                                                jQuery("#id_forgetcause_list").saveRow(ids, false, 'clientArray');
+                                                var rowData = $("#id_forgetcause_list").jqGrid("getRowData",ids);
+                                                var rowName=rowData.cause_Name;
+                                                $("#id_reson").val(rowName);
+                                                $(this).dialog("destroy"); }},
+                                        {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy");}}]  })
+                        $("#id_check_add").button({icons: {primary: "ui-icon-check"}});
+                        $("#id_check_delete").button({icons: {primary: "ui-icon-check"}});
+                        $("#id_check_add").click(function(){f=$('#forgetcause_form').find("#dlg_forgetcause");
+                                    var formStr=formToRequestString(f.get(0));
+                                    var url='/iclock/data/forgetcause/'
+                                    $.post(url+'_new_/',
+                                        formStr,
+                                        function (ret, textStatus) {
+                                                $("#id_forgetcause_list").trigger('reloadGrid');
+                                                $('#forget_cause').val("")
+                                                $("#id_message").css("display","block");
+                                                $("#id_message").html("<div style='background:red;width:300px;font-size:12px;'><img src='../media/img/icon_alert.gif'/>"+ret.message+"</div>");
+                                                setTimeout("$('#id_message').css('display','none');", 3000);},
+                                        "json");  });
+                        $("#id_check_delete").click(function(){
+                                    var ids=$('#id_forgetcause_list').jqGrid('getGridParam','selarrrow');
+                                    if(ids!=""){
+                                    var formStr='K='+ids;
+                                    var url='/iclock/data/forgetcause/'
+                                    $.post(url+'?action=del',
+                                        formStr,
+                                        function (ret, textStatus) {
+                                                $("#id_forgetcause_list").trigger('reloadGrid');
+                                                $('#forget_cause').val("")
+                                                $("#id_message").css("display","block");
+                                                $("#id_message").html("<div style='background:red;width:300px;font-size:12px;'><img src='../media/img/icon_alert.gif'/>"+ret.message+"</div>");
+                                                setTimeout("$('#id_message').css('display','none');", 3000);
+                                        },
+                                        "json");
+                                     }else{return false;}
+                            });
+                        $("#dlg_for_query_forgetcause").dialog({dialogClass: "",width:'465',height:'530'})
+                        var jqOptions_checkexact=copyObj(jq_Options);
+                        var urls="/iclock/data/forgetcause/";
+                        var lastsel;
+                        $.ajax({
+                               type:"GET",
+                               url:"/iclock/att/getColModel/?dataModel=forgetcause",
+                               dataType:"json",
+                               data:'',
+                               success:function(json){
+                                   jqOptions_checkexact.colModel=json['colModel']
+                                   jqOptions_checkexact.sortname="id";
+                                   jqOptions_checkexact.rowNum=10;
+                                   jqOptions_checkexact.sortorder="asc";
+                                   jqOptions_checkexact.height=$('#dlg_for_query_forgetcause').height()-180;
+                                   jqOptions_checkexact.url=urls
+                                   jqOptions_checkexact.gridComplete=''//'/iclock/data/forgetcause/'
+                                   jqOptions_checkexact.pager="#id_pager_forgets";
+                                   ids=$('#id_forgetcause_list').jqGrid('getGridParam','selarrrow');
+                                   jqOptions_checkexact.onSelectRow=function(ids){
+                                            if(ids && ids!==lastsel){
+                                                    var rowData = $("#id_forgetcause_list").jqGrid("getRowData", ids);
+                                                    jQuery('#id_forgetcause_list').jqGrid('restoreRow',lastsel);
+                                                    jQuery('#id_forgetcause_list').jqGrid('editRow',ids,{
+                                                            keys : true,
+                                                            url: '/iclock/data/forgetcause/'+ids+"/",
+                                                            mtype : "POST",
+                                                            oneditfunc: function(rowid){console.log(rowid);},
+                                                            errorfunc: function(rowid, res){
+                                                                $("#id_forgetcause_list").trigger('reloadGrid');
+                                                                //console.log(rowid);
+                                                                //console.log(res);
+                                                                    } })
+                                                    lastsel=ids;}
+                                   jqOptions_checkexact.editurl='/iclock/data/forgetcause/'+ids+'/'; };
+                                   jqOptions_checkexact.caption='原因列表';
+                                   $("#id_forgetcause_list").jqGrid(jqOptions_checkexact);}
+                            });
+
+          })
+        }
+
+        if('{{approval}}'!='0'){
+                currentState=-2;
+        }else{
+                currentState=-1;
+        }
+
+        function showState_checkexact(newState){	
+                //if(currentState==newState) return;
+                currentState=newState;
+                createFilter_checkexact();
+                if (newState>=0)
+                        var url=g_urls[g_activeTabID]+"?State="+Leave_Status_Code[newState]+"&filtertag=0";
+                else if(newState==-1)
+                        var url=g_urls[g_activeTabID];
+                else if(newState==-2)
+                        var url=g_urls[g_activeTabID]+"?filtertag=1"
+                else if(newState==-3)
+                        var url=g_urls[g_activeTabID]+"?filtertag=2";
+                else if(newState==-4)
+                        var url=g_urls[g_activeTabID]+"?filtertag=3";
+                else if(newState==-5)
+                        var url=g_urls[g_activeTabID]+"?filtertag=4";
+                var deptID=getSelected_dept("showTree_"+g_activeTabID);
+                if(deptID!=''){
+                        var ischecked=0;
+                        if($("#id_cascadecheck_"+g_activeTabID).prop("checked"))
+                                ischecked=1;
+                        if (newState==-1)
+                                url=url+"?deptIDs="+deptID+"&isContainChild="+ischecked
+                        else
+                                url=url+"&deptIDs="+deptID+"&isContainChild="+ischecked
+                }
+                var ComeTime=$("#id_ComeTime_checkexact").val();
+                var EndDate=$("#id_EndTime_checkexact").val();
+                var isError=validate_form_checkexact();
+                var urlTime="";
+                var urlTime1="";
+                if(!isError){
+                       exporttag=1;
+                       urlTime1=$("#"+g_activeTabID+" #id_date").val()+"__gte="+ComeTime+"&"+$("#"+g_activeTabID+" #id_date").val()+"__lte="+EndDate
+                        //if (newState==-1)
+                          //      urlTime="&"+urlTime1
+                       // else
+                         //       urlTime="&"+urlTime1
+                        if (url.indexOf("?")==-1)
+                                urlTime="?"+urlTime1
+                        else
+                                urlTime="&"+urlTime1
+               }
+                 urlStr=url+urlTime+"&UserID__DelTag__lt=1"
+ 		savecookie("search_urlstr",urlStr);
+		 $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+        }
+function createQueryDlgbypage1(page,tag,isDiy)
+{
+
+	if(page==undefined){
+		page=''
+	}
+	var html="<div id='dlg_for_query_"+page+"' style='overflow:hidden;'>"
+		+"<div id='dlg_dept_"+page+"' class='dlgdiv'>"
+   			+"<div id='dlg_dept_body_"+page+"' style='overflow:hidden;'>"
+				+"<ul id='showTree_"+page+"' class='ztree' style='height:300px;overflow:auto;'></ul>"
+			+"</div>"
+		+"</div>"
+   +"</div>"
+	$(html).dialog({modal:true,resizable:false,
+			//dialogClass: "no-close",
+			width: 410,
+			height:430,
+                        position:  { my: "left top-150", at: "right top",of:"#id_drop_Authed_device"},
+                                                  open:function(){ShowDeviceData(page,tag,isDiy);},
+						  close:function(){$(this).dialog("destroy"); }
+						})
+}
+function ShowDeviceData(page,tag,isDiy)
+{
+	var setting = {
+            check: {enable: !tag,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},
+	    async: {
+			    enable: true,
+			    url: "/iclock/att/getData/?func=devs_checkexact&mod_name="+app,
+			    autoParam: ["id"]
+		    }
+	};
+	$.fn.zTree.init($("#showTree_"+page), setting,null);
+	if(tag){
+		var zTree = $.fn.zTree.getZTreeObj("showTree_"+page);
+		zTree.setting.check.enable = false;
+		$("#searchbydept_"+page).hide()
+		zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+				$("#id_SN").val(treeNode.id);
+                $("#Authed_device").val(treeNode.name);
+				dlgdestroy(page)
+		}
+	}
+}
+function createOptionDlgs(name,value,id){
+	$("#id_error").hide()
+	var html="<div id='option' align='center'><form id='dlg_option'><table>"
+			+"<tr><td><label>{% trans 'ItemName'%}</label></td>"
+			+"<td></td><td><label>{% trans 'Value'%}</label></td></tr>"
+			+"<tr><td><input id='option_title' name='option_title'/></td>"
+			+"<td>=</td><td><input id='option_value' name='option_value'/></td></tr>"
+			+"<tr><td><input type='hidden' id='old_option_title' name='old_option_title'/></td>"
+			+"<td></td><td><input type='hidden' id='old_option_value' name='old_option_value'/></td></tr>"
+			+"<tr><td colspan='2'><input type='hidden' id='id' name='id' value='100'/></td></tr>"
+			+"</table><table><tr rowspan='2'><td colspan='3'><div id='id_message'></div></td></tr></table></form></div>"
+	var title=""
+	if(typeof name !="undefined"&&typeof value !="undefined"){
+				title=gettext("Edit Option")
+			}else{
+				title=gettext("Add Option")
+			}
+	$(html).dialog({title:title,
+					modal:true,
+					width:360,
+					height:200,
+					buttons:[{id:'id_status_add',text:'{%trans "save and return" %}',click:function(){f=$('#option').find("#dlg_option");SaveOptions(f,"status")}},
+							 {text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}],
+					close:function(){$(this).dialog("destroy");}});
+	if(typeof name!="undefined"&&typeof value!="undefined"){
+			$("#old_option_title").val(name);
+			$("#old_option_value").val(value);
+			if (id<100)
+			$("#option_title").attr({disabled:"disabled"})
+			$("#id").val(id)
+		}
+	$("#option_title").val(name);
+	$("#option_value").val(value);
+
+}
+        function createFilter_checkexact(){
+                var html="<li style=' border: 0px solid white;'><a href='#' style='color: #000;background:white;padding-left:0;'>{% trans '补签记录状态' %}</a>"
+                        +"<ul><li "+(currentState==-1?"class='selected'":"")+"><a href='#' onclick='showState_checkexact(-1)'>{%trans "All"%}</a></li>";
+                for(i=0;i<=3;i++)
+                        html+="<li "+(currentState==i?"class='selected'":"")+"><a href='#' onclick='showState_checkexact("+i+")'>"+Leave_Status[i]+"</a></li>";
+                if('{{approval}}'=='4'){html+="<li "+(currentState==-2?"class='selected'":"")+"><a href='#' onclick='showState_checkexact(-2)'>{% trans "processState"%}</a></li>";}
+		if('{{approval}}'=='4'){html+="<li "+(currentState==-3?"class='selected'":"")+"><a href='#' onclick='showState_checkexact(-3)'>{% trans "越级查看"%}</a></li>";}
+		if('{{approval}}'=='4'){html+="<li "+(currentState==-4?"class='selected'":"")+"><a href='#' onclick='showState_checkexact(-4)'>{% trans "经我审核"%}</a></li>";}
+				html+="<li "+(currentState==-5?"class='selected'":"")+"><a href='#' onclick='showState_checkexact(-5)'>{% trans "补签超五天"%}</a></li>";
+		$("#"+g_activeTabID+" #id_filterbar").html(html+'</ul></li>');
+        }
+        function validate_form_checkexact(){   //验证表单的合法性(人员(可不选，在计算项目中计算选中单位的人员，其他的就默认值0)、开始时间、结束时间)
+                var t_ComeTime=$("#id_ComeTime_checkexact").val();
+                var cTime=t_ComeTime.split("-");
+                var t_EndDate=$("#id_EndTime_checkexact").val();
+                var eTime=t_EndDate.split("-");
+                cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+                edate=new Date(parseInt(eTime[0],10),parseInt(eTime[1],10)-1,parseInt(eTime[2],10));
+                var days=(edate.valueOf()-cdate.valueOf())/(1000*3600*24)+1;
+                if(cdate>edate || t_ComeTime=="" || t_EndDate==""||!valiDate(t_ComeTime)||!valiDate(t_EndDate)){
+                        return 1;
+                }else{
+                        return 0
+                }
+        }
+        function department_tree(){
+		var title="";
+		var urlStr=g_urls[g_activeTabID];
+		createDlgdeptfor('checkexact',1)
+		$('#dlg_for_query_checkexact').dialog({
+			title:'增补记录',
+			buttons:[{id:"btnShowOK",text:gettext('确定'),click:function(){getSelectData();}},
+				{id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+				}]
+		})	
+	}
+        function getSelectData(){
+		var dept_ids=getSelected_dept("showTree_checkexact")
+		$.cookie("dept_ids",dept_ids, { expires: 7 });
+		var dept_names=getSelected_deptNames("showTree_checkexact");
+		$("#department").val(dept_names);
+		var emp = getSelected_emp_ex('checkexact')
+		$.cookie("emp",emp, { expires: 7 });
+		if($("#id_cascadecheck_checkexact").prop("checked")){
+			$("#id_cascadecheck").prop("checked", "true");
+		} else {
+			$("#id_cascadecheck").removeAttr("checked");
+		}
+		dlgdestroy('checkexact')
+	}
+        $(function(){
+		EmpAndDept={% autoescape off %} {{ ForgetAtt_list }}{% endautoescape %}
+		states_checkexact= EmpAndDept.states;
+                $("#tab_iclock_checkexact #id_reload").click(function(){
+                        var ComeTime=$("#id_ComeTime_checkexact").val();
+                        var EndDate=$("#id_EndTime_checkexact").val();
+                        if(ComeTime>EndDate) {
+                            alert('开始时间不能大于结束时间')
+                            return
+                        } else{
+                            reloadData('checkexact')
+                        }
+                });
+                
+                $("#"+g_activeTabID+" #searchButton").click(function(){
+                   searchShowSpeday_checkexact();
+                });
+                $("#"+g_activeTabID+" #searchbar").keypress(function(event){
+                   if(event.keyCode==13)
+                  searchShowSpeday_checkexact();
+                });
+                $("#"+g_activeTabID+" #queryButton").click(function(){
+                    searchShowSpeday_checkexact();
+                });
+                $("#"+g_activeTabID+" #searchbar").val(gettext("考勤编号,身份证号,姓名"))
+                $("#"+g_activeTabID+" #id_newrec").click(function(){
+                        createNewDlg_checkexact();
+                });
+                $("#"+g_activeTabID+" #id_export").css('display','block');
+                var width=$("#"+g_activeTabID+" #id_content").width();
+                //$("#titleId").css("width","30px");
+ 
+ /*
+                $("#id_filtername").before("<span style='float:left; width: 550px;'>"
+                                 +"<span>"
+                                       +"<label class='required' >{%trans 'Begin Date'%}</label>"
+                                        +"<input type='text' name='ComeTime' maxlength='10' id='id_ComeTime' style='width:80px !important;'>"
+                                        +"<label class='required' >{%trans 'End Date'%}</label>"
+                                        +"<input type='text' name='EndTime' maxlength='10' id='id_EndTime' style='width:80px !important;'>"
+                                        
+                                        
+                                        +"&nbsp;&nbsp;&nbsp;&nbsp;<select name='id_date' id='id_date'><option value='CHECKTIME'>考勤时间</option><option value='ApplyDate'>补签时间</option></select>"
+      
+                                +"</span>"
+                                
+                                //+"<span id='search_span' style='float:right;'><ul id='nav' class='nav'><li id='id_search'><span class='searchlink'></span><a href='#'>{%trans 'Query'%}</a></li></ul></span>"
+                       +"</span>"
+                );                
+   */
+                var currDate=new Date();
+                var dateTime=currDate.getFullYear()
+                        +"-"
+                        +(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+                        +"-01"
+                $("#id_ComeTime_checkexact").val(dateTime)
+                var dateTime=currDate.getFullYear()
+                        +"-"
+                        +(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+                        +"-"
+                        +(currDate.getDate()<10?"0"+currDate.getDate():+currDate.getDate())
+                $("#id_EndTime_checkexact").val(dateTime)
+                $("#id_ComeTime_checkexact").datepicker(datepickerOptions);
+                $("#id_EndTime_checkexact").datepicker(datepickerOptions);
+                $("#"+g_activeTabID+" #id_quanbu").click(function(){
+                        showState_checkexact(-1)
+                })
+                 $("#"+g_activeTabID+" #id_search").click(function(){
+                        var emp="";
+                        var deptIDs=$.cookie("dept_ids");
+                        //if (deptIDs!=null){
+                                //emp=getSelected_emp();
+                        //}
+                        emp=$.cookie("emp");
+                        var ComeTime=$("#id_ComeTime_checkexact").val();
+                        var EndDate=$("#id_EndTime_checkexact").val();
+                        $.cookie("ComeTime",ComeTime, { expires: 7 });
+                        $.cookie("EndDate",EndDate, { expires: 7 });
+                        var isError=validate_form_checkexact();
+                        var ischecked=0;
+                        if($("#id_cascadecheck_"+g_activeTabID).prop("checked"))
+                                ischecked=1;
+                        if(deptIDs==undefined)
+                                deptIDs=''
+                        var deptnames=$("#department").val();
+                        if (deptnames==undefined)
+                                deptnames='';
+                        if( typeof(emp)=="object")
+                        {
+                                var maxUrlLength=2000;
+                                while((emp.join(",").length>maxUrlLength))
+                                        emp.pop(0);
+                        }
+                        var urlTime="";
+                        var urlTime1="";
+                        if(!isError){
+                                exporttag=1;
+                                urlTime1=$("#"+g_activeTabID+" #id_date").val()+"__gte="+ComeTime+"&"+$("#"+g_activeTabID+" #id_date").val()+"__lte="+EndDate
+                        }
+                        urlTime="&"+urlTime1
+                        var urlStr="";
+                        if(emp!=""){
+                                urlStr="UserID__id__exact="+emp+urlTime+"&UserID__DelTag__lt=1"
+                        }else{
+                                urlStr="deptIDs="+deptIDs+"&isContainChild="+ischecked+urlTime+"&UserID__DelTag__lt=1"        
+                        }
+                        var url="/iclock/data/checkexact/?"
+                
+                        if (urlStr!="" &&  urlStr!=null)
+                                url+=urlStr;
+                        savecookie("search_urlstr",url);
+                        $("#id_grid_"+g_activeTabID).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+                });
+                $("#"+g_activeTabID+" #id_filtername").css("display","block")
+                createFilter_checkexact(-1)
+        });
+//模糊查询
+        function searchShowSpeday_checkexact(){
+		var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+		if (flag!='cansearch'&&flag!='defvalue') return;
+		if (flag!='defvalue')
+			var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+		else
+			var v=""
+		var ComeTime=$("#id_ComeTime_checkexact").val();
+		var EndDate=$("#id_EndTime_checkexact").val();
+		var urlTime1=''
+		var isError=validate_form_checkexact();
+		if(!isError){
+			urlTime1=$("#"+g_activeTabID+" #id_date").val()+"__gte="+ComeTime+"&"+$("#"+g_activeTabID+" #id_date").val()+"__lte="+EndDate
+		} else{
+            alert('开始时间不能大于结束时间')
+            return
+        }
+		var url="/iclock/data/checkexact/?q="+escape(v)+"&"+urlTime1+"&UserID__DelTag__lt=1"
+		savecookie("search_urlstr",url);
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+        }
+        function createQueryDlg_checkexact(){
+			createDlgdeptfor10('employee_search_checkexact',1)
+			$('#dlg_for_query_employee_search_checkexact').dialog({
+			buttons:[{id:"btnShowOK",text:gettext('搜索'),
+			click:function(){searchbydept_checkexact('employee_search_checkexact');$(this).dialog("destroy"); }},
+			{id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+			}] })
+		}
+
+        function searchbydept_checkexact(page){
+		var ComeTime=$("#id_ComeTime_checkexact").val();
+		var EndDate=$("#id_EndTime_checkexact").val();
+		var urlTime1=''
+		var isError=validate_form_checkexact();
+		if(!isError){
+			urlTime1=$("#"+g_activeTabID+" #id_date").val()+"__gte="+ComeTime+"&"+$("#"+g_activeTabID+" #id_date").val()+"__lte="+EndDate
+		}
+		var url="/iclock/data/checkexact/?"
+		var emp=getSelected_emp_ex("sel_employee_search_checkexact");
+		if(emp.length>0){
+			url+="UserID__in="+emp+"&"+urlTime1
+		}else{
+			url+=urlTime1
+		}
+		savecookie("search_urlstr",url);
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+        }
+
+	function itemCanBeDelete(r)
+	{
+		var state=stripHtml(r.State)
+		if(state==Leave_Status[0]||state==Leave_Status[3])
+			return true
+		return false;	
+	}
+ 
+        function strOfData_checkexact(data)
+	{
+		return "{% trans "User" %} "+data.MODIFYBY+" "+stripHtml(data.PIN)+" "+data.EName+" "+data.CHECKTIME;
+	}
+        //function canEdit()
+        //{
+        //        if(!options.canEdit) return 0;
+        //        var rows=$("#id_grid").jqGrid("getCol",1,true)
+        //        for(var i=0;i<rows.length;i++)
+        //        {
+        //                var id=rows[i].id;
+        //                var r=$("#id_grid").jqGrid("getRowData",id)
+        //                if(r.State==Leave_Status[1]) continue;
+        //                if(r.State==Leave_Status[0]||r.State==Leave_Status[3]){
+        //                        var colData=rows[i].value;
+        //                        var apage="<a class='can_edit' href='#' onclick='editclick("+id+")'>"+colData+"  "+"</a>"
+        //                        $("#id_grid").jqGrid('setRowData',id,{PIN:apage})
+        //                }
+        //        }
+        //}
+
+        function beforePost_checkexact(obj,actionName){
+                 if(actionName=="_new_"){
+                        var deptid=getSelected_dept("showTree_checkexact_add");
+                        var emp=getSelected_emp_ex("checkexact_add");
+				if (deptid.length==0&&emp.length==0)
+				{
+					$("#id_error",obj).css("display","block");
+					//$("#id_error").html("<ul class='errorlist'><li>{%trans 'Please check that you select one or more employees or click department'%}</li></ul>");
+					$("#id_error",obj).html("<ul class='errorlist'><li>选择单位，不选人员则按单位集体补记录</li></ul>");
+					return false;
+				}
+				var checktime=$("#id_checkdate_a").val()+" "+$("#id_checktime").val()
+				var checktime_e=$("#id_checkdate_b").val()+" "+$("#id_checktime").val()
+				var action=false;
+				if(emp.length<=0){
+					var treeObj = $.fn.zTree.getZTreeObj("showTree_checkexact_add");
+					var nodes = treeObj.getSelectedNodes();
+					var deptName=nodes[0].name;
+					action=confirm("{%trans "Are you sure add transaction for the whole department"%}\n"+deptName)
+				}
+				var ischecked=0;
+				if($("#id_cascadecheck_checkexact_add").prop("checked"))
+				    ischecked=1;
+                                $("#isContainChild",obj).val(ischecked);
+                                $("#id_hidden_emp",obj).val(emp);
+				$("#id_hidden_depts",obj).val(deptid);
+				$("#id_audit",obj).val($("#isAudit",obj).val())
+				if(action ||emp.length>0){
+					var f=$("#id_conditions_check").find("#id_edit_form").get(0)
+					if (!$(f).valid()){
+						$("#id_error").html(gettext("occur error!")).css("color","red").css('display','block'); return 0;
+						return false
+					}
+				}
+				else
+					return false
+                                
+                        }else {
+                        }
+            return true    
+        }
+        function process_dialog_checkexact(obj,actionName)
+        {
+                 $(obj).dialog({resizable:false,modal:true})
+                //var currDate=new Date();
+                //td=currDate.getFullYear()
+                //        +"-"
+                //        +(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+                //        +"-"
+                //        +currDate.getDate()
+                //        +" "
+                //        +currDate.getHours()
+                //        +":"
+                //        +currDate.getMinutes()
+                //        +":"
+                //        +currDate.getSeconds()
+				td=moment().format('YYYY-MM-DD HH:mm:ss')
+                tmp_option=copyObj(datetimepickerOptions)
+                tmp_option['showSecond']=true
+                tmp_option['timeFormat']='HH:mm:ss'
+				$("#id_CHECKTIME",obj).datetimepicker(tmp_option);
+//				$("#id_ApplyDate",obj).datetimepicker(tmp_option);
+                $("#id_ApplyDate",obj).val(td);
+                $("#id_ApplyDate",obj).css('background','#E3E3E3').css('color','#B8AF9F').attr({'readonly':true,"disabled":"disabled"});
+                $("#id_UserID",obj).attr('readonly', true);
+                delete tmp_option
+        }
+
+        function validate_form_checkexact(){
+                var t_ComeTime=$("#id_ComeTime_checkexact").val();
+                var cTime=t_ComeTime.split("-");
+                var t_EndDate=$("#id_EndTime_checkexact").val();
+                var eTime=t_EndDate.split("-");
+                cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+                edate=new Date(parseInt(eTime[0],10),parseInt(eTime[1],10)-1,parseInt(eTime[2],10));
+                var days=(edate.valueOf()-cdate.valueOf())/(1000*3600*24)+1;
+                if(cdate>edate || t_ComeTime=="" || t_EndDate==""||!valiDate(t_ComeTime)||!valiDate(t_EndDate)){
+                        return 1;
+                }else{
+                        return 0
+                }
+        }
+ 	
+	function itemIsAccept(r)
+	{
+		var state=stripHtml(r.State)
+		if(state!=Leave_Status[1])
+			return true
+		return false;	
+	}
+
+	function itemIsRefuse(r)
+	{
+		var state=stripHtml(r.State)
+		if(state!=Leave_Status[2])
+			return true
+		return false;	
+	}
+	function itemIsAgain(r)
+	{
+		var state=stripHtml(r.State)
+		if(state!=Leave_Status[3])
+			return true
+		return false;	
+	}
+	
+        function afterPost_checkexact(flag,FormObj)
+        {}
+	
+        extraBatchOp=[
+                {caption:'{%trans "补记录数据相关操作"%}',
+                        submenu:[
+                        {% if user|HasPerm:"iclock.TransAudit_checkexact" %}
+                        {action: '"?action=forgetAudit&to=Accept"',itemCanBeOperated: itemIsAccept, title: '{%trans "审核：补记录通过"%}'},
+                        {action: '"?action=forgetAudit&to=Refuse"',itemCanBeOperated: itemIsRefuse, title: '{%trans "审核：补记录拒绝"%}'},
+                        {action: '"?action=forgetAudit&to=Again"',itemCanBeOperated: itemIsAgain, title: '{%trans "审核：重新申请"%}'}
+                        {% endif %}
+                ]}
+        ];	
+	
+{% endblock %}
+</script>
+<script>
+{% block loadData %}
+	html="<span id=id_opt_tree><input type='checkbox' id='id_cascadecheck_"+g_activeTabID+"' checked />{%trans '级联下级单位' %}</span>"
+	$("#"+g_activeTabID+" #id_west").html(html)
+	html="<div id='show_dept_tree_'>"
+		+"<ul id='showTree_"+g_activeTabID+"' class='ztree' style='margin-left: 0px;height:100%'></ul>"
+		+"</div>"   
+	$("#west_content_tab_iclock_checkexact").html(html)
+	//var h=$("#"+g_activeTabID+" #west_content").height()-20
+	//$('#showTree_'+g_activeTabID).css('height',h)
+        ShowDeptData(g_activeTabID)
+        loadNULLPage('#id_grid_'+tblName[g_activeTabID]);
+	var zTree = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+	zTree.setting.check.enable = false;
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		var deptID=treeNode.id;
+		var deptName=treeNode.name;
+		$.cookie("dept_ids",deptID, { expires: 7 });
+		var ischecked=0;
+		if($("#id_cascadecheck_"+g_activeTabID).prop("checked"))
+			ischecked=1;
+                var ComeTime=$("#id_ComeTime_checkexact").val();
+                var EndDate=$("#id_EndTime_checkexact").val();
+				savecookie("ComeTime",ComeTime)
+				savecookie("EndDate",EndDate)
+                //$.cookie("ComeTime",ComeTime, { expires: 7 });
+                //$.cookie("EndDate",EndDate, { expires: 7 });
+                var isError=validate_form_checkexact();
+                var urlTime="";
+                var urlTime1="";
+                if(!isError){
+                       exporttag=1;
+                       urlTime1=$("#"+g_activeTabID+" #id_date").val()+"__gte="+ComeTime+"&"+$("#"+g_activeTabID+" #id_date").val()+"__lte="+EndDate
+                        urlTime="&"+urlTime1
+                }else{
+                    alert('开始时间不能大于结束时间')
+                    return
+                }
+		var urlStr="/iclock/data/checkexact/?deptIDs="+deptID+"&isContainChild="+ischecked+urlTime
+		savecookie("search_urlstr",urlStr);
+		newState=currentState
+                if (newState>=0)
+                        urlStr=urlStr+"&State="+Leave_Status_Code[newState]+"&filtertag=0";
+                else if(newState==-1)
+                        urlStr=urlStr;
+                else if(newState==-2)
+                        urlStr=urlStr+"&filtertag=1"
+                else if(newState==-3)
+                        urlStr=urlStr+"&filtertag=2";
+                else if(newState==-4)
+                        urlStr=urlStr+"&filtertag=3";
+				else if(newState==-5)
+                        urlStr=urlStr+"&filtertag=4";
+		//$.blockUI({title:'',theme: true ,message: '<h1><img src="/iclock/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}<br /></h1>'});
+		 
+		 $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+		//$.unblockUI()
+	}
+{% endblock %}
+</script>
+		{% block otherQuery %}
+		<div class="s-info left" id="time_area">			
+
+                                 <span>
+                                       <label  >{%trans 'Begin Date'%}</label>
+                                        <input type='text' name='ComeTime' maxlength='10' id='id_ComeTime_checkexact' style='width:80px !important;'>
+                                        <label >{%trans 'End Date'%}</label>
+                                        <input type='text' name='EndTime' maxlength='10' id='id_EndTime_checkexact' style='width:80px !important;'>
+                                        
+                                        
+                                        &nbsp;&nbsp;&nbsp;&nbsp;<select name='id_date' id='id_date'><option value='CHECKTIME'>考勤时间</option><option value='ApplyDate'>申请时间</option></select>
+      
+                                </span>
+                       </div>
+				
+		{% endblock %}

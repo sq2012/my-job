@@ -1,0 +1,31 @@
+{% load iclock_tags %}
+{% load i18n %}
+<script type="text/javascript">
+totalRecCnt_shifts={{ item_count }};
+item_from_shifts={{ from }}
+page_index_shifts={{ page }};
+page_limit_shifts={{ limit }};
+page_number_shifts={{ page_count }};
+$(function(){
+var page_style=5;
+$("#id_result_pages").html(getPagers("", item_from_shifts-1, totalRecCnt_shifts, page_limit_shifts, page_index_shifts, page_number_shifts,page_style,1));
+});
+</script>
+<table>
+<tr><td align="left" style="border:0px;">
+    <div id="id_result_pages" style="float:left;"></div>
+</td></tr>
+<tr id="id_second"><td style="border:0px;">
+    <table id="tbl">
+        {% autoescape off %}
+        <thead><tr><th>{% trans 'department name' %}</th><th>{% trans 'PIN' %}</th><th>{% trans 'EName' %}</th><th>{% trans 'Beginning date' %}</th><th>{% trans 'Ending date' %}</th><th>{% trans 'Shift' %}</th></tr></thead> {% endautoescape %}
+        {% for item in latest_item_list %}
+            {%if forloop.counter|isOdd%}
+                <tr class='row1'><td>{{ item.employee.Dept.DeptName }}</td><td>{{ item.employee.PIN }}</td><td>{{ item.employee.EName }}</td><td>{{ item.StartDate }}</td><td>{{ item.EndDate }}</td><td>{{ item.NUM_OF_RUN_ID }}</td></tr>
+            {%else%}
+                <tr class='row2'><td>{{ item.employee.Dept.DeptName }}</td><td>{{ item.employee.PIN }}</td><td>{{ item.employee.EName }}</td><td>{{ item.StartDate }}</td><td>{{ item.EndDate }}</td><td>{{ item.NUM_OF_RUN_ID }}</td></tr>
+            {%endif%}
+        {% endfor %}
+    </table>
+</td></tr>
+</table>

@@ -1,0 +1,658 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+hasImport={% if user|HasPerm:"ipos.import_allowance" %}true{% else %}false{% endif %}
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='Allowance';
+jqOptions[g_activeTabID].pager='#id_pager_'+tblName[g_activeTabID];
+jqOptions[g_activeTabID].sortname='sys_card_no,allow_date';
+options[g_activeTabID].dlg_width=400;
+options[g_activeTabID].dlg_height=380;
+
+
+function loadAllowcePageData(query, value)
+{
+	var postData={'addition_fields': options.addition_fields,'exception_fields': options.exception_fields};
+	var url=pageQueryString;
+	if(query!=undefined)
+		reloadData();
+	else
+	{
+		var postUrl=g_urls[g_activeTabID]+url;
+		if(postUrl.indexOf("?")==-1){
+			postUrl=postUrl+"?mod_name="+mod_name;//+"?stamp="+new Date().toUTCString();
+		}else{
+			postUrl=postUrl+"&mod_name="+mod_name;//+"&stamp="+new Date().toUTCString();
+		}
+		var hcontent=$("#"+g_activeTabID+" #id_content").height();
+		var hbar=$("#"+g_activeTabID+" #id_top").height();
+		var height=hcontent-hbar-100;
+		if (groupHeaders.length>0)
+		 height=height-30;
+		
+		if(typeof(Custom_Jqgrid_Height)!='undefined'&&Custom_Jqgrid_Height!=""){
+			jqOptions[g_activeTabID].height=Custom_Jqgrid_Height;
+		}else{jqOptions[g_activeTabID].height=height;}
+		
+		jqOptions[g_activeTabID].url=postUrl;
+
+                jqOptions[g_activeTabID].footerrow=true
+                jqOptions[g_activeTabID].userDataOnFooter=true
+		
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid(jqOptions[g_activeTabID]);
+		
+		if (groupHeaders.length>0)
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGroupHeaders', {useColSpanStyle: true,groupHeaders:groupHeaders})
+	        $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setFrozenColumns');
+
+	}
+}
+
+
+
+
+
+function strOfData_Allowance(data)
+{
+	return stripHtml(data.PIN)+" "+data.money+" "+data.batch;
+}
+
+
+function createNewDlg_Allowance(){
+        var title="{%trans '补贴登记' %}";
+        createDlgdeptfor('allowance_add',1)
+        $('#dlg_for_query_allowance_add').dialog({title:title,
+                buttons:[
+                        {id:"btnShowInfo",text:"{% trans "预算补贴" %}",click:function(){ if(typeof beforePost_Allowance=="function"){if(beforePost_Allowance(this,"_showInfo_")==false) return ;}  }},
+                        {id:"btnShowOK",text:"{% trans "save and return" %}",click:function(){ if(typeof beforePost_Allowance=="function"){if(beforePost_Allowance(this,"_new_")==false) return ;}  SaveFormData(this,g_urls[g_activeTabID]+"_new_/",'edit',"Allowance");  }},
+                        {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}
+                ]
+        })
+
+        createDlgother_Allowance('allowance_add')
+        $("#id_valid_date").datepicker(datepickerOptions);
+        
+
+        $("#id_ApplyDate").val(moment().format('YYYY-MM-DD HH:mm:ss')).prop("disabled","disabled");
+        $("#id_valid_date").val(moment().add(1, 'months').endOf('month').format('YYYY-MM-DD'))
+        
+        
+        $('#id_edit_form').validate({
+          	                        rules: {
+          	                            "money": {required:true,min:0.0,max:9999,"maxlength":8,isMoney:true}
+                                        }
+                                        })
+        
+        
+        
+        
+        
+  }
+
+function createDlgother_Allowance(page){
+        var html="<div id='id_form'><div class='module' style='position:relative;'>"
+                +"<table id='id_speday'><tr>"
+                +"<td style='vertical-align:top;color:black;'><div id='show_dept_emp_tree'></div></td><td style='vertical-align:top;'><div id='id_conditions'><form id='id_edit_form' method='POST'><table id='id_setField' style='margin-top: -30px;'>"
+                        +"<tr><td><label for='id_money' class='required'>{% trans '补贴金额'%}</label></td></tr>"
+                        +"<tr><td><input type='text' style='width:135px !important;' id='id_money' name='money' value='' /></td></tr>"
+
+                        +"<tr><td><label for='id_valid_date' class='required'>{% trans '补贴截止日期'%}</label></td></tr>"
+                        +"<tr><td><input id='id_valid_date'  type='text'  value='' maxlength='19' name='valid_date'  style='width:135px !important;'/></td><br /></tr>"
+        
+                        
+                        +"<tr><td><label for='id_remark'>{% trans '备注'%}</label></td></tr>"
+                        +"<tr><td><input type='text' style='width:135px !important;' id='id_remark' name='remark' value='' /></td></tr>"
+                        
+                        +"<tr><td><label for='id_ApplyDate' >{% trans 'ApplyDate'%}</label></td></tr>"
+                        +"<tr><td><input id='id_ApplyDate'  type='text' value='' maxlength='19' name='ApplyDate' style='width:135px !important;'/></td><br /></tr>"
+        
+                        +"<tr><td></td></tr>"
+                        +"<tr><td colspan='2'>"
+		+"<input type='hidden' id='id_hidden_emp' value='' name='UserIDs' />"
+		+"<input type='hidden' id='id_hidden_depts' value='' name='deptIDs' />"
+		+"<input type='hidden' id='id_audit' value='' name='audit' />"
+		+"<input type='hidden' id='isContainChild' value='0' name='isContainChild' />"
+                        +"</td></tr>"
+                        +"<tr><td colspan='2'><span id='id_error'></span></td>"
+                +"</table></form></td>"
+                +"</tr></table></div></div>";
+        
+        $("#dlg_other_body_"+page).html(html)
+        $("#dlg_other_title_"+page).addClass('cascadecheck')
+        $("#dlg_other_"+page).css("width",'220')
+        $("#dlg_emp_"+page).css("width",'470')
+        $("#dlg_other_"+page).css("height",$("#dlg_emp_"+page).height())
+        $("#dlg_other_"+page).addClass('dlgempdiv')
+        $("#dlg_for_query_"+page).dialog({dialogClass: "",width:'982',height:'460'})
+        $("#dlg_other_"+page).position({
+                my: "left top",
+                at: "right top",
+                of: "#dlg_emp_"+page
+        });
+}
+
+
+function Auditbatch(){
+    var block_html="<div id='dlg_to_Exit'>"
+
+            +"<table width=100%>"
+                                
+                                +"<tr><td colspan='2'><div style=''>{%trans '补贴批次号'%}&nbsp;&nbsp;<input id='id_allowance' width='19' style='width:135px !important;' /></div></td>"
+                                +"</tr>"
+                                +"<tr><td colspan='2'><div style=''>{%trans '审批操作'%}&nbsp;&nbsp;&nbsp;<select id='id_allowance_post' style='width:135px !important;' ><option value='AcceptBacth'>补贴通过</option><option value='RefuseBacth'>补贴无效</option></select></div></td>"
+                                +"</tr>"
+                                +"<tr><td colspan='2'>&nbsp;</td></tr>"
+            +"</table>"
+                                +  "<span  id='id_error'></span>"
+                                +       "</div>"
+        $(block_html).dialog({modal:true,
+                                          resizable:false,
+                                          width: 600,
+                                          height:220,
+                                          title:"{% trans '按批次审核补贴' %}",
+                                          buttons:[{id:"btnShowOK",text:'{%trans "Submit" %}',
+                                                          click:subdata1},
+                                                         {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("close"); }
+                                                        }],
+                                          close:function(){$("#dlg_to_Exit").remove();}		
+                                        })
+        function subdata1(){
+        var ET=$("#id_allowance").val();
+        if(ET==''){
+            $("#id_error").html("<ul class='errorlist'><li>{%trans '补贴批次号为空'%}</li></ul>").show();
+            return false
+        }
+        var TT=$("#id_allowance_post").val();
+        var urlStr=g_urls[g_activeTabID]+ "?action=allowanceAudit&to="+TT+"&&batch="+ET;
+        $.blockUI({title:"{% trans '按批次审核补贴' %}",theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}</br></h1>'});
+        $.ajax({type: "POST",
+                url: urlStr,
+                dataType:"json",
+                success: function(retdata){
+                    $.unblockUI();
+					alert(retdata.message)
+                    $("#dlg_to_Exit").remove();
+					alert(retdata.message);
+                    $("#id_grid_"+tblName[g_activeTabID]).jqGrid().trigger("reloadGrid");
+                                        },
+                error: function(){
+                $.unblockUI();alert($.validator.format(gettext('Operating failed for {0} !'),options.title));}
+                });
+        }
+
+}
+extraBatchOp=[
+        {caption:'{%trans "补贴数据相关操作"%}',
+                submenu:[
+                {% if user|HasPerm:"ipos.allowanceAudit_allowance" %}
+                {action: '"?action=allowanceAudit&to=Accept"', title: '{%trans "审核：补贴通过"%}'},
+                {action: '"?action=allowanceAudit&to=Refuse"', title: '{%trans "审核: 补贴无效"%}'},
+                {% endif %}
+        ]}
+];
+$(function(){
+$("#"+g_activeTabID+" #search_id_user__PIN").val("工号,姓名")
+$("#"+g_activeTabID+" #searchbar").val("工号,姓名")
+$("#"+g_activeTabID+" #search_id_user__PIN").css('color','#CCCCCC')
+$("#"+g_activeTabID+" #search_id_user__PIN").attr('role','defvalue')
+var inputEl = $("#"+g_activeTabID+" #search_id_user__PIN")
+         defVal[g_activeTabID] = inputEl.val();
+	 
+    	 inputEl.on("focus",function(){
+		             var _this = $(this);
+				if (_this.val() == defVal[g_activeTabID]) {
+				    _this.val('');
+				    _this.css('color','#000000');
+				    //_this.attr('role','disabled')
+				}
+		})
+	inputEl.on("blur",function(){
+		        var _this = $(this);
+			if (_this.val() == '') {
+			    _this.val(defVal[g_activeTabID]);
+			    _this.css('color','#CCCCCC');
+			    _this.attr('role','defvalue')
+			}
+			else
+			    _this.attr('role','cansearch')
+		})
+	inputEl.on("keydown",function(event) {
+			if (event.which == 13) {
+			      var _this = $(this);
+			       _this.attr('role','cansearch')
+			 }
+		})
+	$("#"+g_activeTabID+" #queryButton").hide()
+        $("#sear_area").hide()
+        $("#"+g_activeTabID+" #id_newrec").html('<SPAN class="icon iconfont icon-butiedengji"></SPAN>'+'{%trans "补贴登记" %}')
+        $("#"+g_activeTabID+" #id_newrec").after('<li id="id_AllowanceReUpload"><span class="icon iconfont icon-butiezhongchuan"></span>补贴重传</li>')
+        
+        {% if user|HasPerm:"ipos.allowanceAudit_allowance" %}
+                    $("#id_op_menu_").after('<li id="id_Allowancebatch" onclick="Auditbatch()"><span class="icon iconfont icon-anpicishenhebutie"></span>按批次审核补贴</li>')
+        
+        {% endif %}
+        $("#"+g_activeTabID+" #id_newrec").click(function(event){
+                createNewDlg_Allowance();
+	});
+        $("#id_AllowanceReUpload").click(function(event){
+                 var block_html="<div id='dlg_to_Exit'>"
+
+                    +"<table width=100%>"
+                                        
+                                        +"<tr><td colspan='2'><div style=''>{%trans '补贴批次号'%}&nbsp;&nbsp;<input id='id_allowance' width='19' style='width:135px !important;' /></div></td>"
+                                        +"</tr>"
+                                        +"<tr><td colspan='2'>&nbsp;</td></tr>"
+                    +"</table>"
+					+  "<span  id='id_error'></span>"
+					+       "</div>"
+                $(block_html).dialog({modal:true,
+                            resizable:false,
+						  width: 600,
+						  height:220,
+						  title:"{% trans '补贴重传' %}",
+						  buttons:[{id:"btnShowOK",text:'{%trans "Submit" %}',
+								  click:subdata},
+								 {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("close"); }
+								}],
+						  close:function(){$("#dlg_to_Exit").remove();}		
+						})
+                function subdata(){
+		var ET=$("#id_allowance").val();
+                if(ET==''){
+                    $("#id_error").html("<ul class='errorlist'><li>{%trans '补贴批次号为空'%}</li></ul>").show();
+                    return false
+                }
+		var urlStr=g_urls[g_activeTabID]+ "?action=AllowanceReUpload&batch="+ET;
+		$.blockUI({title:"{% trans '补贴重传' %}",theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}</br></h1>'});
+		$.ajax({type: "POST",
+			url: urlStr,
+			dataType:"json",
+			success: function(retdata){
+					if(retdata.ret==0)
+					{	
+                                                $.unblockUI();
+                                                $("#dlg_to_Exit").remove();
+					}else{
+							alert(retdata.message);
+                            $.unblockUI();
+                            $("#dlg_to_Exit").remove();
+						}},
+			error: function(){
+			$.unblockUI();alert($.validator.format(gettext('Operating failed for {0} !'),options.title));}
+			});
+                }
+        });
+            
+        
+        
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowDep_Allowance();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowDep_Allowance();
+	});
+	$("#"+g_activeTabID+" #id_third").html("");
+
+    $("#"+g_activeTabID+" #id_import").click(function(){
+	  importAllowance();
+	});
+
+    $("#"+g_activeTabID+" #id_search").click(function(){
+		var flag=$("#"+g_activeTabID+" #search_id_user__PIN").attr('role');
+                if (flag!='cansearch'&&flag!='defvalue') return;
+                if (flag!='defvalue')
+                    var search_user_pin=$("#"+g_activeTabID+" #search_id_user__PIN")[0].value;
+                else
+                    var search_user_pin=""
+		var search_money=$("#"+g_activeTabID+" #search_id_money").val();
+		var search_batch=$("#"+g_activeTabID+" #search_id_batch").val();
+		var search_is_ok=$("#"+g_activeTabID+" #search_id_is_ok").val();
+		var search_is_pass=$("#"+g_activeTabID+" #search_id_is_pass").val();
+        var urlnew="";
+        if (search_user_pin||search_money||search_batch||search_is_ok||search_is_pass)
+              urlnew="q="+escape(search_user_pin)+"&"+"money="+search_money+"&"+"batch="+search_batch+"&"+"is_ok="+search_is_ok+"&"+"is_pass="+search_is_pass
+		var url="/ipos/data/Allowance/?"
+		if (urlnew!="" &&  urlnew!=null)
+			url+=urlnew;
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+		savecookie("search_urlstr",url);
+	});
+    $("#"+g_activeTabID+" #id_search_clean").click(function(){
+        $("#"+g_activeTabID+" #search_id_user__PIN").val('');
+        $("#"+g_activeTabID+" #search_id_money").val('');
+        $("#"+g_activeTabID+" #search_id_batch").val('');
+        $("#"+g_activeTabID+" #search_id_is_ok").val('');
+        $("#"+g_activeTabID+" #search_id_is_pass").val('');
+
+        var url="/ipos/data/Allowance/"
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+		savecookie("search_urlstr",url);
+    });
+});
+
+function searchShowDep_Allowance(){
+    var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+    var url="/ipos/data/Allowance/?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+
+
+
+function process_dialog_Allowance(obj,flag)
+{
+      $(obj).dialog({resizable:false,modal:true})
+    if(flag=='edit')
+    {$("#id_UserID",obj).prop('readonly','True');
+     $("#id_batch",obj).prop('readonly','True');
+    $("#id_valid_date",obj).datepicker(datepickerOptions);}
+
+}
+
+function beforePost_Allowance(obj,actionName)
+{
+        if (!($('#id_edit_form',obj).valid()))
+        {
+            $("#id_error",obj).html("<ul class='errorlist'><li>{%trans '金额可能输入不正确'%}</li></ul>").show();
+            return false
+        }
+        if(actionName=="_new_")
+        {
+                var deptid=getSelected_dept("showTree_allowance_add");
+                var emp=getSelected_emp_ex("allowance_add");
+                $("#id_userid",obj).val(emp);
+
+                if (deptid.length==0)
+                {
+                        $("#id_error",obj).css("display","block");
+                        $("#id_error",obj).html("<ul class='errorlist'><li>{%trans '请选择人员，则按选择人员进行补贴；单击部门不选择人员，则按部门进行集体补贴'%}</li></ul>");
+                        return false;
+                }
+
+                var action=false;
+                if(emp.length<=0)
+                {
+                        var treeObj = $.fn.zTree.getZTreeObj("showTree_allowance_add");
+                        var nodes = treeObj.getSelectedNodes();
+                        var deptName=nodes[0].name;
+                        action=confirm("{%trans "Are you sure add allowance for the whole department"%}\n"+deptName)
+                }
+                var ischecked=0;
+                if($("#id_cascadecheck_allowance_add").prop("checked"))
+                    ischecked=1;
+                $("#isContainChild",obj).val(ischecked);
+                $("#id_hidden_emp",obj).val(emp);
+                $("#id_hidden_depts",obj).val(deptid);
+                $("#id_audit",obj).val($("#isAudit",obj).val())
+                if(action ||emp.length>0)
+                {
+                        var f=$("#id_edit_form")
+                        if (!$(f).valid())
+                        {
+                                $("#id_error",obj).html(gettext("occur error!")).css("color","red").css('display','block'); return 0;
+                                return false
+                        }
+                }
+                else
+                {
+                    return false
+                }
+        }
+        else if (actionName=="_showInfo_")
+        {
+                $("#id_error").css("display","none");
+                var deptid=getSelected_dept("showTree_allowance_add");
+                var emp=getSelected_emp_ex("allowance_add");
+                $("#id_userid",obj).val(emp);
+                if (deptid.length==0)
+                {
+                        $("#id_error",obj).css("display","block");
+                        $("#id_error",obj).html("<ul class='errorlist'><li>{%trans '请选择人员，则按选择人员进行<br/>补贴；单击部门不选择人员，则<br/>按部门进行集体补贴'%}</li></ul>");
+                        return false;
+                }
+                var ischecked=0;
+                if($("#id_cascadecheck_allowance_add").prop("checked"))
+                    ischecked=1;
+                $("#isContainChild",obj).val(ischecked);
+                
+                var action=false;
+                if(emp.length<=0)
+                {
+                        var treeObj = $.fn.zTree.getZTreeObj("showTree_allowance_add");
+                        var nodes = treeObj.getSelectedNodes();
+                        var deptName=nodes[0].name;
+                        //action=confirm("{%trans "Are you sure add allowance for the whole department"%}\n"+deptName)
+                        action=true;
+                }
+                $("#id_hidden_emp",obj).val(emp);
+                $("#id_hidden_depts",obj).val(deptid);
+                $("#id_audit",obj).val($("#isAudit",obj).val())
+                var money=$("#id_money",obj).val();
+                var deptid=$("#id_hidden_depts",obj).val();
+                if(action)
+                {
+                    if (ischecked)
+                    {
+                        var d_url="/iclock/data/department/?deptIDs="+deptid+"&isContainChild="+ischecked
+                        $.ajax({
+                            type: "POST",
+                            url:d_url,
+                            dataType:"json",
+                            success: function(json){
+                                depts=json['records']
+                                }
+                            });
+
+                        var e_url="/iclock/data/employee/?deptIDs="+deptid+"&OffDuty=0&isvalidcard=1&isContainChild="+ischecked
+                        $.ajax({
+                            type: "POST",
+                            url:e_url,
+                            dataType:"json",
+                            success: function(json){
+                                emps=json['records']
+                                }
+                            });
+                        var deptcount=depts
+                        var empcount=emps 
+                        infohtml="<h1>{%trans '按部门进行补贴:'%}</h1><br>"
+                        +"补贴部门共："+deptcount+" 个<br>"
+                        +"补贴人员共："+empcount+" 人<br>"
+                        +"补贴金额共："+empcount*money+" 元"
+
+                        $("#id_error").css("display","block");
+                        $("#id_error").html(infohtml);
+                        
+                    
+                    }
+                    else
+                    {
+                        var d_url="/iclock/data/department/?deptIDs="+deptid
+                        $.ajax({
+                            type: "POST",
+                            url:d_url,
+                            dataType:"json",
+                            success: function(json){
+                                depts=json['records']
+                                }
+                            });
+
+                        var e_url="/iclock/data/employee/?deptIDs="+deptid+"&OffDuty=0&isvalidcard=1"
+                        $.ajax({
+                            type: "POST",
+                            url:e_url,
+                            dataType:"json",
+                            success: function(json){
+                                emps=json['records']
+                                }
+                            });
+                        var deptcount=depts
+                        var empcount=emps                                 
+                        infohtml="<h1>{%trans '按部门进行补贴:'%}</h1><br>"
+                        +"补贴部门共："+deptcount+" 个<br>"
+                        +"补贴人员共："+empcount+" 人<br>"
+                        +"补贴金额共："+empcount*money+" 元"
+
+                        $("#id_error").css("display","block");
+                        $("#id_error").html(infohtml);
+                    }
+                }
+                else if (emp.length>0)
+                {
+                        infohtml="<h1>{%trans '按人员进行补贴:'%}</h1><br>补贴人员共："+emp.length+" 人<br>补贴金额共："+emp.length*money+" 元"
+                        $("#id_error").css("display","block");
+                        $("#id_error").html(infohtml).show();
+                
+                }
+        
+        }
+
+        return true    
+
+}
+
+function download_allowce_xls()
+{
+     window.location.href= "iclock/media/img/ipos/ic_allow_import.xls"
+}
+
+
+
+function importAllowance(){
+var block_html=""
+           +"<form id='frmComebackDb' name='frmComebackDb' method='POST' action='/ipos/tasks/import_Allowance/' enctype='multipart/form-data'>"
+           +"<table><tr>"
+                +'<th>'
+                     +'<table style="margin-top: 20px;">'
+                            +'<tr><th>'+gettext("Support Upload Fields" )+'</th><th>'+gettext("Index in File" )+'</th></tr>'
+                            +'<tr><td><input id="id_PIN" name="PIN" type="checkbox" checked disabled/>'+gettext("人员工号")+'</td>'
+                            +'<td><input name="PIN2file" id="id_PIN2file" type="text"  style="width:100px !important;"/></td>'
+                            +'</tr>'
+                            +'<tr><td><input id="id_money" name="money"  type="checkbox" checked disabled/>'+gettext("补贴金额")+'</td>'
+                            +'<td><input name="money2file" id="id_money2file" type="text" style="width:100px !important;"/></td>'
+                            +'</tr>'
+                            +'<tr><td><input id="id_valid_date" name="valid_date" type="checkbox" checked disabled/>'+gettext("补贴有效日期")+'</td>'
+                            +'<td><input name="valid_date2file" id="id_valid_date2file" type="text"  style="width:100px !important;"/></td>'
+                            +'</tr>'
+                            +'<tr><td><input id="id_remark" name="remark" type="checkbox"/>'+gettext("备注")+'</td>'
+                            +'<td><input name="remark2file" id="id_remark2file" type="text"  style="width:100px !important;"/></td>'
+                            +'</tr>'
+                            +'<tr><td><input id="id_whatrowid" name="whatrowid" type="checkbox" checked disabled/>'+gettext("whatrowid")+'</td>'
+                            +'<td><input name="whatrowid2file" id="id_whatrowid2file" type="text" value="2"  style="width:100px !important;"/>'+gettext("行开始导入")+'</td>'
+                            +'</tr>'
+                            +'<tr><td cospan="3"><input  type="hidden" name="fields" id="id_fields"/></td></tr>'
+                            +'<tr><td><input type="file" class="text" value="" name="fileUpload" id="fileUpload"/></td></tr>'
+		              +'</table>'
+                +'</th>'
+                +'<td>'
+				      +'<table>'
+                            +'<tr><th ><label>'+'一、'+gettext("导入模板示例：")+'</label></th></tr>'
+                            +'<tr><td ><img src="/media/img/ipos/ic_import_exam.jpg" ></td></tr>'
+                            +'<tr><td ><a onclick="download_allowce_xls();" target="_blank"><label style="color:red;cursor:pointer;">>>> 获取导入模版</label></a></td></tr>'
+                            +'<tr><th ><label>'+'二、'+gettext("导入模板说明：")+'</label></th></tr>'
+                            +'<tr><td >&nbsp;&nbsp;&nbsp;&nbsp;<label>'+'1、'+gettext("支持上传的文件格式有三种:以制表符分隔的TXT文件,编码是ANSI格式；以逗号分隔的CSV文件；Excel的标准格式")+'</label></td></tr>'
+                            +'<tr><td >&nbsp;&nbsp;&nbsp;&nbsp;<label>'+'2、'+gettext("补贴有效日期的格式为YYYY-MM-DD，如2011-01-01，在Excel表格中该字段应该为 文本格式")+'</label></td></tr>'
+                            +'<tr><td >&nbsp;&nbsp;&nbsp;&nbsp;<label>'+'3、'+gettext("导入的人员必须是登记过卡帐号的人员，并且该人员的对应的IC卡必须是有效的卡。每月补贴一次。")+'</label></td></tr>'
+                            +'<tr><td >&nbsp;&nbsp;&nbsp;&nbsp;<label>'+'4、'+gettext("'人员编号'，'补贴金额'，'补贴有效日期'是必选字段。")+'</label></td></tr>'
+                            +'<tr><td >&nbsp;&nbsp;&nbsp;&nbsp;<label>'+'5、'+gettext("补贴导入成功后系统会自动下发设备指令，（直接审核通过）不可以再做修改。")+'</label></td></tr>'
+                            +'<tr><td ><div id="id_message"></div>'
+                            +"</td></tr>"
+                       +"</table>"
+                +'</td>'
+           +'</tr></table>'
+           +'</form>'
+        $(block_html).dialog({modal:true,
+                    resizable:false,
+					width: 820,
+					height:515,
+					buttons:[{id:'btnShowOK',text:gettext("Submit"),click:function(){$(this).submit();}},{text:gettext("Cancel"),click:function(){$(this).dialog("close"); }}],
+							  title:gettext("导入补贴数据"),
+							  close:function(){$(this).dialog("destroy");}
+							});
+		var opts = {
+				url:'/ipos/tasks/import_Allowance/',
+				dataType:'json',
+				success: showResponse
+			};
+		var fields=["PIN","money","valid_date",'remark'];
+		for(var i=0;i<fields.length;i++){
+			value=$.cookie("dept"+fields[i]+"_value");
+			if(value)
+				$("#id_"+fields[i]+"2file").val(value);
+			else
+				$("#id_"+fields[i]+"2file").val((i+1));
+		}
+
+		$('#frmComebackDb').submit(function() {
+			$(".errorlist").css("display","none");
+			var fields=["PIN","money","valid_date",'remark'];
+			$("#id_fields").val(fields);
+			for(var i=0;i<fields.length;i++){
+				 isChecked=($("#id_"+fields[i]).prop("checked"))?true:false
+				 value=$("#id_"+fields[i]+"2file").val();
+				 value1=$("#id_whatrowid2file").val();
+				 if(isChecked && value==""||value.match(/^[1-9]\d*$/)==null){
+					$("#id_"+fields[i]+"2file").after("<ul class='errorlist'><li>Please input selected field index in file</li></ul>");
+					return false;
+				 }
+				if(value1==""||value1.match(/^[1-9]\d*$/)==null){
+					$("#id_whatrowid2file").after("<ul class='errorlist'><li>Please input selected field index in file</li></ul>");
+					return false;
+
+				}
+				 $.cookie("dept"+fields[i]+"_checked",isChecked, { expires: 7 });
+				 $.cookie("dept"+fields[i]+"_value",value, { expires: 7 });
+			}
+			var flag=checkForm();
+			if(flag){
+				$(this).ajaxSubmit(opts);
+			}
+			return false;
+		});
+}
+
+
+{% endblock %}
+
+{% block importOp %}
+{% if request|reqHasPerm:"add" %}
+		    <LI id="id_import" ><SPAN class="icon iconfont icon-daoru"></SPAN>{%trans "Import"%}</LI>
+{% endif %}
+
+{% endblock %}
+{% block otherQuery %}
+	<span style='float:left;'>
+        <span>
+			<label >{%trans '人员'%}</label>
+			<input type='text' name=''  id='search_id_user__PIN' style='width:80px;'>
+			<label  >{%trans '补贴金额'%}</label>
+			<input type='text' name=''  id='search_id_money' style='width:80px;'>
+            <label  >{%trans '补贴批次'%}</label>
+			<input type='text' name=''  id='search_id_batch' style='width:80px;'>
+            <label >{%trans '是否领取'%}</label>
+			<select name='' id='search_id_is_ok'><option value=''>--------</option><option value='1'>是</option><option value='0'>否</option></select>
+            <label  >{%trans '是否审核'%}</label>
+			<select name='' id='search_id_is_pass'><option value=''>--------</option><option value='1'>是</option><option value='0'>否</option></select>
+		 </span>
+         <span id='id_search' ><a class='m-btn  zkgreen rnd mini'>{%trans 'Query'%}</a></span>
+         <span id='id_search_clean' ><a class='m-btn  zkgreen rnd mini'>{%trans '清除'%}</a></span>
+	</span>
+
+
+{% endblock %}
+
+
+{% block loadData %}
+	loadAllowcePageData();
+    
+    
+    
+{% endblock %}
+

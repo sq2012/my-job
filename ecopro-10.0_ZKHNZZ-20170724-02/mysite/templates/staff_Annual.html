@@ -1,0 +1,66 @@
+﻿{% load i18n %}
+{% load iclock_tags %}
+<div>
+	
+</div>
+<div>
+	<ul id="breadcrumb">
+		<li><a href='/iclock/staff/'>数据中心</a> <span style='color:#CCCCCC'>/</span> <a href="#">{{ location }}</a></li>
+	</ul>
+</div>
+<div align="center" style="margin-top: 10px">
+<table border="1" width="47%" height="250" style="border-width: 0px">
+	<!-- MSTableType="layout" -->
+	<tr>
+		<td style="border-style: none; border-width: medium">　<form class="contact_form" action="" method="post" name="contact_form" id="id_contact_form">
+    <ul>
+        <li>
+              <label for="name" style="margin-top: -15px;"><h3>年假信息</h3></label>
+                <span>&nbsp;</span>
+        </li>
+        <li>
+            <label for="name">{%trans '年份:'%}</label>
+            <span>{{Ayear}}&nbsp;</span>
+        </li>
+        <li>
+            <label for="name">{%trans '入职时间'%}:</label>
+            <span>{{Hiredday}}&nbsp;</span>
+        </li>
+        <li>
+            <label for="name">{%trans '工龄'%}:</label>
+            <span>{{gongling}}&nbsp;</span>
+        </li>
+	<li>
+            <label for="name">{%trans '可休年假'%}:</label>
+            <span>{{days}}&nbsp;</span>
+        </li>
+	        <li>
+            <label for="name">{%trans '已休年假'%}:</label>
+            <span>{{Hasused}}&nbsp;</span>
+        </li>
+	<li>
+            <label for="name">{%trans '剩余年假'%}:</label>
+            <span>{{canused}}&nbsp;</span>
+        </li>
+	<li>
+            <label for="name">{%trans '年假清零日期'%}:</label>
+            <span>{{Ann_restart}}&nbsp;</span>
+        </li>
+    </ul>
+</form></td>
+	</tr>
+</table>
+</div>
+
+
+
+<script>
+	
+$(function(){
+{% autoescape off %}
+
+{% endautoescape %}
+});
+
+</script>
+

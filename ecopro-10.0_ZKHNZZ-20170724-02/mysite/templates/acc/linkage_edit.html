@@ -1,0 +1,129 @@
+{% load iclock_tags %}
+{% load i18n %}
+
+<div id="id_form" >
+
+<form method="post" id="id_edit_form" enctype="multipart/form-data">
+<table>
+<tr><th></th><td>
+	<span  style="display:none" id="id_span_title">
+		{% if add %}{% trans "Add" %}  {% else %} {% trans "Edit" %} {% endif %} {{ dataOpt.verbose_name|escape }}</span>
+	<span  style="display:none" id="id_span_parent">
+		{{ parent_name }}</span>
+		<input type='hidden' id='id_span_param' value={{ param_value }}  />
+
+</td></tr>
+
+{% autoescape off %}
+<tr>
+    <th>
+    <label for="id_name" class="required">{%trans "联动名称"%}:</label>
+    </th>
+    <td style='vertical-align:top;'> {{ form.name.as_widget }} </td>
+    <th>
+    <label for="id_name" class="required">{%trans "设备名称"%}:</label>
+    </th>
+    <td style='vertical-align:top;'> {{ form.device.as_widget }} </td>   
+     <th>
+    <label for="id_name" class="required">{%trans "动作类型"%}:</label>
+    </th>
+    <td style='vertical-align:top;'> <select name='action_type' onchange='process_actiontime(this)' id='id_action_type'><option value='0'>关闭</option><option value='1'>打开</option><option value='2'>常开</option></select> </td>   
+
+    <th id="id_action_th" style="display: none;">
+    <label for="id_action" class="required">{%trans "动作延时"%}:</label>
+    </th>
+    <td style='vertical-align:top;display: none;' id='id_action_td'> <input id="id_action_time"  value='0' name="action_time" style='width: 30px;'/>秒(1-254) </td>
+	<th>
+    <label for="id_name" >{%trans "备注"%}:</label>
+    </th>
+    <td style='vertical-align:top;'> {{ form.remark.as_widget }} </td>  
+	<td style='display: none;'>
+		<input id="id_events_h" type="hidden" name="events_h" />
+		<input id="id_inputs_h" type="hidden" name="inputs_h" />
+		<input id="id_outputs_h" type="hidden" name="outputs_h" />
+		<input id="id_tab_index" type="hidden" name="tab_index" />
+		
+<!--
+		<input id="id_events_h_in" type="hidden" name="events_h_in" />
+		<input id="id_inputs_h_in" type="hidden" name="inputs_h_in" />
+		<input id="id_outputs_h_in" type="hidden" name="outputs_h_in" />
+		-->
+		
+	</td>
+    
+</tr>
+<tr>
+    <td style="display:none;"></td>
+</tr>
+{% endautoescape %}
+
+<tr id="addition_fields">{% block addfields %}{% endblock %}</tr>
+</td>
+</tr>
+</table>
+</form>
+
+<div id="tabs_event" >
+	<ul>
+		<li><a href="#tabs-door">{%trans "门事件联动配置"%}</a></li>
+		<li><a href="#tabs-reader">{%trans "门和读头事件联动配置"%}</a></li>
+		<li><a href="#tabs-device">{%trans "输入事件联动配置"%}</a></li>
+
+	</ul>
+	<div id="tabs-door">
+		
+           <span style='display: inline-block;border: 1px solid #EEEEEE;'>
+	    <ul style='width:300px;height:300px;color:black;overflow:auto;' class='ztree' id='door_events' ></ul>
+	   </span>
+	   <span style='display: inline-block;border: 1px solid #EEEEEE;'>
+	    <ul style='width:300px;height:300px;color:black;overflow:auto;' class='ztree' id='door_input' ></ul>
+	   </span>
+	   <span style='display: inline-block;border: 1px solid #EEEEEE;'>
+	    <ul style='width:300px;height:300px;color:black;overflow:auto;' class='ztree' id='door_out' ></ul>
+	   </span>
+
+
+
+	</div>
+
+	<div id="tabs-reader">
+		
+           <span style='display: inline-block;border: 1px solid #EEEEEE;'>
+	    <ul style='width:300px;height:300px;color:black;overflow:auto;' class='ztree' id='reader_events' ></ul>
+	   </span>
+	   <span style='display: inline-block;border: 1px solid #EEEEEE;'>
+	    <ul style='width:300px;height:300px;color:black;overflow:auto;' class='ztree' id='reader_input' ></ul>
+	   </span>
+	   <span style='display: inline-block;border: 1px solid #EEEEEE;'>
+	    <ul style='width:300px;height:300px;color:black;overflow:auto;' class='ztree' id='reader_out' ></ul>
+	   </span>
+
+
+
+	</div>
+
+
+	<div id="tabs-device">
+           <span style='display: inline-block;border: 1px solid #EEEEEE;'>
+	    <ul style='width:300px;height:300px;color:black;overflow:auto;' class='ztree' id='door_events_in' ></ul>
+	   </span>
+	   <span style='display: inline-block;border: 1px solid #EEEEEE;'>
+	    <ul style='width:300px;height:300px;color:black;overflow:auto;' class='ztree' id='door_input_in' ></ul>
+	   </span>
+	   <span style='display: inline-block;border: 1px solid #EEEEEE;'>
+	    <ul style='width:300px;height:300px;color:black;overflow:auto;' class='ztree' id='door_out_in' ></ul>
+	   </span>
+
+
+
+	</div>
+</div>
+
+
+
+<div id="id_error"></div>
+
+{% block add_contents %}{% endblock %}
+{% block add_contents_2c %}{% endblock %}
+
+</div>

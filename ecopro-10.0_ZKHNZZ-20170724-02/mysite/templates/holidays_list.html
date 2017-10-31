@@ -1,0 +1,89 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+tblName[g_activeTabID]='holidays';
+
+jqOptions[g_activeTabID].sortname='HolidayID';
+jqOptions[g_activeTabID].colModel={{colModel}}
+jqOptions[g_activeTabID].pager="id_pager_"+tblName[g_activeTabID]
+//options.dlg_width=400;
+options[g_activeTabID].dlg_height=300;
+
+$(function(){
+
+		var t_app='{{app}}'
+		if (t_app=='acc'){
+			var info='<p>设置节假日所属的节假日类型后，门禁时间段中设置的节假日类型通行时间会作用于该节假日类型下面的所有节假日。</p>'
+		}else {
+			var info='<p>设置节假日后,人员排班时自动不会对节假日进行排班，如果节假日需要排班则需要进行临时排班。</p>'
+		}
+		renderLeftInformation(info);
+		//smenu="<ul><li  class='subnav_on' onclick=submenuClick('/iclock/data/holidays/',this);><a href='#'>节假日</a></li></ul>"
+		//$('#menu_div').html(smenu)
+	
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+		processNewModel();
+	});
+	$("#"+g_activeTabID+" #queryButton").hide()
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowHolidays();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowHolidays();
+	});
+	$("#"+g_activeTabID+" #id_export").css('display','none');
+	$("#"+g_activeTabID+" #id_clearrec").css('display','none')
+	$("#"+g_activeTabID+" #id_third").html("");
+});
+//function beforePost(obj,actionName){
+//	var flag=true;
+//	var tmp =$("#id_StartTime",obj).val()
+//    var tempdate= new Date()
+//    var birth =tmp.split("-");
+//	if(tmp.length<1){
+//		$("#id_error",obj).css("display","block");
+//		$("#id_error",obj).html("<ul class='errorlist'><li>{%trans 'Please enter a date' %}</li></ul>");					
+//		flag=false;
+//	}else if(birth[0]!=parseInt(birth[0])||birth[1]!=parseInt(birth[1])||birth[2]!=parseInt(birth[2])||parseInt(birth[0])<1900||parseInt(birth[1])>12||parseInt(birth[1])<1||parseInt(birth[2])<1||parseInt(birth[2])>31){
+//		$("#id_error",obj).css("display","block");
+//		$("#id_error",obj).html("<ul class='errorlist'><li>{%trans 'Invalid date' %}</li></ul>");					
+//		flag=false;
+//	}
+//	return flag
+//}
+//模糊查询
+function searchShowHolidays(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+	var url=g_urls[g_activeTabID]+"?q="+escape(v)
+	savecookie("search_urlstr",url);
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function strOfData_holidays(data)
+{
+	return stripHtml(data.HolidayName);
+}
+function process_dialog_holidays(obj)
+{
+    $(obj).dialog({resizable:false,modal:true})
+	$("#id_StartTime",obj).datepicker(datepickerOptions);
+	f=$(obj).find("#id_edit_form").get(0)
+	$(f).validate({
+			rules: {
+					StartTime: {required:true,dateISO:true},
+					HolidayName: {required:true},
+					Duration:{required:true,digits:true,maxlength:2}
+				}
+			});
+	
+
+}
+
+{% endblock %}

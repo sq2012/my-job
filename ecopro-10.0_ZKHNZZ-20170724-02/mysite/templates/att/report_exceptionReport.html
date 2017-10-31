@@ -1,0 +1,73 @@
+{% extends "report_att.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+
+{% block getDateUrl %}
+
+function getDateUrl()
+{
+    var ComeTime=$("#"+g_activeTabID+" #id_ComeTime").val();
+	var EndDate=$("#"+g_activeTabID+" #id_EndTime").val();
+	var isError=validate_form_att();
+	$.cookie("ComeTime",ComeTime, { expires: 7 });
+	$.cookie("EndDate",EndDate, { expires: 7 });
+	$("#"+g_activeTabID+" #id_con_error").css("display","none");
+	var tmp = ComeTime.split("-");
+	var date1 = new Date(tmp[0],tmp[1]-1,tmp[2]);
+	tmp = EndDate.split("-");
+
+	var date2 = new Date(tmp[0],tmp[1]-1,tmp[2]);
+	if(date2>=date1&&(date2.getTime() - date1.getTime() > 365 * 24 * 60 * 60 * 1000)){
+		alert("查询日期不能超过一年");
+		return ''
+	} else if (date2<date1){
+		alert("开始日期不能小于结束日期");
+		return ''
+	}
+	var urlStr=g_urls[g_activeTabID]
+
+	if(urlStr.indexOf("?")!=-1)
+		urlStr+="&startDate="+ComeTime+"&endDate="+EndDate
+	else
+		urlStr+="?startDate="+ComeTime+"&endDate="+EndDate
+	return urlStr
+
+}
+{% endblock %} 
+{% block toolbar %}
+
+	<div id="id_toolbar_report">
+			<UL class="toolbar" id="navi">
+				<LI id="id_reload_report"><SPAN  class="icon iconfont icon-shuaxin"></SPAN>{%trans "Reload"%}</LI>
+				<LI id="id_export_report" ><SPAN  class="icon iconfont icon-daochu"></SPAN>{%trans "Export"%}
+				        <ul id="op_menu_export" class="op_menu">
+						<li><span>{%trans "文件格式"%}</span>
+							<ul>
+							<li onclick="javascript:clickexport(tblName[g_activeTabID],0);"><a href="#">EXCEL</a></li>
+							</ul>
+						</li>
+					</ul>
+				</LI>
+				<LI id="id_custom"><SPAN class="icon iconfont icon-select"></SPAN>{%trans "Preferences"%}</LI>
+
+			</ul>
+        </div>
+
+{% endblock %} 
+{% block Data %}
+		<div class="inner-ui-layout-west ui-layout-west">
+			<div class="ui-widget-header" style="height: 20px;">
+				<span id=id_opt_tree>
+				<input type='checkbox' id='id_cascadecheck_report' />{%trans "级联下级单位" %}
+				</span>
+			</div>
+			<div id='show_dept_tree_'  class="inner-west-content">
+				<ul id='showTree_report' class='ztree' style='margin-left: 0px;height: 100%'></ul>	
+			</div>   
+		</div>
+		<div class="inner-ui-layout-center ui-layout-center">
+			<table id="id_grid_report" >	</table>
+			<div id="id_pager_report"></div>
+			<div id="showReportSymbol" style="display:none;">{{reportSymbol}}</div>
+		</div>
+	{% endblock %} 

@@ -1,0 +1,21 @@
+{% extends "data_list.html" %}
+
+{% block tblHeader %}
+fieldHeaders=["{{ cl.FieldName.SN }}", "{{ cl.FieldName.AlarmTime }}", "{{ cl.FieldName.User }}", "{{ cl.FieldName.NoAlarmTime }}", "{{ cl.FieldName.NoAlarmReson }}"];
+options[g_activeTabID].canEdit=false;
+options[g_activeTabID].disableCols=["0"];
+tblName[g_activeTabID]='alarms'
+
+function strOfData_alarms(data)
+{
+	return "考勤机 "+data[1]+" 在 "+data[2]+" 的报警";
+}
+
+{% endblock %}
+
+{% block rowdata %}
+    {% for item in latest_item_list %}
+		[{{ item.id }}, "{{item.SN}}", $t("{{ item.AlarmTime }}"), "{{ item.User }}", $t("{{ item.NoAlarmTime }}"),"{{ item.NoAlarmReson|escape }}"],
+    {% endfor %}
+{% endblock %}
+

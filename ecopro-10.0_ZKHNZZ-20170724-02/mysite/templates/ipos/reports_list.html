@@ -1,0 +1,21 @@
+{% load iclock_tags %}
+{% load i18n %}
+<script>
+
+
+$(function(){
+initwindow_tabs();
+
+{% autoescape off %}
+	
+var html={{sub_menu}}
+
+{% endautoescape %}
+
+$("#west_content_tab_ipos_reports").html(html)
+
+$("#"+g_activeTabID+" #menu_div ul").find('li').get(0).click()	
+
+});
+
+</script>

@@ -1,0 +1,225 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+<script>
+schClass=[];
+shifts=[];
+assignedShifts=[];
+MayUsedAutoIds=[];
+AutoSchPlan=1;
+MinAutoPlanInterval=24;
+$(function(){
+	$("#"+g_activeTabID+" #id_ComeTime").val($.cookie("ComeTime"))
+	$("#"+g_activeTabID+" #id_EndTime").val($.cookie("EndDate"))
+	getDept_to_show_emp(200);
+	$("#id_opt_tree").css("width",270)
+	
+	$("#tz").html("<div align='center'><h4><img src='/media/img/hint.gif'/>"+gettext("Click the employee to show the employee shift details!")+"</h4></div>");
+	$("#id_del_tmpShift").click(function(){
+		var emp=getSelected_emp();
+		var deptIDs=$("#hidden_depts").val()
+		var deptName=$("#hidden_deptsName").val()
+		var empNames=getSelected_empNames();
+		var empPin=getSelected_empPin();
+		var ComeTime=$("#"+g_activeTabID+" #id_ComeTime").val();
+		var EndDate=$("#"+g_activeTabID+" #id_EndTime").val();
+		var isError=validate_form_delete_tmpshifts(1);
+		if(isError)
+		{	
+			$("#id_error").css("display","block");
+			$("#id_error").html("<ul class='errorlist'><li>{%trans 'Please check that you select one or more employees or click department and the date is validate and the Beginning date is earlier than the Ending date!'%}</li></ul>");
+		}
+		else{
+			var action=false;
+			if(emp.length<=0){
+				if(totalRecCnt_emp>0)
+					action=confirm("{%trans "Are you sure delete temporary shift for the whole department"%}\n"+deptName)
+				else
+				{
+					$("#id_error").css("display","block");
+					$("#id_error").html("<ul class='errorlist'><li>"+deptName+"&nbsp;&nbsp;{%trans 'no employee'%}</li></ul>");
+				
+				}
+			}
+			if(action ||emp.length>0){
+				$("#id_error").css("display","none");
+				var queryStr="ComeTime="+ComeTime+"&EndDate="+EndDate+"&UserIDs="+emp+"&deptIDs="+deptIDs;
+				$.ajax({ 
+					type: "POST",
+					url:"/iclock/att/doDeleteTmpShifts/",
+					data:queryStr,
+					dataType:"json",
+					success:function(retdata){
+						if(retdata.ret==0){
+							$("#id_error").css("display","block");
+							$("#id_error").html("<ul class='errorlist'><li>{%trans 'Delete temporary shifts successfully,you can click the search button to search the shift'%}</li></ul>"); 
+						}
+					}
+				});
+			}
+	
+	}
+	});
+	
+	$("#"+g_activeTabID+" #id_search").click(function(){
+		var emp=getSelected_emp();
+		var empNames=getSelected_empNames();
+		var empPin=getSelected_empPin();
+		var ComeTime=$("#"+g_activeTabID+" #id_ComeTime").val();
+		var EndDate=$("#"+g_activeTabID+" #id_EndTime").val();
+		var isError=validate_form_delete_tmpshifts(0);
+		if(isError)
+		{	
+			$("#id_error").css("display","block");
+			$("#id_error").html("<ul class='errorlist'><li>{%trans 'Please check that you select one or more employees and the date is validate!'%}</li></ul>");
+		}
+		else{	
+			var cTime=ComeTime.split("-");
+			var days=validate_date(ComeTime,EndDate)+1;
+			var cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+			$("#id_error").css("display","none");
+			$.cookie("ComeTime",ComeTime, { expires: 7 });
+			$.cookie("EndDate",EndDate, { expires: 7 });
+			var queryStr="ComeTime="+ComeTime+"&EndDate="+EndDate+"&UserID="+emp[0];
+			$.ajax({ 
+				type: "POST",
+				url:"/iclock/att/worktimezone/",
+				data:queryStr,
+				dataType:"json",
+				success:function(json){
+					$("#id_shift_details fieldset legend").html("<b><font size='2'>{%trans 'Employee shift details' %}("+empNames[0]+"["+empPin[0]+"])</font></b>");
+					$("#tz").html(createTZTable(json,getTZDateLabel,days,cdate));
+               
+                $(".tzbar").dblclick(function(){
+                    var start=$(this).attr("alt2");
+                    var end=$(this).attr("alt2");
+                    var schClassId=$(this).attr("alt4");
+                    if(start!=undefined&&end!=undefined&&options.canEdit){
+                        ret=window.confirm(gettext("Are you sure delete the shift?"));
+                        if(ret)
+                        {   
+                            $(this).addClass("tzbar space");
+                            $(this).css("background-color","");
+                            $(this).html("");
+                            var queryStr="StartDate="+start+"&EndDate="+end+"&UserIDs="+emp[0]+"&sTimeTbl="+schClassId+"&sDates=";
+                          $.ajax({ type: "POST",
+                                    url: "/iclock/att/addTemparyShifts/",
+                                    data:queryStr,
+                                    dataType:"text",
+                                    success: delEmpShift_success,
+                                    error: function(request, errorMsg){
+                                       alert($.validator.format(gettext('Operating failed for {0} : {1}'), options.title, errorMsg)); 
+                                       }
+                               });
+                    
+                         
+                        }
+                    }
+                });
+				
+				}
+            
+			
+			});
+           
+            
+		}	
+	});
+ 
+});
+
+//时间有效性验证 开始日期要小于结束日期
+function validate_date(ComeTime,EndDate)
+{
+	var cTime=ComeTime.split("-");
+	var eTime=EndDate.split("-");
+	var cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+	var edate=new Date(parseInt(eTime[0],10),parseInt(eTime[1],10)-1,parseInt(eTime[2],10));
+	var days=(edate.valueOf()-cdate.valueOf())/(1000*3600*24);
+	return days;
+}
+function validate_form_delete_tmpshifts(flag){   //验证表单的合法性(人员(可不选，在计算项目中计算选中单位的人员，其他的就默认值0)、开始时间、结束时间)
+	var t_emp=getSelected_emp();
+	var deptIDs=$("#hidden_depts").val()
+	var t_ComeTime=$("#"+g_activeTabID+" #id_ComeTime").val();
+	var cTime=t_ComeTime.split("-");
+	var t_EndDate=$("#"+g_activeTabID+" #id_EndTime").val();
+	var eTime=t_EndDate.split("-");
+	var cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+	var edate=new Date(parseInt(eTime[0],10),parseInt(eTime[1],10)-1,parseInt(eTime[2],10));
+	var days=(edate.valueOf()-cdate.valueOf())/(1000*3600*24)+1;
+	if(flag==0){
+		if(t_ComeTime=="" || t_EndDate=="" || cdate>edate ||t_emp.length==0||!valiDate(t_ComeTime)||!valiDate(t_EndDate))
+			return 1;
+		else
+			return 0
+	}
+	else{
+		if((t_ComeTime=="" || t_EndDate=="" ||(t_emp.length==0&&deptIDs=="")|| cdate>edate ||!valiDate(t_ComeTime)||!valiDate(t_EndDate)))
+			return 1;
+		else
+			return 0
+	}
+}
+var week=[
+		"{% trans 'Sunday' %}",
+	     "{% trans 'Monday' %}",
+	     "{% trans 'Tuesday' %}",
+	     "{% trans 'Wednesday' %}",
+	     "{% trans 'Thursday' %}",
+	     "{% trans 'Friday' %}",
+	     "{% trans 'Saturday' %}"
+];
+
+function getTZDateLabel(index,sdate)
+{
+	var tmp=new Date(sdate.valueOf()+index*1000*3600*24);
+	var m="00"+(tmp.getMonth()+1);
+	var d="00"+tmp.getDate();
+	return	m.substring(m.length-2)+"-"+d.substring(d.length-2)+" "+week[tmp.getDay()];
+}
+</script>
+
+<style>
+form th {
+text-align:left;
+padding-top:4px;
+vertical-align: top;
+}
+</style>
+
+
+
+{% endblock %}
+{% block content %}
+<div class="module" style="position:relative; width: 100%;">
+<table id="changelist" border="0" style="margin-bottom: 2px; float: left; width: 100%;">
+<tr>
+<td colspan="2" style="vertical-align:top;"><div id="show_dept_emp_tree"></div></td>
+<td id="id_conditions" style="vertical-align:top; width:35%;">
+<form id="id_cond_form" method="POST">
+	<table>
+		<tr><th ><label for="id_ComeTime" class="required">{%trans "Beginning Date:"%}</label></th></tr>
+		<tr><td><input type="text" size="11" class="vDateOnlyField" id="id_ComeTime" maxlength="10" name="ComeTime"/>
+		</td></tr>
+		<tr><th><label for="id_EndTime" class="required">{%trans "Ending Date:"%}</label></th></tr>
+		<tr><td><input type="text" size="11" class="vDateOnlyField" id="id_EndTime" maxlength="10" name="EndTime"/>
+		</td></tr>
+		<tr>
+		<td><input type="button" value="{%trans 'Query' %}" id="id_search" class="btnOKClass"/><br />
+			<input type="button" value="{%trans "Clear "%}{%trans "Temporay shifts" %}" id="id_del_tmpShift" class="btnOKClass"/><br />
+		</td>
+		</tr>
+		<tr><td><span id="id_error"></span></td></tr>
+	</table>
+</form></td></tr>
+
+<tr><td colspan="3"><div id="id_shift_details"><fieldset><legend><b><font size="2">{%trans "Employee shift details" %}</font></b></legend><div style="height:300px;width:960px;overflow:scroll;">
+<br />
+<div id="tz">
+</div></div></fieldset></div>
+</td></tr>
+</table>
+</div>
+{% endblock %}

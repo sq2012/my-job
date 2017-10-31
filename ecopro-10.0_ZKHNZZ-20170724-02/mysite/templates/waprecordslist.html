@@ -1,0 +1,41 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head></head>
+<script type="text/javascript">
+function pagenext(){
+page='{{pagecurrent}}'
+window.location.href='/waprecordlist/?page='+page+"&p=n";
+}
+function pageprevious(){
+page='{{pagecurrent}}'
+window.location.href='/waprecordlist/?page='+page+"&p=p";
+}
+
+</script>
+<body>
+
+<table border="0" align="left">
+
+<tr align="left">
+<td colspan="2">姓名：{{emp.EName}}<hr ><hr /><td>
+</tr>
+
+{% for item in latest_item_list %}
+<tr align="left">
+
+<td colspan="2">{{ item.TTime}}</td>
+</tr>
+{%endfor%}
+<tr>
+<td align="right"><input type="button" value="上一页" onclick="pageprevious()"/></td>
+<td  align="left"><input type="button" value="下一页" onclick="pagenext()"/></td>
+</tr>
+<tr>
+<td colspan="2">
+总数：{{count}}  页数：{{pagecurrent}}/{{totalpages}}
+</td>
+</tr>
+</table>
+</body>
+
+</html>

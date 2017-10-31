@@ -1,0 +1,15 @@
+{% load i18n %}
+<style>
+    #content {
+
+        height:250px;
+    }
+</style>
+<div id="content">
+    <p>{{ title }}</p>
+    {% autoescape off %}
+    {{ content }}
+    {% endautoescape %}
+    <br />
+    <p>&nbsp;</p>
+</div>

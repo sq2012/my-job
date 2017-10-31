@@ -1,0 +1,470 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+
+
+<script>
+var reCalcTimeout=null;	
+function getDeptEmpData_calc(page,height,tag){
+	
+	
+	var zTree = $.fn.zTree.getZTreeObj("showTree_"+page);
+	zTree.setting.check.enable = false;
+	$("#searchbydept_"+page).hide()
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		var deptID=treeNode.id;
+		var deptName=treeNode.name;
+		$.cookie("dept_ids",deptID, { expires: 7 });
+		$("#hidden_selDept_reCalc").val(deptID);
+		$("#hidden_depts_reCalc").val(deptID);
+		$("#hidden_deptsName_reCalc").val(deptName)
+		var ischecked=0;
+		if($("#id_cascadecheck_reCalc").prop("checked"))
+			ischecked=1;
+		urlStr="/iclock/data/employee/?e=0&t=employee_dept.js&deptIDs="+deptID+"&isContainChild="+ischecked+'&OffDuty=0'
+		savecookie("search_urlstr",urlStr);
+		var jqOptions2=copyObj(jq_Options);
+		$.ajax({
+			type:"GET",
+			url:"/iclock/att/getColModel/?dataModel=employee",
+			dataType:"json",
+			data:'',
+			success:function(json){
+
+			var hcontent=$("#"+g_activeTabID+" #id_content").height();
+			var hbar=$("#"+g_activeTabID+" #id_top").height();
+			var height=hcontent-hbar-40;
+			$('#'+g_activeTabID+' #id_emp_calc').height(height)
+			height=height-60;
+			jqOptions2.rowNum={{ limit }}
+
+
+
+
+
+				jqOptions2.colModel=json['colModel']
+				jqOptions2.height=height
+				if(tag){
+					jqOptions2.multiselect=false
+				}
+				jqOptions2.url=urlStr
+				jqOptions2.sortname='PIN'
+				jqOptions2.pager="#id_pager_"+page;
+				renderGridData(page,jqOptions2)
+			}
+		});
+	}
+}
+	
+	
+	
+
+function CalcSearchShowEmps(urlStr,page){
+	var jqOptions2=copyObj(jq_Options);
+	$.ajax({
+		type:"GET",
+		url:"/iclock/att/getColModel/?dataModel=employee",
+		dataType:"json",
+		data:'',
+		success:function(json){
+
+			var hcontent=$("#"+g_activeTabID+" #id_content").height();
+			var hbar=$("#"+g_activeTabID+" #id_top").height();
+			var height=hcontent-hbar-40;
+			$('#'+g_activeTabID+' #id_emp_calc').height(height)
+			height=height-60;
+
+
+			jqOptions2.colModel=json['colModel']
+			jqOptions2.height=height;
+			jqOptions2.url=urlStr
+			jqOptions2.rowNum={{ limit }}
+			jqOptions2.sortname="DeptID,PIN";
+			jqOptions2.sortorder="";
+			
+			jqOptions2.pager="#id_pager_"+page;
+			renderGridData(page,jqOptions2)
+		}
+	});
+}
+
+
+
+function getSearchUrl(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+		var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+		var v=""
+	var url="/iclock/data/employee/?q="+escape(v)
+	savecookie("search_urlstr",url);
+	return url;
+}
+
+function close_reCalc() {
+                    $.ajax({
+                        url: "/iclock/att/reCalcAction/?action=cancelCalc&t="+moment().unix(),
+                        type: "GET",
+						data: {},
+                        dataType: "json",
+                        timeout: 5000,
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                             },
+                        success: function (data) {
+							clearTimeout(reCalcTimeout)
+							//$( "#dialog_reCalc" ).dialog( "close" )
+							//$('#progressbar_reCalc').progressbar( {"value": false} );
+							//$('#progressbar_reCalc').hide()
+							//$(".progress-label_reCalc").hide()
+                                $( "#dialog_reCalc" ).dialog('close')
+
+                         }
+			});
+	
+	
+	
+ }
+ 
+ 
+function showProgressDlg_reCalc() {
+    $( "#dialog_reCalc" ).dialog('open')
+
+	
+}
+
+
+
+function longPolling() {
+                
+                    $.ajax({
+                        url: "/iclock/att/reCalcAction/?action=query&t="+moment().unix(),
+                        type: "GET",
+						data: {},
+						sync:true,
+                        dataType: "json",
+                        timeout: 5000,
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                           // $("#state").append("[state: " + textStatus + ", error: " + errorThrown + " ]<br/>");
+                            if (textStatus == "timeout") { // 请求超时
+                                    //longPolling(); // 递归调用
+                                
+                                // 其他错误，如网络错误等
+                                } else { 
+                                    //longPolling();
+                                }
+                            },
+                        success: function (data) {
+                            if (data.ret == 0) { // 请求成功
+								//$.blockUI({title:'',theme: true ,baseZ:10000,message: '{%trans 'Calculating Reports......'%}'+data.message+'</br></h1>'});
+							//$('#progressbar_reCalc').progressbar( {"value": true} );
+							//$('#progressbar_reCalc').show()
+
+									var show = $("#dialog_reCalc").dialog( "isOpen" );
+									if (show) {
+										//$('#progressbar_reCalc').show()
+										//$(".progress-label_reCalc").show()
+
+										$('.progress-label_reCalc').text( "{%trans '正在统计' %}:" +data.n+'/'+data.c );
+									
+										$("#progressbar_reCalc").progressbar( {"value": data.message} );
+		
+										reCalcTimeout=setTimeout("longPolling()",2000);
+									}
+
+
+                            }
+                        }
+			});
+
+}
+
+
+
+$(function(){
+	
+	//outerLayout.show('west')
+	//outerLayout.resizeAll()
+	var hcontent=$("#"+g_activeTabID+" #id_content").height();
+	var hbar=$("#"+g_activeTabID+" #id_top").height();
+	var height=hcontent-hbar-40;
+	$('#'+g_activeTabID+' #id_emp_calc').height(height)
+
+
+
+      $( "#dialog_reCalc" ).dialog({
+        autoOpen: false,
+		modal:true,
+        closeOnEscape: false,
+        resizable: false,
+		dialogClass: "no-close",
+        buttons: [{
+        text: "停止统计",
+        click: function(){close_reCalc();}
+      }],
+        open: function() {
+			longPolling()
+         // progressTimer = setTimeout( progress, 2000 );
+        },
+        beforeClose: function() {
+        },
+		close:function(){}
+      })
+
+
+
+
+
+	html="<span id=id_opt_tree><input type='checkbox' id='id_cascadecheck_reCalc' checked />{%trans '级联下级单位' %}</span>"
+	$("#"+g_activeTabID+" #id_west").html(html)
+	html="<div id='show_dept_tree_'>"
+		+"<ul id='showTree_"+g_activeTabID+"'"
+                +" class='ztree' style='margin-left: 0px;height:100%;'></ul>"
+		+"</div>"
+	$("#west_content_tab_iclock_reCalc").html(html)
+        ShowDeptData(g_activeTabID,true)
+	
+	//EmpAndDept={% autoescape off %} {{ CalcReports_list }}{% endautoescape %}
+	
+	//var w=$("#id_content").width()-5
+
+	
+	
+	
+	//getDept_to_show_emp(410,300,540,'employee',false);  //生成单位员工
+	getDeptEmpData_calc(g_activeTabID)
+	
+	//var h=$('#id_content').height();
+	
+	var dateTime=moment().format("YYYY-MM-DD")
+	
+	$("#id_ComeTime_calcReports").val(dateTime.substring(0,dateTime.length-2)+"01")
+	$("#id_EndTime_calcReports").val(dateTime)
+	
+	$("#id_ComeTime_calcReports").datepicker(datepickerOptions);
+	$("#id_EndTime_calcReports").datepicker(datepickerOptions);
+	$("#"+g_activeTabID+" #queryButton").css('display','none')
+	var f=$("#id_edit_form_reCalc")
+	f.validate({
+		rules: {
+			"ComeTime": {"required":true,"dateISO":true},
+			"EndTime": {"required":true}
+		}
+	});
+	var inputEl = $("#"+g_activeTabID+" .search-input")
+	defVal[g_activeTabID] = inputEl.val();
+	inputEl.bind("focus",function(){
+		             var _this = $(this);
+				if (_this.val() == defVal[g_activeTabID]) {
+				    _this.val('');
+				    _this.css('color','#000000');
+				    //_this.attr('role','disabled')
+				}
+		})
+	inputEl.bind("blur",function(){
+		        var _this = $(this);
+			if (_this.val() == '') {
+			    _this.val(defVal[g_activeTabID]);
+			    _this.css('color','#CCCCCC');
+			    _this.attr('role','defvalue')
+			}
+			else
+			    _this.attr('role','cansearch')
+		})
+	inputEl.bind("keydown",function(event) {
+			if (event.which == 13) {
+			      var _this = $(this);
+			       _this.attr('role','cansearch')
+			 }
+		}) 
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+		if(event.keyCode==13){
+			url = getSearchUrl()
+			CalcSearchShowEmps(url,g_activeTabID);
+		}
+	});
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+		url = getSearchUrl()
+		CalcSearchShowEmps(url,g_activeTabID);
+	});
+
+
+
+
+
+
+
+
+	
+	$("#"+g_activeTabID+" #id_doSubmit").click(function(){
+		var deptIDs=$("#hidden_selDept_reCalc").val()
+		
+		//var emp=$("#id_employee_grid").jqGrid('getGridParam','selarrrow');
+		var emp=getSelected_emp_ex(g_activeTabID);
+		var deptName=$(" #hidden_deptsName_reCalc").val()
+		if(validate_form_calcreports()||deptIDs==""){
+			$("#id_error_reCalc").css("display","block");
+			$("#id_error_reCalc").html("<span class='errorlist'>{%trans 'Please check that you select one or more employees or click department and the date is validate and the most 31 days!'%}</span>");
+			return false;
+		}
+		else{
+			var action=false;
+			if(emp.length<=0){
+				action=confirm("{%trans "Are you sure Cacluate for the whole department"%}\n"+deptName)
+			}
+			if(action ||emp.length>0){
+				$("#id_hidden_emp_reCalc").val(emp);
+				$("#id_hidden_depts_reCalc").val(deptIDs);
+				$("#id_error_reCalc").css("display","none");
+				var ComeTime=$("#id_ComeTime_calcReports").val();
+				var EndDate=$("#id_EndTime_calcReports").val();
+				//$.cookie("ComeTime",ComeTime, { expires: 7 });
+				//$.cookie("EndDate",EndDate, { expires: 7 });
+				savecookie("ComeTime",ComeTime)
+				savecookie("EndDate",EndDate)
+//				$.blockUI({title:'',theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Calculating Reports......'%}</br></h1>'});
+//				$.blockUI({title:'',theme: true ,baseZ:10000,message: "{%trans 'Calculating Reports......'%}</br></h1> <input type='button' id='id_cancelSubmit' class='m-btn  zkgreen rnd' value='{%trans '停止' %}'/>"});
+				var ischecked=0;
+				if($("#id_cascadecheck_reCalc").prop("checked"))
+					ischecked=1;
+				var queryStr=$("#id_edit_form_reCalc").formSerialize()+"&isContainChild="+ischecked+"&isForce=1";
+				$.ajax({ 
+					type: "POST",
+					url:"/iclock/att/reCalcAction/",
+					dataType:"json",
+					data:queryStr,
+					success:function(retdata){
+							clearTimeout(reCalcTimeout)
+							$( "#dialog_reCalc" ).dialog( "close" )
+						if(retdata.ret==0){
+							//$.unblockUI();
+							
+							//close_reCalc()
+							
+							$("#id_error_reCalc").css("display","block");
+							var message=retdata.message
+							$("#id_error_reCalc").html("<span class='errorlist'>&nbsp;&nbsp;"+message+"</span>");
+						}
+						else
+						{
+							//$(".progress-label_reCalc").remove()
+ 							//$.unblockUI();
+							$(" #id_error_reCalc").css("display","block");
+							$("#id_error_reCalc").html("<span class='errorlist'>{%trans 'Calculate Fail!'%}</span>");
+						}
+					},
+				error:function(){
+					//	$.unblockUI();
+							$( "#dialog_reCalc" ).dialog( "close" )
+ 						alert("Server error")
+					}
+					
+				});
+				showProgressDlg_reCalc()
+				
+				
+				
+			}
+		}
+	});
+});
+
+function validate_form_calcreports(){   //验证表单的合法性(人员、开始时间、结束时间)
+	var t_emp=getSelected_emp(g_activeTabID);
+	var t_ComeTime=$("#id_ComeTime_calcReports").val();
+	var cTime=t_ComeTime.split("-");
+	var t_EndDate=$("#id_EndTime_calcReports").val();
+	var eTime=t_EndDate.split("-");
+	cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+	edate=new Date(parseInt(eTime[0],10),parseInt(eTime[1],10)-1,parseInt(eTime[2],10));
+	var days=(edate.valueOf()-cdate.valueOf())/(1000*3600*24)+1;
+	if(t_ComeTime=="" || t_EndDate=="" ||days>31 || cdate>edate||cdate>edate||!valiDate(t_ComeTime)||!valiDate(t_EndDate))
+		return 1;
+	else
+		return 0
+}
+
+</script>
+
+<div id="id_top">
+
+
+	</div>
+
+<div class='module' style='position:relative; width: 1000px;'>
+		<table style='margin-bottom: 2px; float: left; width: 100%;height: 100%;'>
+			
+			
+			
+			<tr><td style='vertical-align:top;'>
+				
+			<table style="width:635px;"><tr>
+		<td class='border_td'>
+			<div><span class='title_bar'>{%trans 'employee'%}</span></div>
+			<div style='overflow:hidden;height:100%;width:621px;height: 350px;padding-left:  4px;padding-top: 2px;' id='id_emp_calc'><table id='id_grid_tab_iclock_reCalc' ></table><div id='id_pager_tab_iclock_reCalc'></div></div>
+		</td></tr></table>
+		<input type='hidden' value='' id='hidden_depts_reCalc' />
+		<input type='hidden' value='' id='hidden_deptsName_reCalc' />
+		<input type='hidden' value='' id='hidden_selDept_reCalc' />
+				
+			</td>
+			<td style='vertical-align:top;'><div id='id_conditions_calc'>
+	<div class="sear-box quick-sear-box" >
+
+		<div class="s-info left" id="sear_area">
+			<div class="nui-ipt nui-ipt-hasIconBtn " style="margin-top:4px;">
+				<input id="searchbar" class="search-input" type="text"  value="考勤编号,身份证号、姓名、卡号" role='defvalue' autocomplete="off" />
+				<span id ="queryButton" class="nui-ipt-iconBtn">
+					<b id="_icon_2_28" class="nui-ico nui-ico-dArr "></b>
+				</span>
+
+			</div>
+
+			<div class="main-search-btn">
+
+				<span><img id="searchButton" src="/media/img/filter.gif" title="{%trans "Search"%}" style="cursor:hand;"></span>
+			</div>
+		</div>
+
+    </div>
+<div style="height: 30px;"></div>
+
+
+				<form id='id_edit_form_reCalc' method='POST'><table id='id_setField' width=300px;>
+		
+				<tr><th style="text-align: left;"><label for='id_ComeTime_calcReports'>{% trans 'Starting Date:'%}</label></th></tr>
+				<tr><td><input type='text' id='id_ComeTime_calcReports' name='ComeTime' value='' size='11' maxlength='10' /></td></tr>
+		
+				<tr><th style="text-align: left;"><label for='id_EndTime_calcReports'>{% trans 'EndDate'%}</label></th></tr>
+				<tr><td><input type='text' id='id_EndTime_calcReports' name='EndTime' value='' size='11' maxlength='10' /></td></tr>
+				
+				<input type='hidden' id='id_hidden_emp_reCalc' value='' name='UserIDs' />
+			<input type='hidden' id='id_hidden_depts_reCalc' value='' name='deptIDs' />
+				<tr><th> </th></tr>
+				<tr>
+					<td><input type='button' id='id_doSubmit' class='m-btn  zkgreen rnd' value='{%trans "开始统计" %}'/>
+				
+				
+				</tr>
+				<tr><th> </th></tr>
+				<tr><td></td></tr>
+				<tr><td>说明:</td></tr>
+				<tr><td>&nbsp;&nbsp;&nbsp;1:未选中人员时则统计所选单位下的全部人员</td></tr>
+				<tr><td>&nbsp;&nbsp;&nbsp;2:请耐心等待提示统计完成</td></tr>
+				<tr><td>&nbsp;&nbsp;&nbsp;3:系统选项中开启自动统计后,系统每晚2点</td></tr>
+				<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;进行统计，10-16点每5分钟统计1次</td></tr>
+				<tr><td style='width: 150px;'><span id='id_error_reCalc'></span></td></tr>
+			</table></form></div></td>
+		</tr></table></div>
+		
+<div id="dialog_reCalc" title="{%trans '正在统计' %}">
+  <div class="progress-label_reCalc" style="font-weight: bold;text-shadow: 1px 1px 0 #fff;">{%trans '准备统计...' %}</div>
+  <div id="progressbar_reCalc" style="margin-top: 20px;"></div>
+</div>
+
+		
+	
+
+
+
+

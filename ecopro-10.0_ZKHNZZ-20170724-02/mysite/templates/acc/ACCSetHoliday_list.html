@@ -1,0 +1,217 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+//options.disableCols=["0","12","13"];
+
+hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+hasImport={% if user|HasPerm:"iclock.import_ACGroup" %}true{% else %}false{% endif %}
+TimeZones=[];
+Holiday=[];
+jqOptions[g_activeTabID]=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='ACCSetHoliday';
+jqOptions[g_activeTabID].sortname='id';
+options[g_activeTabID].dlg_width=360;
+options[g_activeTabID].dlg_height=270;
+function afterPost_ACCSetHoliday(flag,obj)
+{
+	$("#id_edit_form",obj).find(":input[type=text]").each(function(i,elem){
+		$(this).val("");})
+}
+$(function(){
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+		processNewModel();
+	});
+	$("#"+g_activeTabID+" #queryButton").hide()
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowACCSetHoliday();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowACCSetHoliday();
+	});
+	$("#"+g_activeTabID+" #searchbar").val(gettext("节假日名称"))
+	$("#"+g_activeTabID+" #id_export").css('display','none');
+	$("#"+g_activeTabID+" #id_third").html("");
+	{% if user|HasPerm:"iclock.Upload_AC_Options" %}
+	$("#allDelete").after('<li id="to_device" style="border:1px solid #77B7DE;"><span class="setdevicelink"></span><a href="#">{%trans "上传设置到设备"%}</a></li>');
+    {%endif%}
+	$("#to_device").click(function(){
+     setToDevs('ACCSetHoliday')
+    })
+	$.ajax({ 
+			type: "POST",
+			url:"/iclock/att/getData/?func=ACTimeZones",
+			dataType:"json",
+			success:function(json){
+				TimeZones=json;
+			}
+		});
+	 $.ajax({ 
+			type: "POST",
+			url:"/iclock/att/getData/?func=holidays",
+			dataType:"json",
+			success:function(json){
+				Holiday=json;
+			}
+		});
+});
+
+
+//得到ACTimeZones列表
+function getTimeZones_html()
+{
+	var options_html=""
+	for(i=0;i<TimeZones.length;i++)
+	{
+		if(i==0)
+			options_html+="<option value='"+TimeZones[i].TimeZoneID+"' name='"+TimeZones[i].Name+"' selected>"+TimeZones[i].TimeZoneID+"("+TimeZones[i].Name+")"+"</option>"
+		else
+			options_html+="<option value='"+TimeZones[i].TimeZoneID+"' name='"+TimeZones[i].Name+"'>"+TimeZones[i].TimeZoneID+"("+TimeZones[i].Name+")"+"</option>"
+     }
+	return options_html
+}
+
+//得到Holiday列表
+function getHoliday_html()
+{
+	var options_html=""
+	for(i=0;i<Holiday.length;i++)
+	{
+		if(i==0)
+			options_html+="<option value='"+Holiday[i].HolidayID+"' name='"+Holiday[i].HolidayName+"' selected>"+Holiday[i].HolidayID+"("+Holiday[i].HolidayName+")"+"</option>"
+		else
+			options_html+="<option value='"+Holiday[i].HolidayID+"' name='"+Holiday[i].HolidayName+"'>"+Holiday[i].HolidayID+"("+Holiday[i].HolidayName+")"+"</option>"
+			
+		
+	}
+	return options_html
+}
+
+
+function showState_ACCSetHoliday(value)
+{
+   var block_html="<div id='emp_to_dev'>"
+   		+ 	"<div>"
+   		+ 	"<label>"+$.validator.format(gettext('Please Select {0}'),"{%trans "TimeZones" %}")+"</label>"
+   		+	"<div>"
+		+   "<input id='id_selvalue' type='text' style='display:none; width: 263px;' />"
+		+ 	"<select size=15 id='md_slt' style='width: 316px;height:245px'>"
+		+	getTimeZones_html()
+		+ 	"</select>"
+		+	"</div>"
+   		+ 	"</div>"
+   		+	"<div id='id_message'></div>"
+   		+ 	"</div>"
+   
+     
+   $(block_html).dialog({ modal:true,
+   						  width: 350,
+   						  height:415,
+   						  title:"{%trans "device ACTimeZones"%}",
+   						  buttons:[{id:"btnShowOK",text:gettext("Submit"),click:function(){setTimeZone(value)}},
+   								 {id:"btnShowCancel",text:gettext("Cancel"),click:function(){$("#emp_to_dev").remove();}
+   								}],
+   						  close:function(){$("#emp_to_dev").remove();}		
+   						})
+}
+  
+var setTimeZone=function(value){
+		$("#id_TimeZoneID").val($("#md_slt").val());
+		$("#emp_to_dev").remove();
+	
+}
+
+var setHoliday=function(value){
+		$("#id_HolidayID").val($("#md_slt").val());
+		$("#emp_to_dev").remove();
+	
+}
+
+function showHoliday(value)
+{
+   var block_html="<div id='emp_to_dev'>"
+   		+ 	"<div>"
+   		+ 	"<label>"+$.validator.format(gettext('Please Select {0}'),"{%trans "Holiday" %}")+"</label>"
+   		+	"<div>"
+		+   "<input id='id_selvalue' type='text' style='display:none; width: 263px;' />"
+		+ 	"<select size=15 id='md_slt' style='width: 316px;height:245px'>"
+		+	getHoliday_html()
+		+ 	"</select>"
+		+	"</div>"
+   		+ 	"</div>"
+   		+	"<div id='id_message'></div>"
+   		+ 	"</div>"
+   
+     
+   $(block_html).dialog({ modal:true,
+   						  width: 350,
+   						  height:415,
+   						  title:"{%trans "Holiday"%}",
+   						  buttons:[{id:"btnShowOK",text:gettext("Submit"),click:function(){setHoliday(value)}},
+   								 {id:"btnShowCancel",text:gettext("Cancel"),click:function(){$("#emp_to_dev").remove();}
+   								}],
+   						  close:function(){$("#emp_to_dev").remove();}		
+   						})
+}
+  
+
+
+function strOfData_ACCSetHoliday(data)
+{
+	return data[1];
+}
+<!-- function canEdit() -->
+<!-- { -->
+	<!-- if(!options.canEdit) return; -->
+	<!-- var rows=$("#id_grid").jqGrid("getCol",options.edit_col+1,true) -->
+	<!-- for(var i=0;i<rows.length;i++) -->
+	<!-- { -->
+		<!-- var id=rows[i].id; -->
+		<!-- var colData=rows[i].value; -->
+		<!-- var apage="<a class=\"can_edit\" href=\"#\" onclick=\"editclick('"+id+"')\">"+colData+"</a>" -->
+		<!-- $("#id_grid").jqGrid('setRowData',id,{HolidayID:apage}) -->
+	<!-- }	 -->
+ 	
+<!-- } -->
+
+function process_dialog_ACCSetHoliday(obj)
+{
+	//var html="<select id='id_GroupID' name='GroupID' class='valid' style='width:132px;' >"
+	//	html+=$("#id_GroupID",obj).html()+"</select>";
+	//	$("#id_GroupID",obj).parent().html(html);
+	
+	$("#id_HolidayID",obj).parent().parent().html("<th><label for='id_HolidayID'>{%trans 'HolidayID' %}</label></th>"
+		            +"<td><input type='text' id='id_HolidayID' value='"+($("#id_HolidayID",obj).val())+"' name='HolidayID' readonly/>"
+					+"<span id='aGetHoliday' align='center' style='color:green' onclick='showHoliday()'>[{%trans 'select Holiday'%}]</span></td>");
+	$("#id_TimeZoneID",obj).parent().parent().html("<th><label for='id_TimeZoneID'>{%trans 'TimeZone ID' %}</label></th>"
+			            +"<td><input type='text' id='id_TimeZoneID' value='"+($("#id_TimeZoneID",obj).val())+"' name='TimeZoneID' readonly/>"
+						+"<span id='aGeTimeZone' align='center' style='color:green' onclick='showState_ACCSetHoliday()'>[{%trans 'select TimeZone'%}]</span></td>");
+	//$("#id_EndTime",obj).datepicker(datepickerOptions);
+	//f=$(obj).find("#id_edit_form").get(0)
+	//$(f).validate({
+		//	rules: {
+			//		EndTime: {required:true,dateISO:true}
+					
+			//	}
+			//});
+
+	
+	
+}
+//模糊查询
+function searchShowACCSetHoliday(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+	var url=g_urls[g_activeTabID]+"?q="+escape(v)
+	savecookie("search_urlstr",url);
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+
+{% endblock %}

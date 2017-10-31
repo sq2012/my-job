@@ -1,0 +1,359 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+<script>
+{% autoescape off %}
+var iclockpolt={{ iclocks }}
+
+{% endautoescape %}
+function ShowMeetingRoomState()
+{
+        $('#id_meeting_room_charts').height($('#id_meeting_room_charts').height())
+        $('#id_meeting_room_charts').highcharts({
+            chart: {
+                type: 'column'
+            },
+            title: {
+		style: {
+                color: '#000000',
+                fontWeight: 'normal',
+ 		fontSize:'12px'
+			},
+                text: {% autoescape off %}'{{ret.meetings.title}}'{%endautoescape%}
+            },
+	    credits:{enabled: false},
+            xAxis: {
+                categories: {% autoescape off %} {{ret.meetings.categories}}{%endautoescape%},
+                gridLineWidth: 0//设置纵向标尺宽度 
+                
+                
+            },
+            yAxis: {
+ 	    gridLineColor: '#e9e9e9',
+               min: 0,
+                startOnTick:true,
+		allowDecimals:false,
+                labels: {
+                    formatter: function() {
+                        return this.value ;
+                    },
+                    style: {
+                        color: '#4572A7'
+                    }
+                },
+                title: {
+                    text: ''
+                }
+            },
+            legend: {
+                layout: 'vertical',
+                backgroundColor: '#FFFFFF',
+                align: 'right',
+                verticalAlign: 'top',
+                x: 0,
+                y: 0,
+                floating: true,
+                shadow: true,
+                crosschairs:true,
+                enabled:false 
+            },
+            
+            tooltip: {
+		enabled:true,
+                formatter: function() {
+                    return ''+
+                        this.x +':'+ this.y +'{%trans "次" %}';
+                }
+            },
+            plotOptions: {
+                column: {
+                    width:20,                
+                    dataLabels: {
+                        enabled: true
+                    }
+                }
+            },
+                series: [{data:{% autoescape off %}{{ret.meetings.data}}{%endautoescape%}}]
+        });
+ }
+
+
+
+
+
+function ShowMeetSchedule()
+{
+	
+	$('#calendar_home').fullCalendar({
+			       header: {
+				       left: 'prev,next, today',
+				       center: 'title',
+				       right: 'agendaDay,agendaWeek'
+			       },		
+			       buttonText:{
+				       prev:'向前',
+				       next:'向后',
+				       today:'今天',
+				       month:'按月',
+				       agendaWeek:'按周',
+				       agendaDay:'按天'
+			       },
+			       defaultView: 'agendaDay',
+			       titleFormat:'MM月DD日',
+			       allDayText:'整天',
+			       //aspectRatio:2.0,
+			       axisFormat:'H',
+			       timeFormat: 'H:mm',
+			       eventStartEditable:false,
+			       eventDurationEditable:false,
+			       theme:false,
+			       selectable: true,
+			       unselectCancel:'',
+			       eventBackgroundColor:'#ff0000',
+			       unselectAuto:false,
+			       dayNames:['周日','周一','周二','周三','周四','周五','周六'],
+			       dayNamesShort:['周日','周一','周二','周三','周四','周五','周六'],
+			       editable: true,
+			       droppable: true,
+			       diableResizing:false,
+			       	events: {
+				url: '/meeting/getData/?func=latestmeeting_home'
+				},
+				eventClick:function(calEvent, jsEvent, view){
+				var id=calEvent.id;
+				if(id>0){
+					$.ajax({type: "POST",
+							url: "/meeting/getData/?func=showmeeting&Meetid="+id,
+							dataType:"json",
+							success: function(json){
+								var t=json['t']
+								var c=json['c']
+								var st=json['st']
+								var et=json['et']
+								var sh=json['sh']
+								var ab=json['ab']
+								var cc=json['cc']
+								var hh="<div><table><tr><td>会议名称</td><td>"+t+"</td></tr>"
+								hh+="<tr><td>会议内容</td><td>"+c+"</td></tr>"
+								hh+="<tr><td>开始时间</td><td>"+st+"</td></tr><tr><td>结束时间</td><td>"+et+"</td></tr>"
+								hh+="<tr><td>会议详情</td><td>应出席"+sh+"人"
+								if(ab!=0){
+									hh+="，缺席"+ab+"人"
+								}
+								hh+="</td></tr>"
+								hh+="</table></div>"
+								$(hh).dialog({modal:true,
+									title:"{%trans '会议情况'%}",
+									width:450,
+									height:350,
+									buttons:[{text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}],
+									close:function(){$(this).dialog("destroy"); }});
+							},
+							error: function(request){
+								alert($.validator.format(gettext('{0} failed!\n\n{1}'), opName, request.statusText)); $.unblockUI(); 
+								}
+							});
+				}
+				}
+
+							       
+			       
+			       
+			       
+			       
+	   })
+	
+}
+function ShowDeviceState()
+{
+        $('#device_chart').height($('#device_chart').height())
+        $('#device_chart').highcharts({
+            chart: {
+                renderTo: 'device_chart',
+                type: 'column'
+            },
+            title: {
+                text: ''
+            },
+	    credits:{enabled: false},
+            xAxis: {
+                categories: ['{%trans "在线"%}','{%trans "通信中"%}','{%trans "脱机"%}','{%trans "停用"%}'],
+                gridLineWidth: 0//设置纵向标尺宽度 
+                
+                
+            },
+            yAxis: {
+	    gridLineColor: '#e9e9e9',
+                min: 0,
+                startOnTick:true,
+		allowDecimals:false,
+                labels: {
+                    formatter: function() {
+                        return this.value ;
+                    },
+                    style: {
+                        color: '#4572A7'
+                    }
+                },
+                title: {
+                    text: ''
+                }
+            },
+            legend: {
+                layout: 'vertical',
+                backgroundColor: '#FFFFFF',
+                align: 'right',
+                verticalAlign: 'top',
+                x: 0,
+                y: 0,
+                floating: true,
+                shadow: true,
+                crosschairs:true,
+                enabled:false //不显示series框
+            },
+            
+            tooltip: {
+		enabled:true,
+                formatter: function() {
+                    return ''+
+                        this.x +':'+ this.y +'台';
+                }
+            },
+            plotOptions: {
+                column: {
+                    width:20,                
+                    dataLabels: {
+                        enabled: true
+                    }
+                }
+            },
+                series: [{data:iclockpolt}]
+        });
+ }
+
+$(function(){
+	//initwindow_tabs('tab_id_menu_home',true);
+
+	$("#id_Restore").click(function(){
+		menuClick('/iclock/homepage/showHomepage/'+'?mod_name='+mod_name);
+		initwindow_tabs('tab_id_menu_home');
+		
+		})
+
+	{% autoescape off %}
+	
+	html="<div id='show_sys_tree_'>"
+		+"<table>"
+                  +" <tr><td> {% trans '自动添加新设备' %}</td><td>{{ret.sysset.dev_auto}}</td></tr>"
+                  +"  <tr><td>{% trans '仅接收数据库中存在的人员' %}</td><td>{{ret.sysset.new_record}}</td></tr>"
+                  +" <tr><td>{% trans '自动传输人员信息到设备' %}</td><td>{{ret.sysset.Auto_iclock}}</td></tr>"
+                  +"  <tr><td>{% trans '员工自助登录' %}</td><td>{{ret.sysset.self_login}}</td></tr>"
+                   +"  <tr><td>{% trans '照片显示' %}</td><td>{{ret.sysset.photo_show}}</td></tr>"
+                   +" <tr><td>{% trans '每月锁定上月数据的日期' %}</td><td>{{ret.sysset.lock_date}}</td></tr>"
+                  +"  <tr><td>{% trans '采集器采集指纹' %}</td><td>{{ret.sysset.enroll}}</td></tr>"
+		+"	<tr><td>{{ret.sysset.options}}</td><td></td></tr>"
+
+		+"</table>"
+
+		+"</div>"
+		
+		+"<div id='home_info_user' class='west_info' style='padding-top:20px;'>"
+		
+		+     "<p ><i class='ui-icon ui-icon-caret-1-e'></i>{% trans 'Username' %}:{{user.username}}{% if user.is_public %}{% if user.first_name %}<p>{% trans '姓名:' %}{{user.first_name}}</p>{% endif %}{% if user.Tele %}<p>{% trans '电话:' %}{{user.Tele}}</p>{% endif %}{% endif %}</p>"
+		+"    <p><i class='ui-icon ui-icon-caret-1-e'></i>{% trans '角色' %}:{% if user.is_superuser %}{% trans 'Supervisor' %}{% else %}{% trans 'General manager' %}{% endif %}</p>"
+		+"    <p><i class='ui-icon ui-icon-caret-1-e'></i>{% trans 'The last login time' %}:{{user.last_login}}</p>"
+		+"    <p><i class='ui-icon ui-icon-caret-1-e'></i>{% trans 'Authorized department' %}:{{ ret.sysset.Auth_dept}}</p>"
+		+"    <p><i class='ui-icon ui-icon-caret-1-e'></i>{% trans 'Authorized device' %}:{{ret.sysset.Auth_device}}</p>"
+		+"    <p><i class='ui-icon ui-icon-caret-1-e'></i>{% trans '授权时段' %}:{{ret.sysset.Auth_timezone}}</p>"
+		+"    <p><i class='ui-icon ui-icon-caret-1-e'></i>{% trans '登陆次数' %}:{{user.logincount}}</p>"
+		+"<p></p>"
+		+"<a class='icon iconfont icon-xiugai' onclick=menuClick('/iclock/accounts/password_change/'); style='float:left;color:#7ac143;'>{% trans 'Change password' %}</a>" 
+		+"</div>"
+		
+		
+	$("#west_content").html(html)
+	
+	{% endautoescape %}
+	
+	
+	//var h=$("#"+g_activeTabID+" #west_content").height()-20
+	//$('#showTree_'+g_activeTabID).css('height',h)
+	
+//	var width=$("#"+g_activeTabID+" #id_content").width();
+//	if (width>1700) {
+//		$("._home_").css('width',1500)
+//	}
+//	else if (width>1500) {
+//		$("._home_").css('width',1200)
+//	}
+     AutoResizeHome_();
+//	ShowMeetingRoomState();    
+        //ShowMeetSchedule();
+//	ShowDeviceState();     
+
+
+
+	if (home_url[mod_name]) {
+		var htobj=$("<li id="+home_url[mod_name].id+">"+home_url[mod_name].caption+"</li>")
+		menuClick(home_url[mod_name].url,htobj)
+		
+	}
+
+ 
+});
+
+function AutoResizeHome_() {
+		
+	var h=($('#id_content').height()-30)/2-5;
+	$('#id_meeting_room_charts').height(h)
+	$('#device_chart').height(h)
+	//$('#employee_change_info').height(h)
+	$('#calendar_home').height(h)
+			
+	ShowMeetingRoomState();    
+    ShowMeetSchedule();
+	ShowDeviceState();        
+		
+}
+
+//function ShowCustomInfo(){
+//    showCustom();
+//}
+
+
+
+
+</script>
+
+<div id="conId_home" style="width:100%;height: 100%;overflow: auto;" >
+    <div id="titlemsg" align="right" style="margin: 0 auto;min-width:1000px;width: 95%;height: 20px;color: #6699CC;">
+	<span id="id_Restore">[<a  href="#" style='text-decoration:underline;'><font color=red>{% trans '刷新' %}</font></a>]|[<a onclick="load_AboutDlg();" href="#" style='text-decoration:underline;'>{% trans '关于本系统' %}</a>]</span>&nbsp;&nbsp;<span>&nbsp;&nbsp;<a>{{date}}</a>&nbsp;&nbsp;</span>
+    </div>
+    <div class="_home_" style='margin: 0 auto;min-width:1000px;width: 95%;height: 95%;'>
+	<div class="widget-place" id="widget-place-1" style="width: 50%;height: 100%;">
+	    <div id="identifierwidget-1" >
+		    <div id="id_meeting_room_charts" class="widget-content" style="min-height: 180px;height: 185px;">
+		    </div>
+	    </div>
+        <div style="height: 10px;"></div>
+	    <div id="identifierwidget-2">
+		    <div id="device_chart" class="widget-content" style="min-height: 180px;height: 185px;"> </div>
+		    
+		    
+		    
+	    </div>
+    
+	</div>
+	<div class="widget-place" id="widget-place-2" style="width: 50%;height: 100%;">
+    
+	    <div id="identifierwidget-4" >
+		<div class="widget-content contentLeft">
+		    <div id="calendar_home" class="widget-content" style="min-height: 180px;height: 185px;"> </div>
+		</div>
+	    </div>
+    
+	</div>
+	</div>
+
+    
+</div>

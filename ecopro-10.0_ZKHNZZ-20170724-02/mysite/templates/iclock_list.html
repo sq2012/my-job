@@ -1,0 +1,2298 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+//hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+//dtFields = "{{ dtFields }}"
+app='{{app}}'
+tblName[g_activeTabID]="iclock"
+jqOptions[g_activeTabID].colModel={{ colModel }}
+jqOptions[g_activeTabID].sortname='SN'
+jqOptions[g_activeTabID].pager='id_pager_iclock'
+
+var is_super={% if request.user.is_superuser %}true{% else %}false{% endif %}
+
+
+tblName[g_activeTabID]='iclock';
+options[g_activeTabID].edit_col=1
+if(app=='acc'){
+    options[g_activeTabID].edit_col=2;
+	options[g_activeTabID].dlg_width=800;
+} else{
+	options[g_activeTabID].dlg_width=700;
+}
+//options[g_activeTabID].dlg_height=510;
+options[g_activeTabID].canHome=false;
+options[g_activeTabID].keyFieldIndex="0";
+{% block customHeight %}
+
+        
+{% endblock %}
+if(app=='acc')
+{
+    jqOptions[g_activeTabID].subGrid=true
+    jqOptions[g_activeTabID].subGridRowExpanded= function(subgrid_id, row_id){createSubGrid(subgrid_id, row_id);}
+}
+
+function strOfData_iclock(data)
+{
+	return stripHtml(data.SN)+" "+data.Alias;
+}
+
+timeoutId=0;
+
+
+options[g_activeTabID].keyFieldIndex="0";
+
+
+DEV_STATUS_PAUSE=0
+DEV_STATUS_OK=1
+DEV_STATUS_TRANS=2
+DEV_STATUS_OFFLINE=3
+
+//DEV_STATUS=['{%trans "Pause"%}','{%trans "Online"%}','{%trans "Communicating"%}','{%trans "Offline"%}','{%trans "门打开"%}','{%trans "门关闭"%}','{%trans "胁迫报警"%}','{%trans "门被意外打开"%}','{%trans "机器被拆除"%}','{%trans "解除报警"%}']
+DEV_STATUS=['{%trans "禁用"%}','{%trans "Online"%}','{%trans "Communicating"%}','{%trans "Offline"%}']
+COLOR_DEV_STATUS=['gray','blue','skyblue','#ff8888','#13EC30','#13EC30','#FE0103','#FF830F','#FF830F','#13EC30']
+InfoCount=0;
+lastStamp="";
+inAjax=0;
+devs=new Array()
+
+function createSubGrid(subgrid_id, row_id)
+{
+   var jqOptions_subgrid0=copyObj(jq_Options);
+   var jqOptions_subgrid1=copyObj(jq_Options);
+   var jqOptions_subgrid2=copyObj(jq_Options);
+
+    var subgrid0_table_id,subgrid1_table_id,subgrid2_table_id, pager_id;
+    subgrid0_table_id = subgrid_id+"_t0";
+    subgrid1_table_id = subgrid_id+"_t1";
+    subgrid2_table_id = subgrid_id+"_t2";
+    pager_id = "p_"+subgrid0_table_id;
+    $("#"+subgrid_id).html("<table id='"+subgrid0_table_id+"' class='scroll'></table><div id='"+pager_id+"' class='scroll'></div><table id='"+subgrid1_table_id+"' class='scroll'></table><div id='"+pager_id+"' class='scroll'></div><table id='"+subgrid2_table_id+"' class='scroll'></table><div id='"+pager_id+"' class='scroll'></div>");
+    jqOptions_subgrid0.url='/acc/data/AccDoor/?device='+row_id+'&t=AccDoor_sub.js'
+    jqOptions_subgrid0.colModel={{ subgrid0_colModel }}
+    jqOptions_subgrid0.pager=''
+    jqOptions_subgrid0.height='100%'
+    jqOptions_subgrid0.autowidth=false
+    jqOptions_subgrid0.sortname='id'
+   jqOptions_subgrid0.width=730;
+    jqOptions_subgrid0.caption='门管理'
+    $("#"+subgrid0_table_id).jqGrid(jqOptions_subgrid0)
+
+    jqOptions_subgrid1.caption='输入管理'
+    jqOptions_subgrid1.url='/acc/data/AuxIn/?device='+row_id+'&t=AuxIn_sub.js'
+    jqOptions_subgrid1.colModel={{ subgrid1_colModel }}
+    jqOptions_subgrid1.pager=''
+    jqOptions_subgrid1.height='100%'
+    jqOptions_subgrid1.autowidth=false
+    jqOptions_subgrid1.width=730;
+    $("#"+subgrid1_table_id).jqGrid(jqOptions_subgrid1)
+
+    jqOptions_subgrid2.caption='输出管理'
+    jqOptions_subgrid2.url='/acc/data/AuxOut/?device='+row_id+'&t=AuxOut_sub.js'
+    jqOptions_subgrid2.colModel={{ subgrid2_colModel }}
+    jqOptions_subgrid2.pager=''
+    jqOptions_subgrid2.height='100%'
+    jqOptions_subgrid2.autowidth=false
+    jqOptions_subgrid2.width=730;
+    $("#"+subgrid2_table_id).jqGrid(jqOptions_subgrid2)
+
+}
+
+
+function getPosTran(sn){
+    createDataDialog('ICConsumerList', "{%trans '消费明细' %}",  1024,'/ipos/data/ICConsumerList/?dev_sn='+sn+'&mod_name='+app)
+}
+
+function getAccTran(sn){
+    createDataDialog('records', "{%trans '门禁记录' %}",  1024,'/acc/data/records/?SN='+sn+'&mod_name='+app)
+}
+
+function getLog_device(sn){
+    createDataDialog('devcmds', "{%trans '服务器下发命令日志' %}",  1071,'/iclock/data/devcmds/?SN='+sn+'&mod_name='+app)
+}
+function getTran(sn){
+    if(app=='ipos')
+    {
+      alert("{% trans '消费模块不具备此功能' %}")
+      return;
+    }
+    createDataDialog('transactions', "{%trans '原始记录' %}",  1024,'/iclock/data/transactions/?SN='+sn+'&sidx=-TTime'+'&mod_name='+app)
+}
+function getUplog(sn){
+
+    createDataDialog('devlog', "{%trans '设备上传数据日志' %}",  1024,'/iclock/data/devlog/?SN='+sn+'&mod_name='+app)
+
+}
+function getpitureofdevice(sn){
+
+    createPictureDialog('devpictures', "{%trans '设备上传的照片' %}",sn)
+
+}
+
+
+function getdpts_iclock(sn){
+    if(app=='acc')
+    createDataDialog('zone', "{%trans '归属区域' %}("+sn+")",  1024,'/iclock/simple_data/zone/?SN='+sn)
+    else if(app=='ipos')
+    createDataDialog('Dininghall', "{%trans '归属餐厅' %}("+sn+")",  1024,'/iclock/simple_data/Dininghall/?SN='+sn)
+    else
+    createDataDialog('department', "{%trans '归属单位' %}("+sn+")",  1024,'/iclock/simple_data/department/?SN='+sn+'&&gettype=1')
+
+}
+
+function getempofdevice_iclock(sn)
+{
+    if(app=='ipos')
+    {
+       alert("{% trans '消费模块不具备此功能' %}")
+      return;
+    }
+    createDataDialog('empofdevice', "{%trans '设备上的人员名单' %}",  1100,'/iclock/data/empofdevice/?SN='+sn)
+
+}
+
+function getProofCmd(sn){
+    if(app=='ipos')
+    {
+      alert("{% trans '消费模块不具备此功能' %}")
+      return;
+    }
+
+
+    createDataDialog('AttDataProofCmd', "{%trans '记录数据校对日志' %}",  1024,'/iclock/data/AttDataProofCmd/?SN='+sn)
+}
+function afterPost_iclock(flag,obj)
+{
+	$("#id_SN",obj).val("")
+	$("#id_Alias",obj).val("")
+
+}
+function beforePost_iclock(obj,actionName){
+	if(app=='acc') {
+		$("#id_error",obj).html('')
+		sensor_status=$('#id_door_sensor_status',obj).val()
+		lock_delay=parseInt($('#id_lock_delay',obj).val())
+		sensor_delay=parseInt($('#id_sensor_delay',obj).val())
+		if(sensor_status!=undefined&&lock_delay!=undefined&&sensor_status!=0){
+			if(sensor_delay<=lock_delay){
+				$("#id_error",obj).html('门磁延时需大于锁驱动时长').css('color','red').css("display","block");
+				return false
+			}
+		}
+		force_pwd=$('#id_force_pwd',obj).val()
+		supper_pwd=$('#id_supper_pwd',obj).val()
+		var reg = new RegExp("^[0-9]{0,8}$");
+		if(force_pwd!=undefined&&force_pwd!='') {
+			if(!reg.test(force_pwd)){
+				$("#id_error",obj).html('胁迫密码为最大8位整数').css('color','red').css("display","block");
+				return false
+			}
+		}
+		if(supper_pwd!=undefined&&supper_pwd!='') {
+			if(!reg.test(supper_pwd)){
+				$("#id_error",obj).html('紧急状态密码为最大8位整数').css('color','red').css("display","block");
+				return false
+			}
+		}
+	} else {
+		var flag=true;
+		var dept =$("#id_DeptID",obj).val()
+		var authdept =$("#Authed_department",obj).val()
+			var posradio=$("#radioSplit",obj).prop("checked")
+			if(posradio){
+				$("#id_dz_money",obj).val('')
+			}
+			var po=$("#id_ProductType",obj).val()
+			if(po==12){
+				var ca=$("#id_cash_model",obj).val()
+				if(ca=='')
+				{
+				  $("#id_dz_money",obj).val('')  
+				}
+				if(ca==0){
+					var maxm=$("#id_card_max_money",obj).val()
+					var dzm=$("#id_dz_money",obj).val()
+					if(dzm*1>maxm*1){
+						$("#id_error",obj).css("display","block");
+			$("#id_error",obj).html("<ul class='errorlist'><li>{%trans '定值金额不能大于最大限额！' %}</li></ul>");					
+			flag=false;
+					}
+				}
+			}
+		if(dept==""){
+			$("#id_error",obj).css("display","block");
+			$("#id_error",obj).html("<ul class='errorlist'><li>{%trans 'Please select a department' %}</li></ul>");					
+			flag=false;
+		}else if(authdept==""){
+			$("#id_error",obj).css("display","block");
+			$("#id_error",obj).html("<ul class='errorlist'><li>{%trans '请选择归属单位或区域' %}</li></ul>");
+			flag=false;
+
+		}
+		return flag
+	}
+}
+function createQueryDlg_iclock(){
+	createQueryDlgbypage('iclock_search')
+	$('#dlg_for_query_iclock_search').dialog({position: { my: "right top", at: "right bottom",of:"#"+g_activeTabID+" #id_searchbar"},
+	buttons:[{id:"btnShowOK",text:gettext('搜索'),
+	  click:function(){save_hideDeptments('iclock_search');}},
+	 {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+	}] })
+	
+}
+
+function select_door_params()
+{
+
+
+
+}
+
+function iclock_taikangTree(obj)
+{
+		$("#id_BackupDev",obj).after("<div style='display:inline'>"
+		+"<span><img  alt='{%trans 'open department tree'%}' src='/media/img/sug_down_on.gif' id='id_drop_taikang'/></span>"
+		+"</div>"
+		);
+                
+		$("#id_drop_taikang",obj).click(function(){
+		    createQueryDlgbypage('iclock_taikang',true,false)
+		    $('#dlg_dept_title_iclock_taikang').hide()
+		    //$("#dlg_other_body_iclock_taikang").html("{% trans '为了方便使用,在二级(含)以上单位后增加了级联下级的选项,推荐使用,有如下好处：1.不必勾选每一个单位,只需勾选上级单位和级联下级,则自动授权了所有下级单位;2.当下面的单位结构发生变化,不需要重新授权。'%}")
+		    $("#dlg_for_query_iclock_taikang").dialog({width:460,height:460})
+
+		    $("#dlg_other_iclock_taikang").css("height",60).show()
+			
+			
+			$('#dlg_for_query_iclock_taikang').dialog({ position: { my: "left top-220", at: "right top",of:"#id_drop_taikang"},buttons:[{id:"btnShowOK",text:gettext('确定'),
+									  click:function(){save_hide_taikang_Deptment(obj,'iclock_taikang');}},
+									 {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+									}] })
+		})
+                
+                
+}
+function save_hide_taikang_Deptment (obj,page) {
+
+	var zTree = $.fn.zTree.getZTreeObj("showTree_"+page)
+	if (zTree!=null)
+	{
+	    var nodes = zTree.getSelectedNodes()
+            if (nodes.length>0)
+             $("#id_BackupDev",obj).val(nodes[0].value)         
+         }
+
+	dlgdestroy(page)
+
+}
+
+
+function process_dialog_iclock(obj,flag,urlAddr){
+     if(flag=='edit')
+     {
+        $('#id_SN',obj).prop('readonly',true)
+       
+     }
+    $(obj).dialog({resizable:false,modal:true})
+    if(urlAddr.indexOf('/acc/data/AccDoor/')!=-1)
+    {
+        $('#id_device',obj).prop('readonly',true)
+        $('#id_door_no',obj).prop('readonly',true)
+        if($('#id_door_sensor_status',obj).val()=='0')
+        $('#id_sensor_delay',obj).prop('readonly',true)
+        if(!is_super)
+         $("#id_copy_",obj).prop('disabled',true)
+         $('#id_copy_',obj).click(function(){
+            if($('#id_copy_').prop('checked')==true)
+            $('#door_params').show()
+            else
+            $('#door_params').hide()
+            
+         
+         select_door_params()
+         
+         })
+         
+        $("#id_door_sensor_status",obj).change(function(){
+            if($(this).val()==0)
+            $('#id_sensor_delay',obj).prop('readonly',true)
+            else
+            $('#id_sensor_delay',obj).prop('readonly',false)
+            
+            
+        })
+
+    }
+    else
+    {
+        var cdata=''
+        if(app=='ipos'){
+
+            var dzhtml=$("#id_SN",obj).parent().parent().html()
+            var index1=dzhtml.indexOf('><')
+            dzhtml=dzhtml.substring(index1+1)
+            dzhtml="<th>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"+dzhtml
+            $("#id_SN",obj).parent().parent().html(dzhtml)
+            setredrequest(['dz_money','time_price','long_time'],obj)
+            $("#id_consume_model",obj).after('<tr style="display: none;" id="pos_radio"><th></th><td><input type="radio" name="radiobutton" value="1" id="radioDZ" checked>定值<input type="radio" name="radiobutton" value="2" id="radioSplit">分段定值</td></tr>')
+            var ptype=$('#id_ProductType',obj).val()
+            if(ptype==11){
+				{% if "POS_IC"|filter_config_option %}
+                cdata='consume_model,,check_black_list,check_white_list,is_cons_keap,is_check_operate,IsOverCheck'
+				{% else %}
+				cdata='consume_model,,check_black_list,check_white_list,is_cons_keap,is_check_operate'
+				{% endif %}
+            }else if(ptype==12){
+                cdata='cash_model,cash_type,favorable,card_max_money,check_black_list,check_white_list,is_check_operate'
+            }else if(ptype==13){
+                cdata='is_add,is_zeor,is_OK,check_black_list,check_white_list,is_check_operate'
+            }
+            
+            $("#id_ProductType",obj).change(function(){
+            var cdata=''
+            if(app=='ipos'){
+                var ptype=$('#id_ProductType',obj).val()
+                if(ptype==11){
+					{% if "POS_IC"|filter_config_option %}
+					cdata='consume_model,check_black_list,check_white_list,is_cons_keap,is_check_operate,IsOverCheck'
+					{% else %}
+					cdata='consume_model,check_black_list,check_white_list,is_cons_keap,is_check_operate'
+					{% endif %}
+                }else if(ptype==12){                            cdata='cash_model,cash_type,favorable,card_max_money,check_black_list,check_white_list,is_check_operate'
+                }else if(ptype==13){
+                    cdata='is_add,is_zeor,is_OK,check_black_list,check_white_list,is_check_operate'
+                }
+            }
+            setCss(cdata,obj)
+            })
+        }
+        setCss(cdata,obj)
+        if(app=='acc')
+        {
+			$('#id_Authentication',obj).parent().parent().css('display','none')
+			$('#id_device',obj).prop('readonly',true)
+			$('#id_aux_no',obj).prop('readonly',true)
+		}
+	if (flag=='add')
+        {
+            if(app=='att'||app=='meeting'||app=='adms'||app=='patrol')
+                {iclock_Authed_deptTree_iclock(obj)}
+            else if(app=='ipos')
+                {}
+            else if(app=='acc')
+                {iclock_Authed_zoneTree(obj);}
+            
+	}
+        
+         iclock_taikangTree(obj);
+       
+        
+        f=$(obj).find("#id_edit_form").get(0)
+	$(f).validate({
+			rules: {
+					"SN": {"required":true,'alnum':true,"minlength":10},
+					"Alias": {"maxlength":20,'string':true},
+					'City': {'string':true},
+                                        'dz_money':{'required':true,min:0,max:999,"maxlength":6,isMoney:true},
+                                        'cash_model':{'required':true},
+                                        'cash_type':{'required':true},
+										"IPAddress": {"ip":true}
+//					"TZAdj":{"digits":true}
+				}
+			});
+    }	
+}
+function process_dialog_again_iclock(obj,flag){
+        var po=$("#id_ProductType",obj).val()
+        if(po=='11'){
+            var mo=$("#id_consume_model",obj).val()
+                if(mo=='1'){
+                    $("#pos_radio",obj).css('display','table-row')
+                    $("#id_time_price",obj).parent().parent().css('display','none')
+                    $("#id_long_time",obj).parent().parent().css('display','none')
+                    //$("#id_dz_money",obj).parent().parent().css('display','table-row')
+                    if(!($("#id_dz_money",obj).val()))
+                        $("#radioSplit",obj).prop("checked",true)
+                    $("#pos_radio",obj).click(function(){
+                        var posradio=$("#radioDZ",obj).prop("checked")
+                        if(posradio){
+                            $("#id_dz_money",obj).parent().parent().css('display','table-row')
+							if( !$("#id_dz_money",obj).val()) {
+								$("#id_dz_money",obj).val(10)
+							}
+                        }else{
+                            $("#id_dz_money",obj).parent().parent().css('display','none')
+                        }
+                        
+                    })
+                    $("#pos_radio",obj).click();    
+  
+                }else if(mo==6){
+                    $("#pos_radio",obj).css('display','none')
+                    $("#id_time_price",obj).parent().parent().css('display','table-row')
+                    $("#id_long_time",obj).parent().parent().css('display','table-row')
+                    $("#id_dz_money",obj).parent().parent().css('display','none')
+                }else{
+                    $("#id_dz_money",obj).parent().parent().css('display','none')
+                    $("#pos_radio",obj).css('display','none')
+                    $("#id_time_price",obj).parent().parent().css('display','none')
+                    $("#id_long_time",obj).parent().parent().css('display','none')
+                }
+        }else if(po==12){
+                var mo=$("#id_cash_model",obj).val()
+                if(mo==0){
+                    $("#id_cash_model",obj).val(0)
+                    $("#id_dz_money",obj).parent().parent().css('display','table-row')
+                }else if (mo==1){
+                    $("#id_cash_model",obj).val(1)
+                    $("#id_dz_money",obj).parent().parent().css('display','none')
+                } else {
+					$("#id_cash_model",obj).val('')
+                    $("#id_dz_money",obj).parent().parent().css('display','none')
+				}
+                var mo=$("#id_cash_type",obj).val()
+                if(mo==1){
+                    $("#id_cash_type",obj).val(1)
+                    $("#id_favorable",obj).parent().parent().css('display','none')
+                    $("#id_card_max_money",obj).parent().parent().css('display','none')
+                }else{
+                    $("#id_cash_type",obj).val(0)
+                    $("#id_favorable",obj).parent().parent().css('display','table-row')
+                    $("#id_card_max_money",obj).parent().parent().css('display','table-row')
+                    
+                }
+        }
+
+        $("#id_consume_model",obj).change(function(){
+            var mo=$("#id_consume_model",obj).val()
+            if(mo=='1'){
+                $("#pos_radio",obj).css('display','table-row')
+                $("#id_time_price",obj).parent().parent().css('display','none')
+                $("#id_long_time",obj).parent().parent().css('display','none')
+                var posradio=$("#radioDZ",obj).prop("checked")
+                if(posradio){
+                    $("#id_dz_money",obj).parent().parent().css('display','table-row')
+					if(!$("#id_dz_money",obj).val()) {
+						$("#id_dz_money",obj).val(10)
+					}
+                }
+                $("#pos_radio",obj).click(function(){
+                    var posradio=$("#radioDZ",obj).prop("checked")
+                    if(posradio){
+                        $("#id_dz_money",obj).parent().parent().css('display','table-row')
+						if(!$("#id_dz_money",obj).val()) {
+						$("#id_dz_money",obj).val(10)
+					}
+                    }else{
+                        $("#id_dz_money",obj).parent().parent().css('display','none')
+                    }
+                    
+                })
+            }else if(mo==6){
+                $("#pos_radio",obj).css('display','none')
+                $("#id_time_price",obj).parent().parent().css('display','table-row')
+                $("#id_long_time",obj).parent().parent().css('display','table-row')
+                $("#id_dz_money",obj).parent().parent().css('display','none')
+            }else{
+                $("#id_dz_money",obj).parent().parent().css('display','none')
+                $("#pos_radio",obj).css('display','none')
+                $("#id_time_price",obj).parent().parent().css('display','none')
+                $("#id_long_time",obj).parent().parent().css('display','none')
+            }
+        })
+        $("#id_cash_model",obj).change(function(){
+            var mo=$("#id_cash_model",obj).val()
+            if(mo=='0'){
+                $("#id_dz_money",obj).parent().parent().css('display','table-row')
+            }else{
+                $("#id_dz_money",obj).parent().parent().css('display','none')
+            }
+        })
+        $("#id_cash_type",obj).change(function(){
+            var mo=$("#id_cash_type",obj).val()
+            if(mo==0){
+                $("#id_favorable",obj).parent().parent().css('display','table-row')
+                $("#id_card_max_money",obj).parent().parent().css('display','table-row')
+            }else{
+                $("#id_favorable",obj).parent().parent().css('display','none')
+                $("#id_card_max_money",obj).parent().parent().css('display','none')
+            }
+        })
+		$("#id_ProductType",obj).change(function(){
+            var mo=$("#id_consume_model",obj).val()
+            if(mo=='1'){
+				if($("#id_ProductType",obj).val()=='11') {
+					if($("#id_dz_money",obj).parent().parent().css('display')=='none'&&$('#radioDZ').prop('checked')) {
+						$("#id_dz_money",obj).parent().parent().css('display','table-row')
+					} else {
+						$("#id_dz_money",obj).parent().parent().css('display','none')
+					}
+					if($("#pos_radio",obj).css('display')=='none') {
+						$("#pos_radio",obj).css('display','table-row')
+					}
+				} else {
+					$("#id_dz_money",obj).parent().parent().css('display','none')
+				}
+                
+            }
+        })
+                }
+
+function setCss(cdata,obj){
+    var data=['consume_model','dz_money','time_price','long_time','cash_model','cash_type','favorable','card_max_money','is_add','is_zeor','is_OK','check_black_list','check_white_list','is_cons_keap','is_check_operate','IsOverCheck']
+        
+    for(var i=0;i<data.length;i++){
+        if(cdata.indexOf(data[i])!=-1){
+            $('#id_'+data[i],obj).parent().parent().css('display','table-row')
+        }else{
+            $('#id_'+data[i],obj).parent().parent().css('display','none')
+        }
+    }
+}
+function setredrequest(cdata,obj){
+    for(var i=0;i<cdata.length;i++){
+        var dzhtml=$("#id_"+cdata[i],obj).parent().parent().html()
+        var index=dzhtml.indexOf('><')
+        dzhtml=dzhtml.substring(index+1)
+        dzhtml="<th><font color='red'>*</font>"+dzhtml
+        $("#id_"+cdata[i],obj).parent().parent().html(dzhtml)
+    }
+}
+function selectother(){
+	if($("#id_isFptemp").prop("checked")){
+		$("#id_isFptemp").val(1)
+	}else{
+		$("#id_isFptemp").val(2)
+	}
+	if($("#id_isFace").prop("checked")){
+		$("#id_isFace").val(1)
+	}else{
+		$("#id_isFace").val(2)
+	}
+}
+
+
+function iclock_getFormDept(obj)
+{
+	selectNames=[];
+	selectDept=[]
+	var v=$("#id_DeptID",obj).val();
+	$("#id_DeptID option[value='"+v+"']",obj).each(function(){
+		selectNames.push($(this).text());	
+		var optionValue=$(this).val();
+		selectDept.push(optionValue);
+	})
+}
+function iclock_getFormAutuedDept(obj)
+{
+	selectNames=[];
+	selectDept=[];
+	$("select[id='id_AuthedDept'] option",obj).each(function(){
+		selectNames.push($(this).text());	
+		var optionValue=$(this).val();
+		selectDept.push(optionValue);
+	})
+}
+
+
+function save_hide_Autued_Deptment_iclock (obj,page) {
+	deptNames=getSelected_deptNames("showTree_"+page);
+	$("input[alt='Authed_department']",obj).val(formatArrayEx(deptNames));
+
+        var deptIDs=getSelected_dept("showTree_"+page)
+	var authData=[]
+	for (i in deptIDs)
+	{
+		if($("#diyBtn_"+deptIDs[i]).prop("checked"))
+			var Data={deptid:deptIDs[i],iscascadecheck:1}
+		else
+			var Data={deptid:deptIDs[i],iscascadecheck:0}
+		authData.push(Data)
+	}
+			
+
+	$("#id_AuthedDept",obj).val(JSON.stringify(authData));
+	dlgdestroy(page)
+
+}
+
+/*
+function iclock_deptTree(obj){
+		var error=$("#id_DeptID",obj).parent().find(".errorlist",obj).html();
+		$("#id_DeptID",obj).after((error==null?"":"<ul class='errorlist'>"+error+"</ul>")
+		+"<div style='display:inline'>"
+		+"<span><img  alt='{%trans 'open department tree'%}' src='/media/img/sug_down_on.gif' id='id_drop_dept'/></span>"
+		+"</div>"
+		);
+		$("#id_drop_dept",obj).click(function(){
+			createQueryDlgbypage('iclock_dept')
+			var zTree = $.fn.zTree.getZTreeObj("showTree_iclock_dept");
+			zTree.setting.check.enable = false;
+			$('#dlg_for_query_iclock_dept').dialog({ position: { my: "left top-120", at: "right top",of:"#id_drop_dept"},buttons:[{id:"btnShowOK",text:gettext('确定'),
+									  click:function(){save_hide_Autued_Deptment_iclock(obj,'iclock_dept');}},
+									 {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+									}] })
+		
+	});
+
+}
+*/
+
+function Show_ZoneData()
+{
+	var setting = {
+	    async: {
+			    enable: true,
+			    url: "/acc/getData/?func=zonetree",
+			    autoParam: ["id"]
+		    }
+	};
+	$.fn.zTree.init($("#showTree_iclock_auth"), setting,null);
+}
+
+function Show_DiningData()
+{
+	var setting = {
+	    async: {
+			    enable: true,
+			    url: "/ipos/getData/?func=diningtree",
+			    autoParam: ["id"]
+		    }
+	};
+	$.fn.zTree.init($("#showTree_iclock_auth"), setting,null);
+}
+
+//授权单位
+function iclock_Authed_deptTree_iclock(obj){
+
+		$("#id_AuthedDept",obj).parent().html("<div>"
+		+"<span style='float:left;border-top:1 solid #5B80B2;'><input alt='Authed_department' type='text' style='width:200px !important;' readOnly='readOnly'  id='Authed_department'/></span>"
+		+"<span style='float:left;'><img  alt='{%trans 'open department tree'%}' src='/media/img/sug_down_on.gif' id='id_drop_Authed_dept'/></span>"
+		+"</div>"
+		+"<div style='display:none;'><input id='id_AuthedDept' name='AuthedDept' type='hidden' /></div>"
+		);
+
+		$("#id_drop_Authed_dept",obj).click(function(){
+		    createQueryDlgbypage('iclock_auth',false,true)
+		    $('#dlg_dept_title_iclock_auth').hide()
+		    $("#dlg_other_body_iclock_auth").html("{% trans '为了方便使用,在二级(含)以上单位后增加了级联下级的选项,推荐使用,有如下好处：1.不必勾选每一个单位,只需勾选上级单位和级联下级,则自动授权了所有下级单位;2.当下面的单位结构发生变化,不需要重新授权。'%}")
+		    $("#dlg_for_query_iclock_auth").dialog({width:460,height:460})
+
+		    $("#dlg_other_iclock_auth").css("height",60).show()
+			
+			
+			$('#dlg_for_query_iclock_auth').dialog({ position: { my: "left top-220", at: "right top",of:"#id_drop_Authed_dept"},buttons:[{id:"btnShowOK",text:gettext('确定'),
+									  click:function(){save_hide_Autued_Deptment_iclock(obj,'iclock_auth');}},
+									 {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+									}] ,close:function(){$(this).dialog("destroy"); }})
+		})
+
+}
+
+//授权区域
+function iclock_Authed_zoneTree(obj){
+
+		$("#id_AuthedDept",obj).parent().html("<div>"
+		+"<span style='float:left;border-top:1 solid #5B80B2;'><input alt='Authed_department' type='text' style='width:200px !important;' readOnly='readOnly'  id='Authed_department'/></span>"
+		+"<span style='float:left;'><img  alt='{%trans 'open department tree'%}' src='/media/img/sug_down_on.gif' id='id_drop_Authed_dept'/></span>"
+		+"</div>"
+		+"<div style='display:none;'><input id='id_AuthedDept' name='AuthedDept' type='hidden' /></div>"
+		);
+
+		$("#id_drop_Authed_dept",obj).click(function(){
+                        var html="<div id='dlg_for_query_iclock_auth' style='overflow:hidden;'>"
+                                     +"<div id='dlg_dept_ilock_auth' class='dlgdiv'>"
+                                             +"<div id='dlg_dept_body_iclock_auth' style='overflow:hidden;'>"
+                                                     +"<ul id='showTree_iclock_auth' class='ztree' style='height:300px;overflow:auto;'></ul>"
+                                             +"</div>"
+                                     +"</div>"
+                        +"</div>"
+			
+			
+			$(html).dialog({dialogClass: "no-close",modal: true, position: { my: "left top-200", at: "right top",of:"#id_drop_Authed_dept"},
+                                buttons:[{id:"btnShowOK",text:gettext('确定'),click:function(){save_hide_Autued_Deptment_iclock(obj,'iclock_auth');}},
+									 {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+									}],
+                                open:function(){Show_ZoneData();}
+                                                                        })
+		})
+
+}
+
+
+//function updateiClockState(obj)
+//{
+//	var c=0;
+//	for(var i in obj.data)
+//	{
+//		var o=obj.data[i];
+//		if(typeof o=="undefined") break;
+//		index=searchKey(o.SN);
+//		if(index>=0)
+//		{
+//			if(data[index][2]!=o.State)
+//			{
+//				data[index][2]=o.State;
+//				data[index][3]=getStateStr(o.State);
+//				c+=1;
+//			}
+//			if(data[index][6]!=o.LastAct)
+//			{
+//				data[index][6]=o.LastAct;
+//				c++;
+//			}
+//		}
+//		else
+//		{
+//			logtimer1=setTimeout("reloadData()", 5000);
+//		}
+//	}
+//	if(c>0)
+//renderTbl(data, $.extend({pagerId:"pages", tblId:"tbl", showSelect: true}, options));
+//}
+
+//单位模糊查询
+function searchShowIclock(){
+    var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+    if (flag!='cansearch'&&flag!='defvalue') return;
+    if (flag!='defvalue')
+        var v=$("#"+g_activeTabID+" #searchbar").val();
+    else
+        var v=''
+    var url=g_urls[g_activeTabID]+"?q="+escape(v)+'&mod_name='+app
+    savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+
+function getMoreInfo(index){
+	var dev=devs[index]
+	return 		"{% trans "device" %}{% trans "SN" %}:"+(dev.SN=="None"?"":dev.SN)
+				+"<br/>{% trans "Device Alias name" %}:"+dev.Alias
+				+"<br/>{% trans "Transfer time" %}:"+dev.TransTimes
+				+"<br/>{% trans "Interval" %}:"+dev.TransInterval
+				+"<br/>{% trans "Last activity" %}:"+dev.LastActivity
+				+"<br/>{% trans "Fw version" %}:"+(dev.FWVersion=="None"?"":dev.FWVersion)
+				+"<br/>{% trans "User count" %}:"+(dev.UserCount=="None"?"":dev.UserCount)
+				+"<br/>{% trans "Fp count" %}:"+(dev.FPCount=="None"?"":dev.FPCount)
+				+"<br/>{% trans "Transaction count" %}:"+(dev.TransactionCount=="None"?"":dev.TransactionCount)
+			
+}
+
+
+function showBox(data)
+{	
+	var html=""
+	if(data.length>0){
+		html="<table style='margin-left:10px;margin-top:8px'><tbody><tr>"
+		for(var i=0;i<data.length;i++){
+			if(i<6){
+				html+="<td>"+datablock(i,data[i])+"</td>"
+			}else if(i>0&&i%10==0){
+				html+="</tr><tr><td>"+datablock(i,data[i])+"</td>"
+			}else{
+				html+="<td>"+datablock(i,data[i])+"</td>"
+			}
+				
+		}
+		html+="</tr></tbody></table>"
+	}else{
+		html+="<div class='NoIclock'>{%trans "No Device!" %}</div>"
+	}
+	return html
+}
+
+function datablock(index,blockdata){
+	return "<div id='ic_"+blockdata.SN+"' name='div_'"+index+" class='AIClockBox' style='width:115px' onMouseover=''>"
+			+"<div class='iclockButton' >"
+			+"<input type='checkbox' class='class_select' name='"+blockdata.SN+"'onclick='showSelected();'value='"+blockdata.Alias+"' id='id_row_"+index+"' />"
+			+"<a class='can_edit' onclick=editclick('"+blockdata.SN+"')><img border='0' style='width:64px;height:64px' onmouseover='index_tip_info(this);' onmouseout='tip_info_exit();' src='"+blockdata.getImgUrl+"'  index='"+index+"'/><br />"+blockdata.Alias+"</a>"
+			+"</div>"
+			+"<div id='tt_"+blockdata.SN+"' class='iclockTT'>"
+				+"<span>"+blockdata.SN+"<br/>"
+				+""+blockdata.DeptID+"<br/>"
+				+"{%trans "Status"%}:"+blockdata.State+"<br/>"
+			+'</span></div>'
+			+"</div>"
+}
+function index_tip_info(obj)
+{
+	var index=$(obj).attr("index");
+	$("#id_tip").css("background-color",'#cfcfcf').html(getMoreInfo(index));
+	var offset=$(obj).offset();
+	if($("#id_tip").css("visibility")=="hidden"){
+		$("#id_tip").css({"z-index":1024,"visibility":"visible","position":"absolute","top":(offset.top),"left":(offset.left-230)})
+		$("#id_tip").mouseover(function(){
+			$(this).css({"z-index":1024,"visibility":"visible","position":"absolute","top":(offset.top),"left":(offset.left-230)})
+		}).mouseout(function(){
+			$("#id_tip").css("visibility","hidden");
+		});
+	}
+	else
+		$("#id_tip").css("visibility","hidden");
+}
+function tip_info_exit()
+{
+	$("#id_tip").css("visibility","hidden")
+}
+
+//function createFilterList(curState){
+//	var html="<option value=-1 "+(curState==-1?" selected":"")+">{%trans "All"%}</option>";
+//	for(i=0;i<DEV_STATUS.length;i++)
+//		html+="<option value="+i+(curState==i?" selected":"")+">"+DEV_STATUS[i]+"</option>";
+//	return html
+//}
+
+function stateFilter(val) {
+	if ($.cookie("stateFilter") != ("" + val)){
+		$.cookie("stateFilter", val, { expires: 7 });
+		showState_iclock(val);
+	}
+}
+
+function getStateStr(state)
+{
+	if(state>=0 && state<DEV_STATUS.length)
+	{
+		return '<span style="color: '+COLOR_DEV_STATUS[state]+';">'+DEV_STATUS[state]+'</span>'
+	}
+	return "NONE";
+}
+
+function itemCanBePaused(aData)
+{
+	var state=stripHtml(aData.State)
+	if (state!=DEV_STATUS[DEV_STATUS_PAUSE])
+		return 1
+	return 0
+}
+
+function itemCanBeResumed(aData)
+{
+	var state=stripHtml(aData.State)
+	if (state==DEV_STATUS[DEV_STATUS_PAUSE])
+		return 1
+	return 0
+}
+
+function itemIsOnline(aData)
+{
+	var state=stripHtml(aData.State)
+	return state!=DEV_STATUS[DEV_STATUS_OFFLINE] && state!=DEV_STATUS[DEV_STATUS_PAUSE];
+}
+
+function pad2(p){p='0'+p; return p.substr(p.length-2, 2)}
+
+function setopt(key, title)
+{
+	var ret=prompt("{%trans "please enter"%}"+title,"")
+	if(ret==null) return "";
+	if(ret=="")
+	{
+		if(key=="COMKey") ret=0;
+		if(key=="AutoPowerSuspend") ret=65535;
+	}
+	else if((key=="AutoPowerSuspend") && ret.indexOf(":"))
+	{
+		ret=ret.split(":");
+		ret=(ret[0]*256+1*ret[1])+"";
+	}
+	return "?action=devoption&name="+key+"&value="+ret;
+}
+
+function upgrade(devList)
+{
+	var action=confirm("{%trans "Device will be conducted as follows firmware update"%}：\n"+devList.ss+"\n\n{%trans "Please ensure that the server installation path"%}\n"
+			+"\"mysite/files/fw/{%trans "model"%}/\"\n{%trans "The relevant firmware file be stored in its subdirectory"%} main.gz!\n");
+	if(action)
+		return '?action=upgradefw';
+}
+
+function SetPass(devList)
+{
+	var pin=prompt("请输入人员号码：")
+	if(pin>0)
+	{
+		var action=prompt("将对如下考勤机上的人员“"+pin+"”重置密码：\n"+devList.ss+"\n\n请输入新密码：");
+		if(action)
+			return '?action=resetPwd&PIN='+pin+'&Passwd='+action;
+	}
+}
+
+function copyudata(url)
+{
+	createDialog(url, "?action=copyudata&SN=", "miniData?key=SN", "{%trans "Copy device data to"%}", "{%trans "device"%}", 350);
+}
+function doAction_iclock(url, action)
+{
+	if (action == 'deptEmptoDev')
+		createDlgtoDevice(url)
+	else if(action=='deptEmptoDevByPIN'){
+		createDlgtoDeviceByPIN(url);
+	}
+        else if(action=='deptEmpDelFromDev'){
+		createDlgDelFromDevice(url);
+	}
+	else if(action=='fingerDelFromDev'){
+		createDlgDelFingerFromDevice(url)
+	}
+	else if(action=='faceDelFromDev'){
+		createDlgDelFaceFromDevice(url)
+	}
+        else if(action=='browseempindevice')
+        {
+            getempofdevice_iclock(url.ss)
+        }
+        else if(action=='setAuthedDept')
+        {
+            if (app=='acc')
+            {createDlgSetAuthedZone(url)}
+            else if (app=='ipos')
+            {createDlgSetAuthedDining(url)}
+            else
+            {createDlgSetAuthedDept(url)}
+                    
+                    
+       }
+       else if(action=='setoption')
+        {
+		    setoption(url)
+       }
+       else if(action=='sync_acc_data_to_device')
+       {
+            SyncAccDataToDevice(url)
+       
+       }
+		else if(action=='deviceLogCheck') 
+		{
+			deviceLogCheck(url, action)
+		}
+	
+	
+	
+}
+function datas_iclock(id){
+	var r=$("#id_grid_"+tblName[g_activeTabID]).jqGrid("getRowData",id);
+	var id=id
+	var Name=r.conferenceTitle
+	var data=[id,Name];
+	return data
+}
+
+function deviceLogCheck(id)
+{
+	if(typeof id=='undefined')
+	{
+		var result=getSelected(0,"true");
+		if (result.ss.length>1){
+			alert(gettext("一次仅允许选择一台设备"));
+			return;
+		}else {
+			selected_data=datas_iclock(result.ss)
+		}
+			
+	}
+	else
+	{
+		var result={ss:id}
+	    selected_data=datas_iclock(result.ss)
+	}
+	if(selected_data[0].count==1) {
+		$.ajax({
+			type: "GET",
+			url:"/ipos/data/iclock/?action=deviceLogCheck",
+			data:"K="+selected_data[0].ss[0],
+			dataType:"json",
+			success:function(ret){
+				alert(ret.message)
+			}
+		});
+	}
+	else {
+		alert(gettext("一次仅允许选择一台设备"))
+		return
+	}
+}
+
+function SyncAccDataToDevice(url)
+{
+    var title="{% trans '同步数据至设备' %}"
+    var block_html='<div id="selectDevFunction" name="selectDevFunction">'
+                +'<form method="post" id="id_edit_form" enctype="multipart/form-data">'
+                    +'<table width="600px"><tbody><tr><td width="15%">'
+                        +'<div><a class="m-btn blue rnd sm" id="checkAll">{% trans "全不选"%}</a></div></td>'
+                             +'<td><div>'
+                                +'<table><tbody><tr><td width="15%"><input type="checkbox" value="accLevel" name="optBox" id="accLevel" checked="checked">门禁权限</td>'
+                                            +'<td width="15%"><input type="checkbox" value="timeZoneAndHoliday" name="optBox" id="timeZoneAndHoliday" checked="checked">时间段、节假日</td>'
+                                            +'<td width="15%"><input type="checkbox" value="doorOpt" name="optBox" id="doorOpt" checked="checked">门参数</td></tr>'
+                                            +'<tr><td width="15%"><input type="checkbox" value="linkage" name="optBox" id="linkage" >联动</td>'
+                                            +'<td width="15%"><input type="checkbox" value="interlock" name="optBox" id="interlock">互锁</td>'
+                                            +'<td width="15%"><input type="checkbox" value="antiPassBack" name="optBox" id="antiPassBack" >反潜</td></tr>'
+                                            +'<tr><td width="15%"><input type="checkbox" value="firstPerson" name="optBox" id="firstPerson" >首人开门</td>'
+                                            +'<td width="15%"><input type="checkbox" value="multiPerson" name="optBox" id="multiPerson">多人开门</td></tr>'
+                                +'</tbody></table>'
+                            +'</div></td>'
+                        +'</tr></tbody></table>'
+                +'</form>'
+                    +'</div>'
+
+
+
+                $(block_html).dialog({modal:true,
+                          resizable:false,
+						  width: 640,
+						  height:300,
+						  title:title,
+						  buttons:[{id:"btnShowOK",text:'{%trans "Submit" %}',
+								  click:subdata},
+								 {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }
+								}],
+						  close:function(){$(this).dialog("destroy"); }		
+						})
+                function subdata()
+                {
+                    f=$('#selectDevFunction').find("#id_edit_form").get(0)
+                    var formStr=formToRequestString(f)
+                    formStr=url.ret+'&'+formStr
+                    $.blockUI({title:title,theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}<br /></h1>'});
+                    
+                    $.post('/acc/SyncDoorData/', 
+                            formStr,
+                            function (ret, textStatus) {
+                                    if(ret.ret==0)
+                                    {
+                                        $.unblockUI()
+                                        $("#selectDevFunction").dialog("destroy");
+                                  
+                                    }
+                            },
+                            "json");
+                                
+                }
+                
+                $('#selectDevFunction #checkAll').click(function(){
+                    if ($(this).text()=='{% trans "全不选"%}')
+                    {
+                        $(this).text('{% trans "全选"%}')
+                        $("input[name='optBox']").prop('checked',false)
+                        
+                    }
+                    else
+                    {
+                        $(this).text('{% trans "全不选"%}')
+                        $("input[name='optBox']").prop('checked',true)
+                    }
+              
+                
+                })
+
+
+}
+
+
+function SaveAuthedDept(url,urlStr,title,pagename)
+{
+        var deptIDs=getSelected_dept("showTree_"+pagename)
+		if(deptIDs==""){
+		
+			$("#id_error").css("display","block");
+			$("#id_error").html("<ul class='errorlist'><li>{%trans 'Please click department or select employee !'%}</li></ul>");
+		}
+		else{
+			$.blockUI({title:title,theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}<br /></h1>'});
+			querystr=url.ret
+			//authData=[{"deptid":1,"iscascadecheck":1},{"deptid":2,"iscascadecheck":0}]
+			var authData=[]
+			for (i in deptIDs)
+			{
+				if($("#diyBtn_"+deptIDs[i]).prop("checked"))
+					var Data={deptid:deptIDs[i],iscascadecheck:1}
+				else
+					var Data={deptid:deptIDs[i],iscascadecheck:0}
+				authData.push(Data)
+		
+			
+			}
+			
+		        querystr=url.ret+'&authdata='+JSON.stringify(authData)
+			$.ajax({type: "POST",
+				url: urlStr,
+				data:querystr,
+				dataType:"json",
+				success: function(retdata){
+							if(retdata.ret==0){	
+								$.unblockUI()
+								//$("#id_error").css("display","block");
+								//$("#id_error").html(retdata.message)
+								$("#dlg_for_query_iclock_auth").dialog("destroy");
+
+							}else{
+								$.unblockUI()
+								alert(retdata.message);
+							}},
+					error: function(){ $.unblockUI();alert($.validator.format(gettext('Operating failed for {0} !'),options.title));}
+					});
+				}
+        reloadData()
+
+}
+
+function createDlgSetAuthedDept(url)
+{
+		    var title="{% trans '设备归属单位配置' %}";
+		    var urlStr=g_urls[g_activeTabID]+ '?action=setDeviceAuthedDept';
+
+		    createQueryDlgbypage('iclock_auth',false,true)
+		    $('#dlg_dept_title_iclock_auth').hide()
+		    $("#dlg_other_body_iclock_auth").html("{% trans '为了方便使用,在二级(含)以上单位后增加了级联下级的选项,推荐使用,有如下好处：1.不必勾选每一个单位,只需勾选上级单位和级联下级,则自动授权了所有下级单位;2.当下面的单位结构发生变化,不需要重新授权。'%}"+"<span id='id_error' style='display:none;float:right'></span>")
+		    $("#dlg_for_query_iclock_auth").dialog({dialogClass: "",width:500,height:480,title:title,
+		    buttons:[{id:"btnShowOK",text:'{%trans "save and return" %}',click:function(){SaveAuthedDept(url,urlStr,title,'iclock_auth');}},
+		    {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); } }]
+
+		    })
+		    $("#dlg_other_iclock_auth").css("height",60).show()
+}
+
+function createDlgSetAuthedZone(url)
+{
+		    var title="{% trans '设备归属区域' %}";
+		    var urlStr=g_urls[g_activeTabID]+ '?action=setDeviceAuthedZone';
+
+                        var html="<div id='dlg_for_query_iclock_auth' style='overflow:hidden;'>"
+                                     +"<div id='dlg_dept_ilock_auth' class='dlgdiv'>"
+                                             +"<div id='dlg_dept_body_iclock_auth' style='overflow:hidden;'>"
+                                                     +"<ul id='showTree_iclock_auth' class='ztree' style='height:300px;overflow:auto;'></ul>"
+                                             +"</div>"
+                                     +"</div>"
+                        +"</div>"
+			
+			
+			$(html).dialog({title:title,modal:true,resizable:false,buttons:[{id:"btnShowOK",text:gettext('确定'),click:function(){SaveAuthedDept(url,urlStr,title,'iclock_auth');}},
+									 {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+									}],
+                                                                    open:function(){Show_ZoneData();},
+                                                                     close:function(){$(this).dialog("destroy"); }	
+                                                                        })
+}
+
+function createDlgSetAuthedDining(url)
+{
+		    var title="{% trans '设备归属餐厅' %}";
+		    var urlStr=g_urls[g_activeTabID]+ '?action=setDeviceAuthedDining';
+
+                        var html="<div id='dlg_for_query_iclock_auth' style='overflow:hidden;'>"
+                                     +"<div id='dlg_dept_ilock_auth' class='dlgdiv'>"
+                                             +"<div id='dlg_dept_body_iclock_auth' style='overflow:hidden;'>"
+                                                     +"<ul id='showTree_iclock_auth' class='ztree' style='height:300px;overflow:auto;'></ul>"
+                                             +"</div>"
+                                     +"</div>"
+                        +"</div>"
+
+
+			$(html).dialog({title:title,modal:true,resizable:false,buttons:[{id:"btnShowOK",text:gettext('确定'),click:function(){SaveAuthedDept(url,urlStr,title,'iclock_auth');}},
+									 {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+									}],
+                                open:function(){Show_DiningData();},
+                                 close:function(){$(this).dialog("destroy"); }	
+                                                                        })
+}
+
+
+function createDlgDelFingerFromDevice(url)
+{
+	var title="{%trans 'Delete finger of employee from the device order by department' %}";
+	var urlStr=g_urls[g_activeTabID]+ '?action=delFingerFromDev';
+	  createDlgdeptfor('iclock_action',1)
+	  $('#dlg_for_query_iclock_action').dialog({title:title,
+	  buttons:[{id:"btnShowOK",text:gettext('提交'),click:function(){subdata(url,urlStr,title,'iclock_action');}},
+	   {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); } }]
+	  })
+	createDlgother_('iclock_action')
+        $("#id_OffDuty").click(function(){
+            var other=""
+            if($("#id_OffDuty").prop("checked")){
+                other="OffDuty=1"
+            }
+                var zTree = $.fn.zTree.getZTreeObj("showTree_iclock_action");
+		zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+			showgridbydept10("iclock_action",other)
+		}
+        })
+}
+function createDlgDelFaceFromDevice(url)
+{
+	var title="{%trans 'Delete face of employee from the device order by department' %}";
+	var urlStr=g_urls[g_activeTabID]+ '?action=delFaceFromDev';
+	  createDlgdeptfor('iclock_action',1)
+	  $('#dlg_for_query_iclock_action').dialog({title:title,
+	  buttons:[{id:"btnShowOK",text:gettext('提交'),click:function(){subdata(url,urlStr,title,'iclock_action');}},
+	   {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+	  }] })
+	createDlgother_('iclock_action')
+        
+        $("#id_OffDuty").click(function(){
+            var other=""
+            if($("#id_OffDuty").prop("checked")){
+                other="OffDuty=1"
+            }
+                var zTree = $.fn.zTree.getZTreeObj("showTree_iclock_action");
+		zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+			showgridbydept10("iclock_action",other)
+		}
+        })
+}
+
+function createDlgtoDevice(url)
+{
+   var title="{%trans 'Transfer employee of department to the device' %}";
+   var urlStr=g_urls[g_activeTabID]+ '?action=deptEmptoDev';
+   createDlgdeptfor('iclock_action',1)
+   $('#dlg_for_query_iclock_action').dialog({title:title,height:530,
+   buttons:[{id:"btnShowOK",text:gettext('提交'),click:function(){subdata(url,urlStr,title,'iclock_action');}},
+    {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+   }] })
+	createDlgother('iclock_action')
+        var zTree = $.fn.zTree.getZTreeObj("showTree_iclock_action");
+		zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+			showgridbydept10("iclock_action","OffDuty=0")
+		}
+}
+function createDlgother(page){//添加附件条件
+	var html="<div id='alldev' style='width:400px'>"
+	+"<tr><td colspan='3'><span>"+gettext("Click department and do not select employe that will be transfer the whole department of employees to device")+"</span>&nbsp;</td></tr>"
+	+"</br><span id='span_del_alldev' style='margin-left:0px;'><input type='checkbox' id='id_ForAllDev' value='1' />{% trans "进行的操作对所有设备有效" %}</span>"
+	+"</div>"
+	+"<div id='faceorfp' style='width:400px'>"
+	+"<tr><td colspan='3'><span>{% trans "可以单独传送指纹、面部或照片等" %}</span>&nbsp;</td></tr>"
+	+"</br><span id='span_fp_face' style='margin-left:0px;'><input type='checkbox' id='id_Forfp' value='1' checked/>{% trans "Fingerprint" %}&nbsp;&nbsp;<input type='checkbox' id='id_Forface' value='1' checked/>{% trans "Face template" %}&nbsp;&nbsp;<input type='checkbox' id='id_ForPIC' value='0' />{% trans "Photo" %}&nbsp;&nbsp;<input type='checkbox' id='id_ForVein' value='1' checked/>{% trans "指静脉" %}&nbsp;&nbsp;<input type='checkbox' id='id_ForPalm' value='1' checked/>{% trans "Palm" %}</span>"
+	+"</div>"
+	+"<span id='span_del_sys'style='margin-left:80px;display:none'><input type='checkbox' id='id_delFrmSys' value='1' />{% trans "从系统中删除指纹" %}</span><span id='id_error' style='display:none;float:right'></span>"
+	$("#dlg_other_iclock_action").html(html)
+	$("#alldev").position({
+		  my: "left top",
+		  at: "left top",
+		  of: "#dlg_other_iclock_action"
+		});
+	$("#faceorfp").position({
+		  my: "right top",
+		  at: "right top",
+		  of: "#dlg_other_iclock_action"
+		});
+}
+function createDlgother_(page){//添加附件条件
+	var html="<div id='alldev' style='width:400px'>"
+	+"<tr><td colspan='3'><span>"+gettext("Click department and do not select employe that will be transfer the whole department of employees to device")+"</span>&nbsp;</td></tr>"
+	+"</br><span id='span_del_alldev' style='margin-left:0px;'><input type='checkbox' id='id_ForAllDev' value='1' />"+gettext("From All Devices")+"</span>"
+	+"</div>"
+	+"<div id='faceorfp' style='width:400px'>"
+	+"<tr><td colspan='3'><span id='span_offduty' style='margin-left:0px;'><input type='checkbox' id='id_OffDuty' value='1' />"+gettext("仅限离职人员")+"</span>"
+	+"</div>"
+	+"<span id='span_del_sys'style='margin-left:80px;display:none'><input type='checkbox' id='id_delFrmSys' value='1' />"+gettext("Delete fingers from system")+"</span><span id='id_error' style='display:none;float:right'></span>"
+	$("#dlg_other_iclock_action").html(html)
+	$("#alldev").position({
+		  my: "left top",
+		  at: "left top",
+		  of: "#dlg_other_iclock_action"
+		});
+	$("#faceorfp").position({
+		  my: "right top",
+		  at: "right top",
+		  of: "#dlg_other_iclock_action"
+		});
+}
+function createDlgDelFromDevice(url)
+{
+    var title="{%trans 'Delete employee from the device order by department' %}";
+	var urlStr=g_urls[g_activeTabID]+'?action=deptEmptoDelete';
+	  createDlgdeptfor('iclock_action',1)
+	  $('#dlg_for_query_iclock_action').dialog({title:title,
+	  buttons:[{id:"btnShowOK",text:gettext('提交'),click:function(){subdata(url,urlStr,title,'iclock_action',this);}},
+	   {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+	  }] })
+	createDlgother_('iclock_action')
+    $("#id_OffDuty").click(function(){
+            var other=""
+            if($("#id_OffDuty").prop("checked")){
+                other="OffDuty=1"
+            }
+                var zTree = $.fn.zTree.getZTreeObj("showTree_iclock_action");
+		zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+			showgridbydept10("iclock_action",other)
+		}
+        })
+}
+
+//对话框数据提交的处理方法
+function subdata(url,urlstr,title,pagename,obj){
+	$("#id_error",obj).css("display","none")
+        var deptIDs=getSelected_dept("showTree_"+pagename)
+		var flag=0;
+        var fpflag=0;
+        var faceflag=0;
+		var sysflag=0;
+		if($("#id_delFrmSys").prop("checked"))
+			sysflag=1;
+		if($("#id_ForAllDev").prop("checked"))
+			flag=1;
+		var emp=getSelected_emp_ex(pagename);
+		if(deptIDs==""&&emp.length==0){
+			$("#id_error").css("display","block");
+			$("#id_error").html("<ul class='errorlist'><li>{%trans 'Please click department or select employee !'%}</li></ul>");
+		}
+		else{
+			$.blockUI({title:title,theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}<br /></h1>'});
+			var ischecked=0;
+			if($("#id_cascadecheck_"+pagename).prop("checked"))
+				ischecked=1;
+			querystr=url.ret+'&foralldev='+flag+'&isContainChild='+ischecked+'&deptIDs='+deptIDs+'&userids='+emp+'&isDel='+sysflag
+            if($("#id_OffDuty").prop("checked"))
+                querystr=querystr+'&OffDuty=1';
+            if($("#id_Forfp").prop("checked"))
+                querystr=querystr+'&finger=1';
+            if($("#id_Forface").prop("checked"))
+                querystr=querystr+'&face=1';
+			if($("#id_ForPIC").prop("checked"))
+			    querystr=querystr+'&PIC=1';
+      		if($("#id_ForVein").prop("checked"))
+			    querystr=querystr+'&vein=1';
+      		if($("#id_ForPalm").prop("checked"))
+			    querystr=querystr+'&palm=1';
+            
+			$.ajax({type: "POST",
+				url: urlstr,
+				data:querystr,
+				dataType:"json",
+				success: function(retdata){
+							$.unblockUI()
+							if(retdata.ret==0){	
+								$("#id_error",obj).css("display","block");
+								$("#id_error",obj).html(retdata.message)
+								
+							}else{
+								alert(retdata.message);
+							}},
+					error: function(){ $.unblockUI();alert($.validator.format(gettext('Operating failed for {0} !'),options.title));}
+					});
+				}
+
+}
+
+function reloadAppointlogdata(url)
+{
+	createDlgtoReload(url)
+}
+function createDlgtoReload(url)
+{
+	//重新上传考勤记录
+	var block_html="<div id='dlg_to_dev'>"
+					+           "<table width=100%>"
+									+"<tr><td colspan='2'>{%trans 'If select Upload all transaction in device,it will be upload all transaction,otherwise order by assign date,will be upload the transaction after it'%}</td></tr>"
+									+"<tr><td colspan='2'><div style=''>{%trans 'beginning time'%}&nbsp;&nbsp;<input id='id_date_range_from' width='19' style='width:135px !important;'/></div></td>"
+									+"</tr><tr><td colspan='2'><div style=''>{%trans 'ending time'%}&nbsp;&nbsp;<input id='id_date_range_from1' width='19' style='width:135px !important;'/></div></td>"
+									+"</tr>"
+									+"<tr><td colspan='2'><input type='checkbox' id='is_all'/>{%trans 'Upload all transaction in device'%}</td></tr>"
+									+"<tr><td colspan='2'>&nbsp;</td></tr>"
+					+            "</table>"
+					+  "<span  id='id_error'></span>"
+					+       "</div>"
+
+	$(block_html).dialog({modal:true,
+						  width: 400,
+						  height:260,
+						  title:"{% trans 'Upload transactions again' %}",
+						  buttons:[{id:"btnShowOK",text:'{%trans "Submit" %}',
+								  click:subdata},
+								 {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }
+								}],
+						  close:function(){$(this).dialog('destroy');}		
+						})
+		$('#id_date_range_from').datetimepicker(datetimepickerOptions)
+		$('#id_date_range_from1').datetimepicker(datetimepickerOptions)
+	function subdata(){
+		var st=$("#id_date_range_from").val();
+		var et=$("#id_date_range_from1").val();
+		var is_all=0;
+		if($("#is_all").prop("checked"))
+			is_all=$("#is_all").val();
+		if(validate_form_iclock(st,et)&&is_all==0){
+			$("#id_error").css("display","block");
+			$("#id_error").html("<span class='Se_Tran_errorlist'>{%trans 'Please enter the correct time!'%}</span>");
+			return false;
+		}else{
+			var urlStr=g_urls[g_activeTabID]+ '?action=reloadAppointlogdata&start='+st+'&end='+et+'&is_all='+is_all;
+			$.blockUI({title:"{% trans 'Upload transactions again' %}",theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}<br /></h1>'});
+			$.ajax({type: "POST",
+				url: urlStr,
+				data:url.ret,
+				dataType:"json",
+				success: function(retdata){
+						if(retdata.ret==0)
+						{	
+							$.unblockUI();
+							$("#id_error").css("display","block");
+							$("#id_error").html("<span class='Se_Tran_errorlist'>{%trans '操作已成功'%}</span>");
+							//$("#dlg_to_dev").remove();
+							//$(this).dialog("destroy");
+						}else{
+								alert(retdata.message);
+							}},
+				error: function(){$.unblockUI();alert($.validator.format(gettext('Operating failed for {0} !'),options.title));}
+				});
+		}
+    }
+}
+function validate_form_iclock(st,et){   //验证表单的合法性(开始时间、结束时间)
+	var cTime=st.split("-");
+	var eTime=et.split("-");
+	cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+	edate=new Date(parseInt(eTime[0],10),parseInt(eTime[1],10)-1,parseInt(eTime[2],10));
+	if(cdate>edate || st=="" || et==""){
+		return 1;
+	}else{
+		return 0
+	}
+}
+function attdataProof(url)
+{
+	createDlgDataProof(url)
+}
+function createDlgDataProof(url)
+{
+	var block_html="<div id='dlg_to_dev'>"
+					+           "<table width=100%>"
+									+"<tr><td colspan='2'>{%trans '通过此功能可以验证设备上的记录是否已准确的上传到了服务器,下发此命令后,可以点D或到记录数据校对日志中查询结果。此命令如果在服务器下发命令日志中返回-1说明设备不支持此命令。'%}</td></tr>"
+									+"<tr><td colspan='2'><div style=''>{%trans 'beginning time'%}&nbsp;&nbsp;<input id='id_date_range_from' width='19' style='width:135px !important;'/></div></td>"
+									+"</tr>"
+									+"<tr><td colspan='2'><div style=''>{%trans 'ending time'%}&nbsp;&nbsp;<input id='id_date_range_from1' width='19' style='width:135px !important;'/></div></td>"
+									+"</tr>"
+									+"<tr><td colspan='2'>&nbsp;</td></tr>"
+					+            "</table>"
+					+  "<div  id='id_error'></div>"
+					+       "</div>"
+
+	$(block_html).dialog({modal:true,
+						  width: 400,
+						  height:260,
+						  title:"{% trans 'Attendance data proofreading' %}",
+						  buttons:[{id:"btnShowOK",text:'{%trans "Submit" %}',
+								  click:subdata},
+								 {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }
+								}],
+						  close:function(){$(this).dialog("destroy"); }		
+						})
+		$('#id_date_range_from').datetimepicker(datetimepickerOptions)
+		$('#id_date_range_from1').datetimepicker(datetimepickerOptions)
+	function subdata(){
+		var st=$("#id_date_range_from").val();
+		var et=$("#id_date_range_from1").val();
+		if(validate_form_iclock(st,et)){
+			$("#id_error").css("display","block");
+			$("#id_error").html("<span class='Se_Tran_errorlist'>{%trans 'Please enter the correct time!'%}</span>");//请输入正确的时间
+			return false;
+		}else{
+			var is_all=0;
+			if($("#is_all").prop("checked"))
+				is_all=$("#is_all").val();
+			var urlStr=g_urls[g_activeTabID]+ '?action=attdataProof&start='+st+'&end='+et;
+			$.blockUI({title:"{% trans 'Attendance data proofreading' %}",theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}<br /></h1>'});
+			$.ajax({type: "POST",
+				url: urlStr,
+				data:url.ret,
+				dataType:"json",
+				success: function(retdata){
+					$.unblockUI();
+					$("#id_error").html(retdata.message)
+				},
+				error: function(){$.unblockUI();alert($.validator.format(gettext('Operating failed for {0} !'),options.title));}
+				});
+		}
+    }
+}
+
+extraBatchOp=[
+    {caption:'{%trans "数据传送相关操作"%}',
+	submenu:[
+	{% if app|isModule:'att;meeting;acc' %}{action: {% if user|HasPerm:"iclock.reloaddata_iclock" %}'"?action=reloaddata"'{% else %}''{% endif %}, itemCanBeOperated: itemIsOnline, title: '{%trans "Upload data again"%}'},{% endif %}
+	{action: {% if user|HasPerm:"iclock.reloadlogdata_iclock" %}reloadAppointlogdata{% else %}''{% endif %}, itemCanBeOperated: itemIsOnline, title: '{%trans "收取设备上的记录"%}'},
+    {% if app|isModule:'att;adms' %}{action: {% if user|HasPerm:"iclock.deptEmptoDev_iclock" %}'"?action=synEmptoDev"'{% else %}''{% endif %}, itemCanBeOperated: itemIsOnline, title: '{%trans "同步人员到设备"%}'},{% endif %}
+	//{% if app|isModule:'att;meeting;adms' %}{action: {% if user|HasPerm:"iclock.loaddata_iclock" %}'"?action=loaddata"'{% else %}''{% endif %}, itemCanBeOperated: itemIsOnline, title: '{%trans "Upload new data"%}'},{% endif %}
+	{% if app|isModule:'att;meeting;adms' %}{action:{% if user|HasPerm:"iclock.deptEmptoDev_iclock" %}function(url){doAction_iclock(url, "deptEmptoDev")}{% else %}''{% endif %}, title: '{%trans "Transfer employee of department to the device"%}'},{% endif %}
+        {% if app|isModule:'att;meeting;adms' %}{action:{% if user|HasPerm:"iclock.deptEmptoDev_iclock" %}function(url){doAction_iclock(url, "deptEmptoDevByPIN")}{% else %}''{% endif %}, title: '{%trans "按身份证号批量下发人员"%}'},{% endif %}
+        {% if app|isModule:'ipos' %}{action: {% if user|HasPerm:"iclock.Upload_pos_all_data" %}'"?action=sync_ipos_data"'{% else %}''{% endif %},  title: '{%trans "同步所有数据至设备"%}'},{% endif %}
+        {% if app|isModule:'ipos' %}{action: {% if user|HasPerm:"iclock.Upload_pos_Merchandise" %}'"?action=upload_ipos_Merchandise"'{% else %}''{% endif %},  title: '{%trans "上传商品资料至设备"%}'},{% endif %}
+        {% if app|isModule:'ipos' %}{action: {% if user|HasPerm:"iclock.Upload_pos_Meal" %}'"?action=upload_ipos_Meal"'{% else %}''{% endif %},  title: '{%trans "上传餐别资料至设备"%}'},{% endif %}
+	//{% if app|isModule:'att;meeting' %}{action:{% if user|HasPerm:"iclock.attdataProof_iclock" %}attdataProof{% else %}''{% endif %},itemCanBeOperated: itemIsOnline, title: '{%trans "Attendance data proofreading"%}'},{% endif %}
+        {% if app|isModule:'acc' %}{action: {% if user|HasPerm:"iclock.Upload_AC_Options" %}'"?action=upload_ac"'{% else %}''{% endif %},  title: '{%trans "Upload AC Options"%}'},{% endif %}
+        //{% if app|isModule:'acc' %}{action: {% if user|HasPerm:"iclock.Upload_User_AC_Options" %}'"?action=upload_userac"'{% else %}''{% endif %},  title: '{%trans "Upload User AC Options"%}'},{% endif %}
+	{% if app|isModule:'acc' %}{action:{% if user|HasPerm:"iclock.Upload_User_AC_Options" %}function(url){doAction_iclock(url, "sync_acc_data_to_device")}{% else %}''{% endif %}, title: '{%trans "同步数据至设备"%}'}{% endif %}
+    ]},
+    {caption:'{%trans "设备数据删除相关操作"%}',
+	submenu:[
+	{action: {% if user|HasPerm:"iclock.cleardata_iclock" %}'"?action=cleardata"'{% else %}''{% endif %}, itemCanBeOperated: itemIsOnline, title: '{%trans "Clear data in device"%}'},
+	{% if app|isModule:'ipos' %}
+            {action: {% if user|HasPerm:"iclock.clearlog_iclock" %}'"?action=clearlog"'{% else %}''{% endif %}, itemCanBeOperated: itemIsOnline, title: '{%trans "清除设备上的消费记录"%}'},
+    {% else %}
+        {% if app|isModule:'acc' %}
+            {action: {% if user|HasPerm:"iclock.clearlog_iclock" %}'"?action=clearlog"'{% else %}''{% endif %}, itemCanBeOperated: itemIsOnline, title: '{%trans "清除设备上的门禁记录"%}'},
+        {% else %}
+            {action: {% if user|HasPerm:"iclock.clearlog_iclock" %}'"?action=clearlog"'{% else %}''{% endif %}, itemCanBeOperated: itemIsOnline, title: '{%trans "Clear transactions in device"%}'},
+        {% endif %}
+    {% endif %}
+	{% if app|isModule:'adms;att;meeting' %}
+            {action: {% if user|HasPerm:"iclock.deptEmptoDelete_iclock" %}'"?action=clearpic"'{% else %}''{% endif %},  title: '{%trans "Clear pictures in device"%}'},
+	{action:{% if user|HasPerm:"iclock.deptEmptoDelete_iclock" %}function(url){doAction_iclock(url, "deptEmpDelFromDev")}{% else %}''{% endif %},  title: '{%trans "Delete employee from the device order by department"%}'},
+	{action:{% if user|HasPerm:"iclock.deptEmptoDelete_iclock" %}function(url){doAction_iclock(url, "fingerDelFromDev")}{% else %}''{% endif %},  title: '{%trans "Only Delete fingers of employee from the device order by department"%}'},
+	{action:{% if user|HasPerm:"iclock.deptEmptoDelete_iclock" %}function(url){doAction_iclock(url, "faceDelFromDev")}{% else %}''{% endif %},  title: '{%trans "Only Delete face of employee from the device order by department"%}'},
+        {% endif %}            
+	{% if app|isModule:'acc' %}{action: {% if user|HasPerm:"iclock.cleardata_iclock" %}'"?action=clearinterlock"'{% else %}''{% endif %}, itemCanBeOperated: itemIsOnline, title: '{%trans "从设备中删除互锁规则"%}'},{% endif %}
+	{% if app|isModule:'acc' %}{action: {% if user|HasPerm:"iclock.cleardata_iclock" %}'"?action=clearlinkage"'{% else %}''{% endif %}, itemCanBeOperated: itemIsOnline, title: '{%trans "从设备中删除联动规则"%}'},{% endif %}
+	{% if app|isModule:'ipos' %}{action: {% if user|HasPerm:"iclock.cleardata_iclock" %}'"?action=clearMerchandise"'{% else %}''{% endif %}, itemCanBeOperated: itemIsOnline, title: '{%trans "从设备中删除商品资料"%}'},{% endif %}
+	{% if app|isModule:'ipos' %}{action: {% if user|HasPerm:"iclock.cleardata_iclock" %}'"?action=clearKeyValue"'{% else %}''{% endif %}, itemCanBeOperated: itemIsOnline, title: '{%trans "从设备中删除键值资料"%}'},{% endif %}
+	{% if app|isModule:'ipos' %}{action: {% if user|HasPerm:"iclock.cleardata_iclock" %}'"?action=clearMealValue"'{% else %}''{% endif %}, itemCanBeOperated: itemIsOnline, title: '{%trans "从设备中删除餐别资料"%}'},{% endif %}
+    ]},
+    {caption:'{%trans "其他操作"%}',
+	submenu:[
+	{action: {% if user|HasPerm:"iclock.pause_iclock" %}'"?action=pause"'{% else %}''{% endif %}, itemCanBeOperated: itemCanBePaused, title: '{%trans "禁用"%}'},
+	{action: {% if user|HasPerm:"iclock.resume_iclock" %}'"?action=resume"'{% else %}''{% endif %}, itemCanBeOperated: itemCanBeResumed, title: '{%trans "启用"%}'},
+	{% if app|isModule:'acc;att;adms;meeting;patrol' %}{action: {% if user|HasPerm:"iclock.info_iclock" %}'"?action=info"'{% else %}''{% endif %}, itemCanBeOperated: itemIsOnline, title: '{%trans "Refresh device information"%}'},{% endif %}
+	{action: {% if user|HasPerm:"iclock.reboot_iclock" %}'"?action=reboot"'{% else %}''{% endif %}, itemCanBeOperated: itemIsOnline,title: '{%trans "Reboot device"%}'},
+	{% if app|isModule:'ipos' %}{action:function(url){doAction_iclock(url, "deviceLogCheck")}, title: '{%trans "消费记录检测"%}'},{% endif%}
+	//{action: {% if user|HasPerm:"iclock.devoption_iclock" %}function(){return setopt("COMKey", "{%trans "communicate password"%}")}{% else %}''{% endif %}, itemCanBeOperated: itemIsOnline, title: '{%trans "Set communicate password"%}'},
+	//{action: {% if user.is_superuser%}function(url){doAction_iclock(url, "setoption")}{% else %}''{% endif %}, title: '{%trans "设备参数配置"%}'},
+        //{% if app|isModule:'acc' %}{action: {% if user|HasPerm:"iclock.change_iclock" %}'"?action=SyncACTime"'{% else %}''{% endif %},  title: '{%trans "同步设备时间"%}'},{% endif %}
+        //{% if app|isModule:'acc' %}{action: {% if user|HasPerm:"iclock.unlock_iclock" %}'"?action=unlock"'{% else %}''{% endif %},  title: '{%trans "Output unlock signal"%}'},{% endif %}
+	{% if app|isModule:'acc' %}{action: {% if user|HasPerm:"iclock.unalarm_iclock" %}'"?action=unalarm"'{% else %}''{% endif %},  title: '{%trans "Terminate alarm signal"%}'},{% endif %}
+
+    ]}
+]
+
+
+currentState=-1;
+currentPState=-1;
+function filterData(data)
+{
+	if(currentState==-1) return 1;
+	if(data[2]==currentState) return 1;
+	return 0;
+}
+
+currentState=getKeyQuery('s');
+if(currentState=="") currentState=-1;
+else currentState=currentState.substr(2,100);
+
+function showState_iclock(newState)
+{
+	currentState=newState;
+	createFilter_iclock();
+	var url=g_urls[g_activeTabID]+"?s="+newState;
+	
+		    var deptID=getSelected_dept("showTree_");
+                    if(url.indexOf("?")!=-1)
+                       url=url+"&mod_name="+app
+                   else
+                        url=url+"?mod_name="+app
+		    if(deptID!=''){
+			    var ischecked=0;
+			    if($("#id_cascadecheck_").prop("checked"))
+				    ischecked=1;
+                           if(app=='acc')
+                               url=url+"&ZoneID__Iclock__in="+deptID+"&isContainChild="+ischecked;
+                           else if(app=='ipos')
+                               url=url+"&Dining__Iclock__exact="+deptID+"&isContainChild="+ischecked;
+                           else
+                                       url=url+"&DeptID__DeptID__exact="+deptID+"&isContainChild="+ischecked;
+                        }
+            
+	
+       savecookie("search_urlstr",url);
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype: "json"}).trigger("reloadGrid");
+}
+
+function createFilter_iclock(){
+	var html="<li style=' border: 0px solid white;'><a href='#' style='color: #000;background:white;padding-left:0;height: 20px;'>{% trans 'Device Status' %}</a>"
+		+"<ul><li "+(currentState==-1?"class='selected'":"")+"><a href='#' onclick='showState_iclock(-1)'>{%trans "All"%}</a></li>";
+	for(i=0;i<DEV_STATUS.length;i++)
+		html+="<li "+(currentState==i?"class='selected'":"")+"><a href='#' onclick='showState_iclock("+i+")'>"+DEV_STATUS[i]+"</a></li>";
+        $("#"+g_activeTabID+" #id_filterbar").html(html+'</ul></li>');
+       
+}
+function createPFilrer(){
+        if(app=='ipos'){
+            var html='<span style="float:left;width:100px;" class="nav" id="id_filterbar1">'
+            html+='<li style=" border: 0px solid white;">'
+            html+=    '<a style="color: #000;background:white;padding-left:0;height: 20px;" href="#">{%trans "由 设备用途"%}</a>'
+            html+=    '<ul>'
+            html+=        '<li '+(currentPState==-1?"class='selected'":"")+'><a onclick="showProductType(-1)" href="#">全部</a></li>'
+            html+=        '<li '+(currentPState==11?"class='selected'":"")+'><a onclick="showProductType(11)" href="#">{%trans "消费机"%}</a></li>'
+            html+=        '<li '+(currentPState==12?"class='selected'":"")+'><a onclick="showProductType(12)" href="#">{%trans "出纳机"%}</a></li>'
+            html+=        '<li '+(currentPState==13?"class='selected'":"")+'><a onclick="showProductType(13)" href="#">{%trans "补贴机"%}</a></li>'
+            html+=    '</ul></li></span>'
+            $("#"+g_activeTabID+" #id_filterbar1").remove()
+            $("#"+g_activeTabID+" #id_filterbar").after(html)
+        }
+}
+function showProductType(newState)
+{
+	currentPState=newState;
+	createPFilrer();
+        var url=g_urls[g_activeTabID];
+        if(newState!=-1){
+            url+="?ProductType="+newState;
+        }
+            var deptID=getSelected_dept("showTree_");
+                    if(url.indexOf("?")!=-1)
+                       url=url+"&mod_name="+app
+                   else
+                        url=url+"?mod_name="+app
+        
+
+            if(deptID!=''){
+                    var ischecked=0;
+                    if($("#id_cascadecheck_").prop("checked"))
+                            ischecked=1;
+                    if(app=='acc')
+                        url=url+"&ZoneID__Iclock__in="+deptID+"&isContainChild="+ischecked;
+                    else if(app=='ipos')
+                        url=url+"&Dining__Iclock__exact="+deptID+"&isContainChild="+ischecked;
+                    else
+                        url=url+"&DeptID__DeptID__exact="+deptID+"&isContainChild="+ischecked;
+                }                
+            
+        savecookie("search_urlstr",url);
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype: "json"}).trigger("reloadGrid");
+}
+function setRefresh(){
+//	clearTimeout(logtimer1);
+//	var toc=$.cookie("tointerval");
+//	var to=parseInt($("#id_check_interval").val());
+//	if(isNaN(to)) to=10;
+
+}
+function restartIP()
+{
+	ip=prompt("{%trans 'Input the IP Address of a device: '%}");
+	if (ip!=null && ip!="")
+	{
+		window.location.href="/iclock/tasks/restart?IP="+ip;
+	}
+}
+function showlist(urlstring){
+	if(urlstring==''){
+	currentState=-1;
+        currentPState=-1;
+	createFilter_iclock()
+        createPFilrer()
+	}
+	var p=$("#id_grid_"+tblName[g_activeTabID]).jqGrid('getGridParam','page')
+	var rows=$("#id_grid_"+tblName[g_activeTabID]).jqGrid('getGridParam','rowNum')
+	if(typeof(p)=="undefined"){
+		p=$.cookie("page")
+		if(p==null){
+			p=1
+		}
+	}
+	if(typeof(rows)=="undefined"){
+		rows=$.cookie("rows")		
+		if(rows==null){
+			rows=30
+		}
+	}
+	$.ajax({type: "POST",
+		url: "/iclock/data/iclock/"+urlstring,
+		data:"rows="+rows+"&page="+p+"&sidx=&sord=asc",
+		//data:"rows=30&page=1&sidx=&sord=asc&page="+p,
+		dataType:"json",
+		success: function(retdata){
+				if(retdata.records>0){	
+					$.unblockUI();
+				}
+				devs=retdata.rows
+				$("#id_iclockPhoto").css("display","block")
+				$("#gbox_id_grid").css("overflow","scroll").css("overflow-x","hidden").css('height','394px').html(showBox(devs))
+				$("#pages").html(showoffset(retdata,30,p))
+			}
+		});
+	$.cookie("style","grid",{expires:7});
+	$.cookie("rows",rows,{expires:7});
+    $.cookie("page",p,{expires:7});
+}
+function showoffset(obj,pagecount,curpage){
+	var html=getPagers(gettext("device"),pagecount*(curpage-1),obj.records,pagecount,curpage,obj.total,18)
+	return html
+}
+function showgrid(){
+	  var p=$.cookie("page")
+	  var rows=$.cookie("rows")
+      if(p==null){
+		p=1
+	  }else if(rows==null){
+		rows=30
+	  }
+	  var url="/iclock/data/iclock/"
+	  $.ajax({
+		  type: "GET",
+		  url:url+"?stamp="+new Date().toUTCString(),
+		  data:"rows="+rows+"&page="+p+"&sidx=&sord=asc",
+		  dataType:"text",
+		  success:function(data){
+				$('#'+g_activeTabID+' #id_content').html(data);
+				$("#id_iclockPhoto").css("display","none")
+				jqOptions[g_activeTabID].page=p
+	          },
+	          error:function(){
+				alert("Server error")
+	          }
+	      });
+	$.cookie("style","list",{expires:7});
+}
+
+function showIclockPhoto(ret, statusText, xhr, $form){
+	$("#id_message").html(ret.message).css('color','red').css("display","block");
+}
+
+$("#"+g_activeTabID+" #id_import").click(function(){
+	  importIclock();
+	});
+
+function createDlgtoDeviceByPIN(url){
+	var block_html="<div id='id_bulk_emp' style='overflow:hidden'>"
+                    +"<table width=100%>"
+                    +"<tr><td colspan='2'>{%trans '人员身份证号用换行符或逗号分号分割！'%}</td></tr>"
+                    +"<tr>"
+                    +"<td colspan='2'><textarea id='id_duorenyuanchaxun'  style='height:340px;width:335px;resize:none'></textarea></td>"
+                    +"</tr>"
+                    +"</tr>"
+                    +"</table>"
+                    +"<span  id='id_transfer_error'></span>"
+                    +"</div>"
+	
+	$(block_html).dialog({modal:true,
+                    resizable:false,
+                    width: 378,
+                    height:500,
+                    title:"{% trans '按身份证号批量下发人员' %}",
+                    buttons:[{id:"btnShowOK",text:'{%trans "发送" %}',
+                                    click:subdata
+                                  }],
+                    close:function(){$(this).dialog("destroy");}		
+                  })
+	function subdata(){
+                        $.blockUI({title:"{% trans '批量下发人员到设备' %}",theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}<br /></h1>'});
+                        var rren=$("#id_duorenyuanchaxun").val()
+                        rren=rren.replace(/\n/g,",")
+                        rren=rren.replace(/\t/g,',')
+                        rren=rren.replace(/\r/g,',')
+                        rren=rren.replace(/;/g,',')
+                        rren=rren.replace(/；/g,',')
+                        rren=rren.replace(/，/g,',')
+                        qustr=url.ret+"&PIN__in="+rren
+			queryUrl="/iclock/data/iclock/?action=deptEmptoDevbyPIN"
+                        $.ajax({
+                            type:"POST",
+                            url:queryUrl,
+                            dataType:"json",
+                            data:qustr,
+                            success:function(json){
+                                    $("#id_transfer_error").html(json.message)
+                                    $.unblockUI()
+                            }
+                         });
+                         
+			$("#trans_to_history").dialog("destroy");
+                        
+		}
+	
+}
+
+function setoption()
+{       
+        var block_html="<div id='dlg_to_dev'>"
+                        + "<form id='id_edit_form' method='post'><table width=100%>"
+                        +"<tr><td>{%trans '正常联网时联接服务器的间隔时间（秒）:'%}</td><td><input id='id_Delay' name='Delay' value='30'  style='width:135px !important;'/></td>"
+                        +"</tr>"
+                        +"<tr><td>{%trans '是否实时传送新记录:'%}</td><td><select id='id_Realtime' name='Realtime' style='width:135px !important;'><option value='1' checked>{%trans '是'%}</option><option value='0'>{%trans '否'%}</option></select> </td>"
+                        +"</tr>"
+                        +"<tr><td>{%trans '传送时间:'%}</td><td><input id='id_TransTimes' name='TransTimes' value=''  style='width:135px !important;'/></td>"
+                        +"</tr>"
+                        +"<tr><td>{%trans '传送间隔时间（分）:'%}</td><td><input id='id_TransInterval' name='TransInterval' value='1'  style='width:135px !important;'/></td>"
+                        +"</tr>"
+                        //+"<tr><td>{%trans '通信密码:'%}</td><td><input id='id_compwd' name='compwd' value=''  style='width:135px !important;'/></td>" -->
+                        //+"</tr>"
+                        +"<tr><td>{%trans '允许设备传送的数据类型:'%}</td><td><div id='id_TransType' name='TransType' style='border:1px solid #A6C9E2 ;background:white;padding:2px;width:135px !important;'></div></td>"
+                        +"</tr>"
+                        +"<tr><td colspan='2'><span>"
+                        +"<front  style='font-weight:bold;'>备注</front>：<br/>是否实时传送新记录: 选否表示按照传送时间和传送间隔时间规定传送<br/><br/>传送时间: 设定考勤机在某个时刻向服务器传送新数据. hh:mm (时:分)格式, 多个时间之间用分号(;)分开<br/><br/>传送间隔时间: 设定设备间隔多少分钟向服务器传送新数据<br/><br/>"
+						+"是否实时传送新记录、传送时间、传送间隔时间、允许设备传送的数据类型，对考勤设备有效"
+						+"</span></td>"
+                        +"</tr>"
+                        +"<tr><td>&nbsp;</td></tr>"
+                        +            "</table></form>"
+                        +  "<div  id='id_error'></div>"
+                        +       "</div>"
+	$(block_html).dialog({modal:true,
+                resizable:false,
+                width: 500,
+                height:450,
+                title:"{% trans '设备参数配置' %}",
+                buttons:[{id:"btnShowOK",text:'{%trans "Submit" %}',
+                                click:subsetoptiondata},
+                               {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }
+                              }],
+                close:function(){$(this).dialog("destroy"); }		
+              })
+        $.ajax({ 
+        type: "POST",
+        url:"/iclock/att/getoptionAttParam/",
+        dataType:"json",
+        success:function(json){
+			var arr=json['message']
+			Delay=arr.Delay;
+			Realtime=arr.Realtime;
+			TransTimes=arr.TransTimes;
+			TransInterval=arr.TransInterval;
+			TransType=arr.TransType;
+                        compwd=arr.compwd
+                        $("#id_Delay").val(Delay)
+                        $("#id_Realtime").val(Realtime)
+                        $("#id_TransTimes").val(TransTimes)
+                        $("#id_TransInterval").val(TransInterval)
+                        $("#id_compwd").val(compwd)
+                        var ds=["{%trans '设备原始记录'%}","{%trans '人员信息'%}","{%trans '现场考勤照片'%}"]
+                        var shtml="<table>"
+                        for(var u=0;u < ds.length;u++){
+                            if(TransType.substr(u,1)=='1'){
+				shtml+="<tr><td><span><input type='checkbox' alt='"+u+"' checked='checked'/>"+ds[u]+"</span></td></tr>"
+                            }else{
+				shtml+="<tr><td><span><input type='checkbox' alt='"+u+"'/>"+ds[u]+"</span></td></tr>"
+                            }
+                        }
+                        shtml+="</table>"
+                        $("#id_TransType").html(shtml)
+        }})
+	function subsetoptiondata(){
+		var Delay=$("#id_Delay").val()
+                    if(Delay<5)
+                    	Delay=5
+		var ErrorDelay=parseInt(Delay)+30
+		var Realtime=$("#id_Realtime").val()
+		var TransTimes=$("#id_TransTimes").val()
+		var TransInterval=$("#id_TransInterval").val()
+                var compwd=$("#id_compwd").val()
+		var TransType=getdivoption()
+		var type=0
+		for(var i=0;i<TransType.length;i++){
+			if(TransType[i]==0){
+				type+=1000000000
+			}else if(TransType[i]==1){
+				type+=101111111
+			}else if(TransType[i]==2){
+				type+=10000000
+			}
+		}
+		var queryStr="ErrorDelay="+ErrorDelay+"&Delay="+Delay+"&Realtime="+Realtime+"&TransTimes="+escape(TransTimes)+"&TransInterval="+TransInterval+"&TransType="+type+"&compwd="+compwd;
+		$.ajax({ 
+			type: "POST",
+			url:"/iclock/att/setoptionAttParam/",
+			data:queryStr,
+			dataType:"json",
+			success:function(retdata){
+				if(retdata.ret==0){
+					$("#dlg_to_dev").remove();
+					}
+				}
+			});
+    }
+}
+
+function getdivoption(){
+	var id=[];
+	$.each($("#id_TransType input"),function(){
+			if(this.checked) 
+				id.push(this.alt)
+	});
+	return id
+}
+
+
+function edit_searchs(id)
+{
+	$('#id_grid_mini').jqGrid('editRow',id);
+	
+}
+function save_searchs(id)
+{
+
+	$('#id_grid_mini').jqGrid('saveRow',id);
+	
+}
+
+function subdata_searchs()
+{
+	var ss=getSelected_emp_ex("mini")
+	if (ss.length==0){
+		alert('请选择');return;
+	}
+	var slt=ss.join(',')
+	$.ajax({type: "POST",
+		url:'/acc/add_devices/',
+		data: {k:slt},
+		dataType:"json",
+		success: function(ret){
+			alert(ret.message)
+		},
+		error: function(request, errorMsg){
+			alert($.validator.format(gettext('Operating failed for {0} : {1}'), options.title, errorMsg)); $.unblockUI();
+			}
+		});
+
+
+}
+
+
+
+{% endblock %}
+
+{% block loadData %}
+    {% ifequal app 'acc' %}
+    html="<span id=id_opt_tree><input type='checkbox' id='id_cascadecheck_"+g_activeTabID+"' ,"
+    +" checked/>{%trans '级联下级区域' %}</span>"
+    {% else %}
+        {% ifequal app 'ipos' %}
+        html="<span id=id_opt_tree>{%trans '餐厅列表' %}</span>"
+        {% else %}
+        html="<span id=id_opt_tree><input type='checkbox' id='id_cascadecheck_"+g_activeTabID+"' ,"
+                                          +" checked/>{%trans '级联下级单位' %}</span>"
+        {% endifequal %}
+	{% endifequal %}
+        $("#"+g_activeTabID+ " #id_west").html(html)
+	html="<div id='show_dept_tree_'>"
+		+"<ul id='showTree_"+g_activeTabID+"'"
+                      +" class='ztree' style='margin-left: 0px;height: 100%;'></ul>"
+		+"</div>"
+	$("#west_content_tab_iclock_iclock").html(html)
+
+//	var h=$("#"+g_activeTabID+ " #west_content").height()-20
+//	$("#showTree_"+g_activeTabID).css('height',h)
+
+
+
+        if(app=='acc')
+            ShowZoneData(g_activeTabID,true);
+        else if(app=='ipos')
+            ShowZoneData(g_activeTabID,true,false,"/ipos/getData/?func=diningtree");
+        else
+            ShowDeptData(g_activeTabID,true);
+       // if(app!='acc' && app!='ipos')
+       //     loadNULLPage('#id_grid_iclock');
+       // else
+            loadPage();
+
+	var zTree = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+	zTree.setting.check.enable = false;
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		var deptID=treeNode.id;
+		var deptName=treeNode.name;
+		$.cookie("dept_ids",deptID, { expires: 7 });
+		var ischecked=0;
+		if($("#id_cascadecheck_"+g_activeTabID).prop("checked"))
+			ischecked=1;
+                if(app=='acc')
+                        var urlStr="/iclock/data/iclock/?ZoneID__Iclock__in="+deptID+"&isContainChild="+ischecked+"&mod_name="+app
+                else if(app=='ipos')
+                        var urlStr="/iclock/data/iclock/?Dining__Iclock__exact="+deptID+"&isContainChild="+ischecked+"&mod_name="+app
+                else
+                        var urlStr="/iclock/data/iclock/?DeptID__DeptID__exact="+deptID+"&isContainChild="+ischecked+"&mod_name="+app
+                savecookie("search_urlstr",urlStr);
+                $("#id_grid_iclock").jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+	}
+       
+{% endblock %}
+{% block Data %}
+			<table id="id_grid_iclock" >	</table>
+			<div id="id_pager_iclock"></div>
+		    <div id="id_alarm_cc"></div>
+
+{% endblock %} 
+
+
+{% block extraSection %}
+
+{% endblock %}
+
+
+
+
+{% block importOp %}
+{% if request|reqHasPerm:"add" %}
+{% ifequal app 'att' %}
+		    <LI id="id_import"><SPAN class="icon iconfont icon-daoru"></SPAN>{%trans "Import"%}</LI>
+{% endifequal %}
+{% endif %}
+
+{% endblock %}
+
+{% block extractButton %}
+{% if request|reqHasPerm:"add" %}
+
+		    <LI id="id_authe_dept" onclick='batchOp(function(url){doAction_iclock(url, "setAuthedDept")},undefined,"{%trans '设置归属' %}");'><SPAN class="icon iconfont icon-shezhiguishu"></SPAN>{%trans "设置归属"%}</LI>
+{% endif %}
+
+
+{% endblock %}
+  {% block extractOP %}
+  {% ifequal app 'ipos' %}
+      {% if "POS_ID"|filter_config_option %}
+            ''
+      {%else%}
+				<LI id="id_op_menu_"><SPAN class="icon iconfont icon-shuju"></SPAN>{%trans "Operation for selected"%}
+					<ul id="op_menu_" class="op_menu">
+					</ul>
+				</LI>
+      {% endif %}
+   {% else %}
+      <LI id="id_op_menu_" ><SPAN class="icon iconfont icon-shuju"></SPAN>{%trans "Operation for selected"%}
+					<ul id="op_menu_" class="op_menu">
+					</ul>
+				</LI>
+   {% endifequal %}
+{% if app|isModule:'acc;att;adms' %}
+   {% if request.user.is_superuser %}
+		    <!-- <LI  id="id_setoption"    onclick='setoption()'><SPAN class="icon iconfont icon-shebeicanshupeizhi"></SPAN>{% trans "设备参数配置" %}</li> -->
+
+{% endif %}
+{% endif %}
+
+
+{% if app|isModule:'acc' %}
+    {% if request|reqHasPerm:"add" %}
+		    <LI  id="id_pull_device"   title="自动搜索门禁设备" ><SPAN class="icon iconfont icon-chaxun"></SPAN>{% trans "搜索设备" %}</li>
+		 <!--   <LI  id="id_restartsvr2"   title="添加非PUSH通讯的设备后需要重启服务" ><SPAN class="icon iconfont icon-pagenext"></SPAN>{% trans "重启服务" %}</li>
+        -->
+    {% endif %}
+{% endif %}
+
+
+{% endblock %}
+
+{% block $function %}
+
+
+
+
+
+	$("#"+g_activeTabID+" #id_reload").click(function(){
+		var styval=$("input[name='showStyle']:checked").val()
+		if(styval==0){
+			reloadData()
+		} 
+		if(styval==1){
+			showlist('')
+		}
+	})
+        createPFilrer()
+	$("input[name='showStyle'][value=0]").click(function(){showgrid()})
+	$("input[name='showStyle'][value=1]").click(function(){showlist('')})
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+		processNewModel();
+	});	
+	$("#"+g_activeTabID+" #id_filtername").css("display","block")	
+	$("#"+g_activeTabID+" #ulStateSuper").hide();
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+		    searchShowIclock();
+		});
+        $("#"+g_activeTabID+" #queryButton").hide()
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+		    if(event.keyCode==13)
+		    searchShowIclock();
+	});
+        if(app=='ipos')
+            $("#"+g_activeTabID+" #id_import").hide()
+
+        if(app=='acc')
+        {
+            $("#"+g_activeTabID+" #id_restartsvr2").click(function()
+            {
+                var url="/acc/restartsvr2/"
+                title='重启监控控制器服务'
+               $.blockUI({title:title,theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}<br /></h1>'});
+
+                $.ajax({
+                        type: "GET",
+                        url:url+"?stamp="+new Date().toUTCString(),
+                        data:"",
+                        dataType:"json",
+                        success:function(ret){
+                            $.unblockUI()
+ 
+                            alert(ret.message)
+                                      
+                        }
+                    });
+            
+            });
+
+
+
+
+            $("#"+g_activeTabID+" #id_pull_device").click(function()
+            {
+				
+			/*
+							createDataDialog('searchs', "{%trans '已搜素到的设备' %}",  1024,'/acc/data/searchs/?mod_name='+app)
+
+							$('#simple_data').dialog({
+							buttons:[{id:"btnShowOK",text:gettext('添加到设备表'),click:function(){subdata_searchs();}},
+							 {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+							}] })
+
+
+
+				return
+				*/
+                var url="/acc/search_device/"
+                title='搜索控制器'
+                $.blockUI({title:title,theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}<br /></h1>'});
+                $.ajax({
+                        type: "GET",
+                        url:url+"?stamp="+moment().unix(),
+                        data:"",
+                        dataType:"json",
+                        success:function(ret){
+                            $.unblockUI()
+ 							createDataDialog('searchs', "{%trans '已搜索到的设备' %}",  1024,'/acc/data/searchs/?mod_name='+app)
+
+							$('#simple_data').dialog({
+                            resizable:false,
+							buttons:[{id:"btnShowOK",text:gettext('添加到设备表'),click:function(){subdata_searchs();}},
+							 {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+							}] })
+                        }
+                    });
+            
+            });
+        }
+	var to=$.cookie("tointerval"); 
+	if(to) $("#id_check_interval").val(to<10?10:to);
+	var to=$.cookie("toenable"); 
+	//$("#id_chk_alarm")[0].checked=(to=="true");
+	createFilter_iclock(-1);
+	setRefresh();
+	//$("#id_chk_alarm").click(setRefresh);
+	//$("#id_check_interval").change(setRefresh);
+	{% if user|HasPerm:"iclock.Upload_Iclock_Photo" %}
+		$("#"+g_activeTabID+" #id_custom").after('<li id="id_iclockPhoto" style="border:1px solid #77B7DE;display:none"><span class="iclockPhotolink"></span><a href="#">{%trans "更改设备图标"%}</a></li>');
+	{% endif %}
+	/*if ({{"opt_ac_options"|get_params}}=='1'){
+			{% if user|HasPerm:"iclock.Upload_AC_Options" %}
+				var html="<li id='id_upload_ac' style='border:1px solid #77B7DE;' onclick="+"batchOp('?action=upload_ac',true,'{%trans "Upload AC Options"%}');"+"><a  href='#' >{%trans 'Upload AC Options'%}</a></li>"  
+				$("#"+g_activeTabID+" #id_custom").after(html)
+			{% endif %}
+			{% if user|HasPerm:"iclock.Upload_User_AC_Options" %}
+				var html="<li id='id_upload_userac' style='border:1px solid #77B7DE;' onclick="+"batchOp('?action=upload_userac',true,'{%trans "Upload AC Options" %}');"+"><a  href='#' >{%trans 'Upload User AC Options'%}</a></li>"  
+				$("#"+g_activeTabID+" #id_upload_ac").after(html)
+			{% endif %}
+	}*/
+	$("#"+g_activeTabID+" #id_iclockPhoto").click(function(){
+		if($("input[name='showStyle']:checked").val()==1){
+			var result=tblSelect("true")
+			var SNs=result.ret;
+		}else{
+			var result=getSelected(options.edit_col,"true");
+			var SNs=result.ret;
+		}
+		var SNss=[];
+		SNss=SNs.split("&K=")
+		if(SNss.length<=1){
+			alert("请选择设备")
+			return false
+		}else{
+			var block_html="<div class='module' id='SetIclockDb' style='position:relative; width: 100%;'>"
+				+"<table style='margin-bottom: 2px;'>"
+				+"<tr>"
+					+"<td style='vertical-align:top;width:40%;'>"
+					+"<div id='id_conditions'>"
+					+"<form id='frmSetIclockDb' method='POST' action='/iclock/iacc/saveSetIclock/' enctype='multipart/form-data'>"
+						+"<table id='id_setField'>"
+							+"<tr><td>"
+								+'{%trans "图片"%}<input type="file" id="id_fileUpload" name="fileToUpload" size="15"/>'
+							+"</td></tr>"
+							+"<tr><td>"
+								+"<input class='ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only' type='submit' value="+gettext('Submit')+" />"
+								+"&nbsp;<input id='btnCancel' class='ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only' type='button' value="+gettext('Cancel')+" />"
+							+"</td></tr>"
+							+"<tr><td colspan='2'><span id='id_message'></span>"
+							+"<input type='hidden' id='Iclockid' value='"+SNss+"' name='Iclockid' />"
+							+"</td></tr>"
+						+"</table>"
+					+"</form>"
+					+"</div>"
+					+"</td>"
+				+"</tr>"
+				+"</table>"
+				+"</div>"
+		  
+			$(block_html).dialog({modal:true,
+                                resizable:false,
+								width: 250,
+								height:200,
+								title:gettext("上传图片"),
+								close:function(){$("#SetIclockDb").remove();}
+							});
+			$("#btnCancel").click(function(){$("#SetIclockDb").remove();});
+			var opts = { 
+				url:'/iclock/iacc/saveSetIclock/',
+				dataType:'json',
+				success: showIclockPhoto
+			};
+			$('#frmSetIclockDb').submit(function() {
+				var f=$("#id_fileUpload").val();
+				var fs=[];
+				if(f!=undefined||f!=""){
+					fs=f.split("\\");
+				}
+				var fss=fs[fs.length-1];
+				if(f!=undefined||f!=""){
+					fs=f.split(".");
+					if(fss!=undefined||fss!=""){
+						fs=fss.split(".");
+					}
+				}
+				if(f==""){
+					$("#id_message").html("{%trans 'Please select picture'%}").css('color','red');
+					return false;
+				}
+				else{
+					$(this).ajaxSubmit(opts); 
+				}
+				return false;
+			}); 
+		}
+	});
+        
+        
+        
+
+
+
+
+
+{% endblock %}
+
+
+{% block initGrid %}
+
+{% endblock %}
+
+{% block other_area %}
+   {% ifequal "opt_users_start_page"|get_params:request '1' %}
+ 
+	 <div id='id_add_home'  onclick="javascript:saveHome();"  style="float: left;cursor:pointer;"> <i class="icon iconfont icon-shezhiweiqishiye" title='{%trans "设置为起始页" %}'></i></div>
+    {%endifequal%}	
+{% endblock %}
+
+
+
+

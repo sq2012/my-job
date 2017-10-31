@@ -1,0 +1,255 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+
+//jqOptions=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='firstopen';
+jqOptions[g_activeTabID].sortname='id';
+jqOptions[g_activeTabID].pager='#id_pager_'+tblName[g_activeTabID];
+options[g_activeTabID].dlg_width=800
+options[g_activeTabID].dlg_height=470;
+
+selected_data=[]
+
+function datas(id){
+	var r=$("#id_grid_"+tblName[g_activeTabID]).jqGrid("getRowData",id);
+	var id=id
+	var Name=r.door
+	var data=[id,Name];
+	return data
+}
+
+
+
+
+function strOfData_firstopen(data)
+{
+	return stripHtml(data.door);
+}
+
+
+function doAction_firstopen(url, action)
+{	
+	var result=getSelected(0,"true");
+	selected_data=datas(result.ss);
+	var shift_id=selected_data[0]
+	if (action == 'add_firstopen')
+		createDlgfirstopen();
+}
+
+
+function createDlgFirstOpen1(id)
+{
+
+    createDlgfirstopen(id)
+}
+
+
+function createDlgfirstopen(id)
+{
+        if(typeof id=='undefined')
+	{
+		var result=getSelected(0,"true");
+		if (result.ss.length>1){
+			alert(gettext("仅允许选择一个模板"));
+			return;
+		}else
+			selected_data=datas(result.ss);
+	}
+	else
+        {
+		  var result={ss:id}
+		  selected_data=datas(id);
+         }
+
+    createDlgdeptfor10('employee_search_FirstOpen',1)
+	html="<div id='faceorfp' style='width:400px'>"
+		+"<table id='id_setField'>"
+		+"<tr><td>"+gettext('仅选择部门不选择人员时,默认为该部门的人员 ')+"</td></tr>"
+		+"</table>"
+		+"</div>"
+	$('#dlg_for_query_employee_search_FirstOpen #dlg_other_employee_search_FirstOpen').html(html).css('display','block').css('position','relative').css('top','-680px').css('left','0px')
+    $('#dlg_for_query_employee_search_FirstOpen').dialog({
+    buttons:[{id:"btnShowOK",text:gettext('提交'),
+      click:function(){searchempbydept_FirstOpen('employee_search_FirstOpen',selected_data);$(this).dialog("destroy"); }},
+     {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+    }] })
+
+
+}
+
+function searchempbydept_FirstOpen(page,selected_data){
+    var dept_ids=getSelected_dept("showTree_"+page)
+    if (dept_ids!=null){
+    	if(dept_ids==undefined||dept_ids==''){
+    		alert("{% trans "请选择部门" %}")
+    		return false;
+    	}
+    }else{
+    	alert("{% trans "请选择部门" %}")
+    	return false;
+    }
+    var ischecked=0;
+    if($("#id_cascadecheck_"+page).prop("checked"))
+    	ischecked=1;
+    urlStr="deptIDs="+dept_ids+"&isContainChild="+ischecked
+    var emp=getSelected_emp_ex("sel_employee_search_FirstOpen");
+    if(emp.length>0){
+	urlStr="UserIDs="+emp
+    }
+    $.ajax({type: "POST",
+                url: "/acc/employeeforfirstopen/?door="+selected_data[0],
+                data: urlStr,
+                dataType:"json",
+                success: function(){},
+                error: function(request){alert("保存失败")}
+                });
+    reloadData()
+}
+
+function Check_firstopen(id)
+{
+    createDataDialog('FirstOpen_emp', "{%trans '人员名单' %}",  1024,'/acc/data/FirstOpen_emp/?firstopen='+id+'&UserID__DelTag=0')
+}
+function del_firstopen_emp(id)
+{
+        $.ajax({type: "POST",
+                        url: "/acc/data/FirstOpen_emp/?action=del",
+                        data: 'K='+id,
+                        dataType:"json",
+                        success: function(){$("#id_grid_mini").jqGrid("delRowData",id);
+},
+                        error: function(request){
+                                alert($.validator.format(gettext('{0} failed!\n\n{1}'), opName, request.statusText)); $.unblockUI(); 
+                                }
+                        });
+}
+
+//参会人员模板模糊查询
+function searchShow_FirstOpen(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+    var url=g_urls[g_activeTabID]+"?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function iclock_Authed_doorTree(obj)
+{
+	$("#id_door",obj).parent().html("<div>"
+		+"<span style='float:left;border-top:1 solid #5B80B2;'><input alt='Authed_door' type='text' style='width:200px !important;' readOnly='readOnly'  id='Authed_door'/></span>"
+		+"<span style='float:left;'><img  src='/media/img/sug_down_on.gif' id='id_drop_Authed_door'/></span>"
+		+"</div>"
+		+"<div style='display:none;'><input id='id_door' name='door' type='hidden' /></div>"
+		);
+
+		$("#id_drop_Authed_door",obj).click(function(){
+				    createQueryDlgbypage('auth_device',true,false)
+
+		})
+}
+
+function createQueryDlgbypage(page,tag,isDiy)
+{
+
+	if(page==undefined){
+		page=''
+	}
+	var html="<div id='dlg_for_query_"+page+"' style='overflow:hidden;'>"
+		+"<div id='dlg_dept_"+page+"' class='dlgdiv'>"
+   			+"<div id='dlg_dept_body_"+page+"' style='overflow:hidden;'>"
+				+"<ul id='showTree_"+page+"' class='ztree' style='height:300px;overflow:auto;'></ul>"
+			+"</div>"
+		+"</div>"
+   +"</div>"
+	$(html).dialog({modal:true,resizable:false,
+			//dialogClass: "no-close",
+			width: 410,
+			height:430,
+                        position:  { my: "left top-150", at: "right top",of:"#id_drop_Authed_door"},
+                                                  open:function(){ShowDoorData(page,tag,isDiy);},
+						  close:function(){$(this).dialog("destroy"); }
+						})
+}
+
+function ShowDoorData(page,tag,isDiy)
+{
+
+	var setting = {
+            check: {enable: !tag,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},
+	    async: {
+			    enable: true,
+			    url: "/acc/getData/?func=door_first&ptype=FirstOpen",
+			    autoParam: ["id"]
+		    }
+	};
+	$.fn.zTree.init($("#showTree_"+page), setting,null);
+	if(tag){
+		var zTree = $.fn.zTree.getZTreeObj("showTree_"+page);
+		zTree.setting.check.enable = false;
+		$("#searchbydept_"+page).hide()
+		zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+				$("#id_door").val(treeNode.id);
+				$("input[alt='Authed_door']").val(treeNode.value);
+				dlgdestroy(page)
+		}
+	}
+}
+
+function process_dialog_firstopen(obj,flag,urlAddr)
+{
+	 $(obj).dialog({resizable:false,modal:true})
+	if (flag=='add')
+		iclock_Authed_doorTree(obj);
+}
+
+$(function(){
+        $("#"+g_activeTabID+" #queryButton").hide()
+        $("#"+g_activeTabID+" #id_customOrder").css("display","none")
+        $("#"+g_activeTabID+" #id_custom").css("display","none")
+        $("#"+g_activeTabID+" #id_newrec").click(function(event){
+                processNewModel();
+               // $('ui-dialog-title').val('sss')
+        })
+        $("#"+g_activeTabID+" #property_manage").click(function(event){
+                savecookie("manual_PropertyEdit_UserIDs","");
+                menuClick("/iclock/att/manualProperty/?stamp="+new Date().toUTCString())
+        })
+
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	   searchShow_FirstOpen();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	   if(event.keyCode==13)
+	  searchShow_FirstOpen();
+	});        
+        
+        
+})
+{% endblock %}
+
+{% block loadData %}
+
+        loadPage();
+
+
+{% endblock %}
+
+{% block extractButton %}
+    <LI id="id_add_participants"   onclick='batchOp(function(url){doAction_firstopen(url, "add_firstopen")},undefined,"{%trans '添加人员' %}");'><SPAN class="icon iconfont icon-tianjiarenyuan" ></SPAN>{%trans "添加人员"%}</LI>
+    <LI id="id_delete_participants"  onclick="batchOp('?action=firstopen_del',null,'{%trans "清除人员"%}');"><SPAN class="icon iconfont icon-qingchurenyuan"></SPAN>{%trans "清除人员"%}</LI>
+	
+	
+{% endblock %}
+
+{% block newrec %}
+	{% if user|HasPerm:"acc.add_firstopen" %}
+	 <LI id="id_newrec" ><SPAN class="icon iconfont icon-xinzeng"></SPAN>{%trans "Append"%}</LI>
+	{% endif %}
+{% endblock %}

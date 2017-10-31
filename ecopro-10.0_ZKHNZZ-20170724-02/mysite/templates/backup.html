@@ -1,0 +1,165 @@
+{% load i18n %}
+{% block content %}
+<script>
+  $(function(){
+    $("#tabs").tabs();
+    $("#executeDate").datepicker(datepickerOptions);
+  })
+
+  function oncheckType(e){
+      if(e==1){
+        $("#radio1").css("display","");
+        $("#radio2").css("display","none");
+      }else{
+        $("#radio2").css("display","");
+        $("#radio1").css("display","none");
+      }
+  }
+
+  function onsubform(){
+      queryStr=''
+      executeVar=1
+      hzVar=1
+      
+      backupPath=$("#backupPath").attr("value")
+      queryStr+="backupPath="+backupPath;
+    
+      if($("#backupType1").prop("checked")==true){
+          executeDate=$("#executeDate").attr("value")
+          executeTime=$("#executeTime").attr("value")
+        
+          queryStr+="&executeDate="+executeDate;
+          queryStr+="&executeTime="+executeTime;
+      }else{
+          if($("#hz1").prop("checked")==true){
+               dayTime=$("input[@name=dayTime]").val()
+            
+               queryStr+="&dayTime="+dayTime;
+               hzVar=1;
+          }else if($("#hz2").prop("checked")==true){
+               weekDays=$("select[@name=weekDays]").find("option:seleced").val()
+               weekTime=$("select[@name=weekTime]").val()
+            
+               queryStr+="&weekDays="+weekDays;
+               queryStr+="&weekTime="+weekTime;
+               hzVar=2;
+          }else{
+               monthDays=$("select[@name=monthDays]").find("option:seleced").val()
+               monthTime=$("select[@name=monthTime]").val()
+             
+               queryStr+="&monthDays="+monthDays;
+               queryStr+="&monthTime="+monthTime;
+               hzVar=3;
+          }
+        
+          startTime=$("select[@name=startTime]").val()
+          endTime=$("select[@name=endTime]").val()
+          
+          queryStr+="&startTime="+startTime;
+          queryStr+="&endTime="+endTime;
+        
+          executeVar=2
+      }
+    
+    queryStr+="&executeVar="+executeVar;
+    queryStr+="&hzVar="+hzVar;
+    alert(queryStr)
+    //$.blockUI()
+    $.ajax({
+       type:"POST",
+       url:"/iclock/backup/mysql/",
+       dataType:"json",
+       data:queryStr,
+       success:function(retdata){
+           //alert(retdata)
+       }
+    })
+      
+  }
+</script>
+
+<table id="changelist" style="margin-bottom: 2px; float: left; width: 100%;">
+<tr>
+<td><span style="font-size: 15px; padding-right: 20px;"><b><img src="/media/img/blogmarks.png" />{%trans 'backup and restore'%}</b></span></td>
+</tr>
+
+<tr><td>
+<div id="RightPane"  valign="top" style="height:900px"><!-- Tabs pane -->
+	<div id="tabs" style="width:100%;height:100%">
+		<ul class="ul_tags">
+			<li><a href="#tabs-1" alt="1"><span>{% trans "backup"%}</span></a></li>
+			<li><a href="#tabs-2" alt="2"><span>{% trans "restore"%}</span></a></li>
+		</ul>
+		<div id="tabs-1">
+            <table align="center">
+            <tr><td>
+            <fieldset><legend>备份路径</legend>
+              <input type="file" value="浏览" size="60" name="backupPath" id="backupPath"/>
+            </fieldset>
+            </td></tr>
+            <tr><td>
+            <fieldset ><legend>备份计划类型</legend>
+             <div>
+               <input type="radio" name="backupType" value="1" id="backupType1" checked="checked" onclick="oncheckType(1)"/>执行一次
+               <input type="radio" name="backupType" value="2" id="backupType2" onclick="oncheckType(2)"/>启用定时备份
+             </div>
+             <div id="radio1">
+               执行日期:<input type="None" size="11" class="vDateOnlyField" id="executeDate" maxlength="10" name="executeDate"/>
+               时间:<input type="None" size="11" class="vDateOnlyField" id="executeTime" maxlength="10" name="executeTime"/>
+             </div>
+             <div id="radio2" style="display:none;">
+              <ol>1)执行频率
+               <ol><input type="radio" name="hz" value="1" id="hz1" />每天<input type="" name="dayTime" id="dayTime"/>时间</ol>
+               <ol><input type="radio" name="hz" value="2" id="hz2" />每周
+                      <select  style="width:60px;" name="weekDays">
+                        <option value="1">周一</option>
+                        <option value="2">周二</option>
+                        <option value="3">周三</option>
+                        <option value="4">周四</option>
+                        <option value="5">周五</option>
+                        <option value="6">周六</option>
+                        <option value="7">周日</option>
+                      </select>
+                      <input type="" name="weekTime"/>时间
+               </ol>
+               <ol><input type="radio" name="hz" value="3" id="hz3" />每月
+                      <select  id="month_id" style="width:60px;" name="monthDays">
+                        <script>
+                          for(i=1;i<32;i++){
+                             $("#month_id").append("<option value="+i+">"+i+"</option>")
+                          }
+                        </script>
+                      </select>
+                      <input type="" name="monthTime"/>时间
+               </ol>
+              </ol>
+              <ol>2)持续时间
+                <ol><div style="float:left;">开始时间:<input  name="startTime" value=""/></div>
+                <div style="float:right;">
+                 <input type="radio" name="" value="1" id="end1"/>结束时间:<input type="" name="endTime"/>时间<br><br />
+                 <input type="radio" name="" value="1" id="end2"/>无结束时间
+                </div> </ol>
+              </ol>
+             </div>
+            </fieldset>
+            </td></tr>
+            <tr>
+              <td align="center">
+                   <input type="button" onclick="onsubform()" value="确定" style="margin-right:80px;" />
+                   <input type="reset" value="取消" />
+              </td>
+            </tr>
+            </table>
+			
+		</div>
+		<div id="tabs-2">
+			
+		</div>
+</div>
+</div>
+</td></tr>
+</table>
+
+
+
+{% endblock %}

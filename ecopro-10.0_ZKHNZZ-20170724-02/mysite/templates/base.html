@@ -1,0 +1,68 @@
+{% load i18n static %}
+<!DOCTYPE html>
+		
+<html lang="{{ LANGUAGE_CODE|default:"zh-cn" }}" {% if LANGUAGE_BIDI %}dir="rtl"{% endif %}>
+<head>
+    
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<meta name="Author" content="ZKTeco Inc." />
+<meta name="renderer" content="webkit">
+<meta name = "viewport" content = "initial-scale = 1.0, maximum-scale = 1.0, user-scalable = no, width = device-width">
+<title>{% block title %}{% endblock %}</title>
+
+<script src="{{ MEDIA_URL }}jslib/i18n.js?scriptVersion=10.001"></script>
+<script src="{{ MEDIA_URL }}jslib/jquery-ui/jquery-1.11.1.min.js?scriptVersion=10.001"></script>
+<script src="{{ MEDIA_URL }}jslib/jquery-ui/jquery-ui.min.js?scriptVersion=12.001"></script>
+<script src="{{ MEDIA_URL }}jslib/moment.min.js?scriptVersion=10.002"></script>
+<script src="{{ MEDIA_URL }}jslib/base.js?scriptVersion=11.004"></script>
+
+<script src="{{ MEDIA_URL }}jslib/jquery.cookie.js?scriptVersion=10.001"></script>
+<script src="{{ MEDIA_URL }}jslib/jquery.form.js?scriptVersion=11.001"></script>
+<script src="{{ MEDIA_URL }}jslib/i18n_{{ LANGUAGE_CODE }}.js?scriptVersion=10.001"></script>
+<script src="{{ MEDIA_URL }}jslib/validate/jquery.validate.min.js?scriptVersion=10.001"></script>
+<script src="{{ MEDIA_URL }}jslib/validate/localization/messages_{{ LANGUAGE_CODE }}.js?scriptVersion=10.001"></script>
+{% block extrjs %}{% endblock %}
+<link rel="shortcut icon" href="{{ MEDIA_URL }}img/favicon.ico?imgVersion=11.004"/>
+<link rel="stylesheet" id='css_base' type="text/css" href="{{ MEDIA_URL }}css/base.css?cssVersion=10.004" />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/jquery-ui/ui0/jquery-ui.css?cssVersion=12.002" />
+<link rel="stylesheet" type="text/css" href='{{ MEDIA_URL }}css/m-buttons.css?cssVersion=10.001' />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/forms.css?cssVersion=11.001" />
+{% block extrastyle %}{% endblock %}
+
+{% block extrahead %}{% endblock %}
+
+</head>
+{% load i18n %}
+
+<script>      
+//javascript:window.history.forward(1);
+        history.pushState(null, null, document.URL);
+        window.addEventListener('popstate', function () {
+            history.pushState(null, null, document.URL);
+        });
+
+
+$(document).keydown(function (e) {
+		var doPrevent;
+		if (e.keyCode == 8) {
+			var d = e.srcElement || e.target;
+			if (d.tagName.toUpperCase() == 'INPUT' || d.tagName.toUpperCase() == 'TEXTAREA' || d.tagName.toUpperCase() == 'DIV') {
+				doPrevent = d.readOnly || d.disabled;	}
+			else{doPrevent = true;}
+		}
+		else{doPrevent = false;}
+		if (doPrevent){e.preventDefault();}
+	}); 
+
+
+
+
+</script>
+
+<body class="{% if is_popup %}popup {% endif %}{% block bodyclass %}{% endblock %}">
+ 
+        {% block content %}{% endblock %}
+
+</body>
+</html>
+

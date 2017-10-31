@@ -1,0 +1,358 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+<script>
+{% block tblHeader %}
+options[g_activeTabID].disableCols=[0];
+
+//jqOptions=copyObj(jq_Options)
+jqOptions[g_activeTabID].sortname='';
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='combopen_door';
+//options.dlg_width=400;
+jqOptions[g_activeTabID].pager="#id_pager_"+tblName[g_activeTabID];
+
+options[g_activeTabID].dlg_height=470;
+options[g_activeTabID].dlg_width=830;
+var combs=[]
+$(function(){
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+		processNewModel();
+	});
+	$("#"+g_activeTabID+" #queryButton").hide()
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowHolidays();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowHolidays();
+	});
+	$("#"+g_activeTabID+" #id_export").css('display','none');
+	$("#"+g_activeTabID+" #id_clearrec").css('display','none')
+	$("#"+g_activeTabID+" #id_third").html("");
+});
+function beforePost_combopen_door(obj,actionName){
+	var flag=true;
+//	var tmp =$("#id_StartTime",obj).val()
+//    var tempdate= new Date()
+//    var birth =tmp.split("-");
+//	if(tmp.length<1){
+//		$("#id_error",obj).css("display","block");
+//		$("#id_error",obj).html("<ul class='errorlist'><li>{%trans 'Please enter a date' %}</li></ul>");					
+//		flag=false;
+//	}else if(birth[0]!=parseInt(birth[0])||birth[1]!=parseInt(birth[1])||birth[2]!=parseInt(birth[2])||parseInt(birth[0])<1900||parseInt(birth[1])>12||parseInt(birth[1])<1||parseInt(birth[2])<1||parseInt(birth[2])>31){
+//		$("#id_error",obj).css("display","block");
+//		$("#id_error",obj).html("<ul class='errorlist'><li>{%trans 'Invalid date' %}</li></ul>");					
+//		flag=false;
+//	}
+
+            var sum = 0;
+		$("select[name='openNumber']",obj).each(function(){
+			if($(this).val()!=null)
+			sum += parseInt($(this).val())
+            });
+            if(sum == 0)
+            {
+                alert(gettext("请至少在一个组内填入开门人数！"));
+                $("#openNumber1",obj).focus()
+                return false;
+            }
+            else if(sum == 1)
+            {
+                alert(gettext("至少两人同时开门！"));
+                $("#openNumber1",obj).focus()
+                return false;
+            }
+            if(sum > 5)
+            {
+                alert(gettext("最多五人同时开门！"));
+                return false;
+            }
+ 
+
+
+
+	var datas=[];
+	var j=0;
+	$("select[name='groupId']",obj).each(function(){
+		j=j+1
+		var combopenValue=$(this).val();
+		var openValue=$('#openNumber'+j,obj).val()
+		if(combopenValue!=''&&openValue!=null)
+		datas.push({combid:combopenValue,empCount:openValue})
+	})
+	$("#id_combopen_door_data",obj).val(JSON.stringify(datas));
+	
+
+
+
+	return flag
+}
+//模糊查询
+function searchShowHolidays(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+	var url=g_urls[g_activeTabID]+"?q="+escape(v)
+	savecookie("search_urlstr",url);
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function strOfData_combopen_door(data)
+{
+	return stripHtml(data.device)+' '+stripHtml(data.name);
+}
+
+
+function ShowDeviceData(page,tag,isDiy)
+{
+	
+	var setting = {
+            check: {enable: !tag,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},          
+	    async: {
+			    enable: true,
+			    url: "/acc/getData/?func=devs_tree&ptype=acc",
+			    autoParam: ["id"]
+		    }
+	};
+	$.fn.zTree.init($("#showTree_"+page), setting,null);	
+	if(tag){
+		var zTree = $.fn.zTree.getZTreeObj("showTree_"+page);
+		zTree.setting.check.enable = false;
+		$("#searchbydept_"+page).hide()
+		zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+			alert(treeNode.value)
+			if (treeNode.value==-1)
+			{
+				alert('请选择具体的门！')
+				return
+			}
+				$("#id_device").val(treeNode.value);
+				$("input[alt='Authed_device']").val(treeNode.value);
+
+				dlgdestroy(page)
+
+		}
+	}
+}
+
+
+function createQueryDlgbypage(page,tag,isDiy)//生成部门框
+{
+
+	if(page==undefined){
+		page=''
+	}
+   var html="<div id='dlg_for_query_"+page+"' style='overflow:hidden;'>"
+		+"<div id='dlg_dept_"+page+"' class='dlgdiv'>"
+   			+"<div id='dlg_dept_body_"+page+"' style='overflow:hidden;'>"
+				+"<ul id='showTree_"+page+"' class='ztree' style='height:300px;overflow:auto;'></ul>"
+			+"</div>"
+		+"</div>"
+   +"</div>"
+
+	$(html).dialog({modal:true,resizable:false,
+			//dialogClass: "no-close",
+			width: 410,
+			height:430,
+                        position:  { my: "left top-150", at: "right top",of:"#id_drop_Authed_device"},
+                                                  open:function(){ShowDeviceData(page,tag,isDiy);},
+						  close:function(){$(this).dialog("destroy"); } 		
+						})
+}
+
+
+
+function iclock_Authed_deptTree_combopen_door(obj)
+{
+	$("#id_device",obj).parent().html("<div>"
+		+"<span style='float:left;border-top:1 solid #5B80B2;'><input alt='Authed_device' type='text' style='width:200px !important;' readOnly='readOnly'  id='Authed_device'/></span>"
+		+"<span style='float:left;'><img  alt='{%trans 'open department tree'%}' src='/media/img/sug_down_on.gif' id='id_drop_Authed_device'/></span>"
+		+"</div>"
+		+"<div style='display:none;'><input id='id_device' name='device' type='hidden' /></div>"
+		);
+
+		$("#id_drop_Authed_device",obj).click(function(){
+				    createQueryDlgbypage('auth_device',true,false)
+	
+			
+			
+			
+		})
+	
+	
+	
+}
+function setGroupNames(combopens,obj)
+{
+	var Data=combopens.combopen
+	var options_html="<option value=''>------------------</option>";
+	for(var i=0;i<Data.length;i++)
+            options_html+="<option value='"+Data[i].id+"'>{% trans '"+Data[i].name+"' %}</option>";
+	$('select[name=groupId]',obj).html(options_html)
+
+
+		var j=1
+		for(var i=j;i<=5;i++)
+		{
+			$('#openNumber'+i).html('')
+			$('#openNumber'+i).prop("disabled","disabled")
+			$('#allEmpCount'+i).html('')
+			$('#allEmpCount'+i).prop("disabled","disabled")
+			$('#group'+(i+1)).prop("disabled","disabled")
+			$('#group'+(i+1)).val('')
+			
+		}
+
+	Data=combopens.comb
+	for(var i=1;i<=Data.length;i++)
+	{
+		$('select[id=group'+i+']',obj).val(Data[i-1].combid)
+		
+		comb=combopens.combopen
+		empCount=0
+		for (var j=0;j<comb.length;j++)
+		{
+			if(comb[j].id==Data[i-1].combid)
+			empCount=comb[j].count
+		}
+		$('#allEmpCount'+i).html('('+empCount+')')
+		
+		$('#openNumber'+i).html(getGroupNumber(empCount))
+	
+		
+		$('select[id=openNumber'+i+']',obj).val(Data[i-1].opennumber)	
+		
+	}
+	
+	
+    return true;
+}
+function getGroupNumber(count)
+{
+	var options_html="";
+	var j=0;
+	if (count>5) count=5
+	for(i=0;i<=count;i++)
+            options_html+="<option value='"+i+"'>"+i+"</option>";
+	return options_html
+	
+	
+	
+	
+}
+//onchange
+function getGroupEmpCount(obj,id,n)
+{
+	val=$(obj).val()
+	if(val=='')
+	{
+		var j=parseInt(id)
+		for(var i=j;i<=5;i++)
+		{
+			$('#openNumber'+i).html('')
+			$('#openNumber'+i).prop("disabled","disabled")
+			$('#allEmpCount'+i).html('')
+			$('#allEmpCount'+i).prop("disabled","disabled")
+			$('#group'+(i+1)).prop("disabled","disabled")
+			$('#group'+(i+1)).val('')
+			
+		}
+		
+	}
+	else
+	{
+		$('#group'+(parseInt(id)+1)).removeAttr("disabled")
+		$('#openNumber'+id).removeAttr("disabled")
+		
+		
+		comb=combs.combopen
+		empCount=0
+		for (var i=0;i<comb.length;i++)
+		{
+			if(comb[i].id==val)
+			empCount=comb[i].count
+		}
+		$('#allEmpCount'+id).html('('+empCount+')')
+		$('#openNumber'+id).html(getGroupNumber(empCount))
+		
+		
+	}
+	
+	
+}
+function FectchCombInfo(obj,flag,key)
+{
+	var urlStr="/acc/getData/?func=combopen"
+	if (flag=='edit')
+	urlStr=urlStr+'&key='+key
+	$.ajax({ 
+			type: "POST",
+			url:urlStr,
+			dataType:"json",
+			success:function(json){
+				combs=json;
+				setGroupNames(combs,obj)
+				
+			}
+	});
+	
+	
+	
+}
+
+
+function process_dialog_again_combopen_door(obj,flag,key)
+{
+	$(obj).dialog({resizable:false,modal:true})
+	$("#id_door",obj).prop('readonly',true)
+	$("#id_door",obj).css('width',250)
+	FetchAccDoorInfo(obj)
+	FectchCombInfo(obj,flag,key)
+}
+
+
+
+function FetchAccDoorInfo(obj)
+{
+	
+	urlStr="/acc/getData/?func=level_door"
+	     
+	var setting = {
+	     check: {enable: false},          
+             data: {simpleData: {enable: true,idKey: "id", pIdKey: "pid",  rootPId: 0}},
+	     async: {
+			    enable: true,
+			    url: urlStr
+		    }
+	};
+	$.fn.zTree.init($("#combopen_door_tree"), setting,null);	
+	var zTree = $.fn.zTree.getZTreeObj("combopen_door_tree");
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		if (treeNode.id==-1)
+		{
+			alert('请选择具体的门!')
+			return
+		}
+		if (typeof treeNode.id=='string') {
+                       alert('请选择具体的门!')
+		       return
+                }
+		$('#id_door',obj).val(treeNode.name)
+		$("input[name='door']:hidden").val(treeNode.id);
+		
+	}	
+	
+}
+
+
+
+{% endblock %}
+</script>
+{% block newrec %}
+	{% if user|HasPerm:"acc.add_combopen_door" %}
+	 <LI id="id_newrec"><SPAN class="icon iconfont icon-xinzeng"></SPAN>{%trans "Append"%}</LI>
+	{% endif %}
+{% endblock %}

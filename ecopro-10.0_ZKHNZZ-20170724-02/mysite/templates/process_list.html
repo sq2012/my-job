@@ -1,0 +1,390 @@
+{% load i18n %}
+{% load iclock_tags %}
+<script>
+var jqOptions_process=copyObj(jq_Options);
+		jqOptions_process.colModel=[
+			{'name':'id','hidden':true},
+			{'name':'roleid','sortable':false,'width':55,'resizable':false,'title':true,'label':'职务编号'},
+			{'name':'roleName','sortable':false,'width':90,'resizable':false,'title':true,'label':'职务名称'},
+			{'name':'roleLevel','sortable':false,'width':55,'resizable':false,'title':true,'label':'职务级别'}
+		]
+	
+		jqOptions_process.height=330
+		jqOptions_process.width='auto'
+		jqOptions_process.rowNum=2000
+		jqOptions_process.url="/iclock/att/getuserRoles/?procSN=0"
+		jqOptions_process.pager='id_pager_role'
+		var jqOptions_leave=copyObj(jq_Options);
+		    jqOptions_leave.colModel=[
+			{'name':'id','hidden':true},
+			{'name':'LeaveName','sortable':false,'width':120,'resizable':false,'title':true,'label':'假类名称'}
+		    ]
+	
+		jqOptions_leave.height=330
+		jqOptions_leave.rowNum=2000
+		jqOptions_leave.width='auto'
+		jqOptions_leave.url="/iclock/att/getprocleave/" ;
+		jqOptions_leave.pager='id_pager_leave'
+		
+		var jqOptions_dept=copyObj(jq_Options);
+		    jqOptions_dept.colModel=[
+			{'name':'DeptID','hidden':true},
+			{'name':'DeptNumber','width':60,'label':'单位编号'},
+			{'name':'DeptName','width':100,'label':'单位名称'}
+			
+		    ]
+	
+		jqOptions_dept.height=122
+		jqOptions_dept.rowNum=2000
+		jqOptions_dept.width='auto'
+		jqOptions_dept.url="/iclock/att/getdepartment/"
+		jqOptions_leave.pager='id_pager_dept'
+		{% autoescape off %}
+			var ap={{allproc}}
+		{% endautoescape %}
+	$(function(){
+		$("#content_process").html(ap);
+		//initwindow_tabs();
+		
+		
+		var html="<div class='pinfo'><br><div><b>配置说明</b></div><br><div>1.在用户界面找到职务设置，新增职务</div>"
+		+"<br>"
+		+"<div>2.在用户界面，为每个用户（具有审核请假的权限的用户）添加职务，确认审核人的身份</div>"
+		+"<br>"
+		+"<div>3.在人员维护界面，为员工添加职务（也可以不添加职务），确认申请人的身份</div>"
+		+"<br>"
+		+"<div>4.多级审批界面，点击新的审核流程</div>"
+		+"<br>"
+		+"<div>5.填写流程适用人情况，申请假类、申请人职务等。允许多选</div>"
+		+"<br>"
+		+"<div>6.点击绿色加号，新增审核人，选择第一级审批职务，能够审批通过的天数</div>"
+		+"<br>"
+		+"<div>7.重复第6步操作，添加下一级审批，直到流程添加完成</div>"
+		+"<br>"
+		+"<div>8.重复4到7步操作，添加多个流程</div>"
+		+"<br>"
+		+"<div>9.流程设置完成</div>"
+		+"<br>"
+		+"<div>注意:<br>1.申请满足多个流程时，优先选择应用范围较小的流程<br>2.流程应用范围相同时，优先选择最早创建的流程<br>3.流程根据用户的授权单位自动选择审批人，跳过没有授权的用户<br>4.审批流程因为天数不同需要多个不同职务人员审批且分支流程不重合时，软件需要添加多个流程才能实现。举例说明，病假3天组长审批，3天以上直接经理审批，这样需要建立两个流程，最大天数3天的流程和最小天数4天的流程。</div>"
+		+"</div>"
+		$("#west_content_tab_iclock_setprocess").html(html);
+		
+		$("#id_approval").change(function(){
+		    var approval=$("#id_approval").prop("checked")
+		    if(approval){
+			approval=1
+		    }else{
+			approval=0
+		    }
+		    var url='/base/isys/options/'
+		    $.post(url+'?action=Single', 
+			    "opt_basic_approval="+approval,
+			    function (ret, textStatus) {
+				    if(ret.ret!=0){
+					alert("{%trans '保存失败'%}")
+				    }
+			    },
+			    "json");
+		})
+
+	})
+	function newdiv(pid,lid){
+		var id=pid+'_'+lid;
+		$("#id_"+id+"_div_b").remove();
+		$("#id_"+id+"_div_a").remove();
+		var top = parseFloat($("#id_"+id+"_div").css("top").replace("px", ""), 10);
+		var left = parseFloat($("#id_"+id+"_div").css("left").replace("px", ""), 10);
+		$("#id_"+id+"_div").css("left",left-22);
+		left=left+218
+		lid=parseInt(lid,10)+1;
+		id=pid+'_'+lid;
+		var rhtml="<div id='id_"+pid+"_"+lid+"_div_a' class='div_r_a' style='top:"+top+"px;left:"+left+"px' onclick=javescrip:deldiv('"+pid+"','"+lid+"')></div>"
+		+"<div id='id_"+pid+"_"+lid+"_div_b' class='div_r_b' style='top:"+top+"px;left:"+(left+176)+"px' onclick=javescrip:newdiv('"+pid+"','"+lid+"')></div>"
+		+"<div id='id_"+pid+"_"+lid+"_div_' class='div_t' style='top:"+top+"px;left:"+(left-85)+"px'></div>"
+		+"<div id='id_"+pid+"_"+lid+"_div' class='div_r' style='top:"+top+"px;left:"+(left+22)+"px' onclick=javescrip:setdiv('"+pid+"','"+lid+"')>点击设置审批流程</div>"
+		$("#id_"+pid+"_div").append(rhtml)
+	}
+	function setdiv(pid,lid){
+		if(lid==0){
+			roleforprocess(pid,lid)
+		}else{
+			processlist(pid,lid)
+		}
+	}
+	function roleforprocess(pid,lid){
+		var block_html="<div id='id_form'><div class='module' style='position:relative;'>"
+			+"<table id='id_speday'><tr>"
+			+"<td style='vertical-align:top;color:black;'><div id='show_dept_emp_tree'>"
+			+"<table width=100% ><tr><td class='border_x' style='width:244px;'>"
+			+"<div >"
+			+"<div class='titlebar'>"
+			+"<span class='title_bar'>"+gettext("申请人")+"</span></div>"
+			+"<div id='dlg_role_body_process'><table id='id_grid_role' ></table><div id='id_pager_role'></div>"
+			+"</div></td>"
+			+"<td class='border_x' style='width:153px;'><div>"
+			+"<div class='titlebar'><span class='title_bar'>"+gettext("申请假类")+"</span></div>"
+                        +"<div id='dlg_leave_body_process'><table id='id_grid_leave' ></table><div id='id_pager_leave'></div>"
+			+"</div>"
+			+"</td></tr></table>"
+			+"</div></td><td style='vertical-align:top;'><div id='id_conditions'><form id='id_edit_form' method='POST'><table id='id_setField'>"
+			+"<tr><td><label for='id_processName' class='required'>{% trans '流程名称'%}</label></td></tr>"
+			+"<tr><td><input id='id_processName'  type='text'  value='' name='processName'  style='width:135px !important;'/></td></tr>"
+			
+			//+"<tr><td><label for='id_notitle' class='required'>{% trans '允许审核无职务人员'%}</label></td></tr>"
+			//+"<tr><td><select  id='id_notitle' style='width:135px !important;'><option value=0>{% trans '否'%}</option><option value=1>{% trans '是'%}</option></select></td></tr>"
+			
+			+"<tr><td><label for='id_smallday' class='required'>{% trans '最小天数'%}</label></td></tr>"
+			+"<tr><td><input id='id_smallday'  type='text'  value='0' name='smallday' style='width:135px !important;'/></td></tr>"
+				
+			+"<tr><td><label for='id_bigday' class='required'>{% trans '最大天数'%}</label></td></tr>"
+			+"<tr><td><input id='id_bigday'  type='text'  value='999' name='bigday' style='width:135px !important;'/></td></tr>"
+		   
+			+"<tr><td><label for='id_State' class='required'>{% trans '应用范围'%}</label></td></tr>"
+			+"<tr><td><select  id='id_State' style='width:135px !important;'><option value=0>{% trans '全公司'%}</option><option value=1>{% trans '下面选择单位'%}</option></select></td></tr>"
+			
+			+"<tr><td>"
+			+"<div id='id_for_dept' style='display:none;'><table id='id_grid_dept' ></table><div id='id_pager_dept'>"
+			+"</div>"
+			+"</div></td></tr>"
+			+"<tr><td></td></tr>"
+			+"<tr><td colspan='2'><span id='id_error'></span></td>"
+			+"</table></form></div></td>"
+			+"</tr></table></div></div>";
+		title="{%trans '申请条件设置'%}"
+		$(block_html).dialog({	modal:true,
+			width: 650,
+			height:540,
+			title:title,
+			resizable:false,
+			buttons:[{id:"btnShowOK",text:gettext("Submit"),click:function(){saveprocess(pid)}},
+				{id:"btnShowCancel",text:gettext("Cancel"),click:function(){$(this).remove();}
+			       }],
+			close:function(){$(this).remove()}
+		      })
+		jqOptions_process.multiselect=true
+		jqOptions_process.url="/iclock/att/getuserRoles/?procSN=0"
+		jqOptions_process.gridComplete=function(){}
+		$("#id_grid_role").jqGrid(jqOptions_process)
+		$("#id_grid_dept").jqGrid(jqOptions_dept)
+		$("#id_State").change(function(){
+			var sta=$("#id_State").val()
+			if(sta==1){
+			    $("#id_for_dept").css('display','block')
+			}else{
+			    $("#id_for_dept").css('display','none')
+			}
+		    })
+		jqOptions_leave.gridComplete=function(){
+		if(pid!='new'){
+		    $.ajax({type: "POST",
+			url: "/iclock/att/getprocessfor/",
+			data:"pid="+pid+"&lid="+lid,
+			dataType:"json",
+			success: function(rs){
+						
+						$("#id_bigday").val(rs.bd)
+						$("#id_smallday").val(rs.sd)
+						$("#id_processName").val(rs.pn)
+					    var pleaves=rs.pleave
+					    if(pleaves){
+						var rows=$("#id_grid_leave").jqGrid("getCol",1,true)
+						for(var i=0;i < rows.length;i++)
+						{
+							var id=rows[i].id;
+							var colData=rows[i].value;
+							if(pleaves.indexOf(','+colData+',')!=-1)
+							$("#id_grid_leave").jqGrid("setSelection", id);
+						}
+					    }
+					    var ptitles=rs.ptitle
+					    if(ptitles){
+						var rows=$("#id_grid_role").jqGrid("getCol",2,true)
+						for(var i=0;i < rows.length;i++)
+						{
+							var id=rows[i].id;
+							var colData=rows[i].value;
+							if(ptitles.indexOf(','+colData+',')!=-1){
+								$("#id_grid_role").jqGrid("setSelection", id);
+							}
+						}
+					    }
+					    if(rs.nt==1){
+						$("#id_grid_role").jqGrid("setSelection", -1);
+					    }
+					    var pdepts=rs.pdept
+					    if(pdepts){
+						$("#id_State").val(1)
+						$("#id_for_dept").css('display','block')
+						var rows=$("#id_grid_dept").jqGrid("getCol",2,true)
+						for(var i=0;i < rows.length;i++)
+						{
+							var id=rows[i].id;
+							var colData=rows[i].value;
+							if(pdepts.indexOf(','+id+',')!=-1)
+							$("#id_grid_dept").jqGrid("setSelection", id);
+						}
+					    }
+					    
+				},
+				error: function(){ }
+				});
+		}
+		}
+		$("#id_grid_leave").jqGrid(jqOptions_leave)
+		
+	}
+	
+	function saveprocess(pid){
+	    var pn=$("#id_processName").val()
+	    var sd=$("#id_smallday").val()
+	    var bd=$("#id_bigday").val()
+	    var nt=0
+	    var state=$("#id_State").val()
+	    var role=getSelected_emp_ex('role')
+        var role=role.toString()
+	    if(role.indexOf('-1')!=-1){
+		nt=1
+	    }else{
+		nt=0
+	    }
+	    var leave=getSelected_emp_ex('leave')
+	    var querystr='id='+pid+'&role='+role+"&leave="+leave+"&pname="+pn+"&smallday="+sd+"&bigday="+bd+"&notitle="+nt+"&state="+state
+	    if(state==1){
+		var dept=getSelected_emp_ex('dept')
+		querystr+="&dept="+dept
+	    }
+	    $.ajax({type: "POST",
+		url: "/iclock/att/saveprocessfor/",
+		data:querystr,
+		dataType:"json",
+		success: function(retdata){
+					if(retdata.ret==0){	
+						var ap=retdata.message;
+						$("#content_process").html(ap);
+					}else{
+						alert(retdata.message);
+					}},
+			error: function(){ }
+			});
+	    $("#id_form").remove();
+	}
+	function processlist(pid,lid){
+	    
+	    var block_html="<div id='id_form'><div class='module' style='position:relative;'>"
+			+"<table id='id_speday'><tr>"
+			+"<td style='vertical-align:top;color:black;'><div id='show_dept_emp_tree'>"
+			+"<table width=100% ><tr><td class='border_x' style='width:230px;'>"
+			+"<div >"
+			+"<div class='titlebar'>"
+			+"<span class='title_bar'>"+gettext("审批人")+"</span></div>"
+			+"<div id='dlg_role_body_process'><table id='id_grid_role' ></table><div id='id_pager_role'></div>"
+			+"</div></td>"
+			+"<td style='vertical-align:top;'><div id='id_conditions'><form id='id_edit_form' method='POST'><table id='id_setField'>"
+			+"<tr><td><label for='id_day' class='required'>{% trans '允许审核通过的最大天数'%}</label></td></tr>"
+			+"<tr><td><input id='id_day'  type='text'  value='' name='day'  style='width:135px !important;'/></td></tr>"
+	
+			+"<tr><td><label for='id_State' class='required'>{% trans '审核职务限制'%}</label></td></tr>"
+			+"<tr><td><select  id='id_State' style='width:225px !important;'><option value=0>{% trans '不限制'%}</option><option value=1>{% trans '允许审核小于等于自己职务的人员'%}</option><option value=2 >{% trans '只允许审核小于自己职务的人员'%}</option></select></td></tr>"
+				
+			+"<tr><td></td></tr>"
+			+"<tr><td colspan='2'><span id='id_error'></span></td>"
+			+"</table></form></div></td>"
+			+"</tr></table></div></div>";
+		title="{%trans '审核流程配置'%}"
+		$(block_html).dialog({	modal:true,
+			width: 515,
+			height:520,
+			title:title,
+			resizable:false,
+			buttons:[{id:"btnShowOK",text:gettext("Submit"),click:function(){saveprocessl(pid,lid)}},
+				{id:"btnShowCancel",text:gettext("Cancel"),click:function(){$(this).remove();}
+			       }],
+			close:function(){$(this).remove()}
+		      })
+		jqOptions_process.multiselect=false
+		$("#id_State").val(2)
+		jqOptions_process.url="/iclock/att/getuserRoles/?procSN="+lid
+		jqOptions_process.gridComplete=function(){
+			$.ajax({type: "POST",
+			url: "/iclock/att/getprocessfor/",
+			data:"pid="+pid+"&lid="+lid,
+			dataType:"json",
+			success: function(rs){
+					$("#id_day").val(rs.days)
+					    $("#id_State").val(rs.state)
+					var rowid=rs.roleid
+					if(rowid){
+						var rows=$("#id_grid_role").jqGrid("getDataIDs")
+						for(var i=0;i < jqOptions_process.rowNum;i++){
+						    var rl=$("#id_grid_role").jqGrid("getCell",i,1)
+						    if(rl==rowid){
+							rowid=$("#id_grid_role").jqGrid("getCell",i,0)
+						    }
+						}
+						$("#id_grid_role").jqGrid("setSelection", rowid);
+					}
+				    
+				},
+				error: function(){ }
+				});		}
+		
+		$("#id_grid_role").jqGrid(jqOptions_process)
+	}
+	
+	function saveprocessl(pid,lid){
+	    var sd=$("#id_State").val()
+	    var day=$("#id_day").val()
+	    var role = $("#id_grid_role").jqGrid('getGridParam','selrow');
+	    var querystr='id='+pid+'&lid='+lid+'&role='+role+"&state="+sd+"&day="+day
+	    $.ajax({type: "POST",
+		url: "/iclock/att/saveprocessl/",
+		data:querystr,
+		dataType:"json",
+		success: function(retdata){
+					if(retdata.ret==0){	
+						var ap=retdata.message;
+						$("#id_"+pid+"_"+lid+"_div").html(ap);
+					}else{
+						alert(retdata.message);
+					}},
+			error: function(){ }
+			});
+	    $("#id_form").remove();
+	}
+	function deldiv(pid,lid){
+	    ret=window.confirm(gettext("确认删除该审批节点吗"));
+	    if (ret){
+	    var querystr='id='+pid+'&lid='+lid;
+		$.ajax({type: "POST",
+		url: "/iclock/att/delprocessl/",
+		data:querystr,
+		dataType:"json",
+		success: function(retdata){
+				if(retdata.ret==0){	
+				    var id=pid+'_'+lid;
+				    $("#id_"+id+"_div").remove();
+				    $("#id_"+id+"_div_b").remove();
+				    $("#id_"+id+"_div_a").remove();
+				    $("#id_"+id+"_div_").remove();
+				    if(lid>0){
+					    lid=lid-1;
+					    id=pid+'_'+lid;
+					    var top = parseFloat($("#id_"+id+"_div").css("top").replace("px", ""), 10);
+					    var left = parseFloat($("#id_"+id+"_div").css("left").replace("px", ""), 10);
+					    var rhtml="<div id='id_"+pid+"_"+lid+"_div_a' class='div_r_a' style='top:"+top+"px;left:"+left+"px' onclick=javescrip:deldiv('"+pid+"','"+lid+"')></div>"
+					    +"<div id='id_"+pid+"_"+lid+"_div_b' class='div_r_b' style='top:"+top+"px;left:"+(left+176)+"px' onclick=javescrip:newdiv('"+pid+"','"+lid+"')></div>"
+					    $("#id_"+pid+"_div").append(rhtml)
+					    $("#id_"+id+"_div").css("left",left+22);
+				    } else {
+						$("#id_"+pid+"_div").remove()
+					}
+				}else{
+					alert(retdata.message);
+				}},    
+			error: function(){ }
+			});
+	    }
+	}
+</script>
+<div id="content_process" style='height: 540px;overflow: auto;'>
+</div>

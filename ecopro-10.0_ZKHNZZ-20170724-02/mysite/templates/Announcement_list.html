@@ -1,0 +1,260 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block extraSection %}
+<script src="{{ MEDIA_URL }}jslib/jquery-te-1.4.0.min.js?scriptVersion=1.4.0"></script>
+
+{% endblock %}
+
+{% block tblHeader %}
+
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='Announcement';
+jqOptions[g_activeTabID].sortname='-IsTop,-Pubdate';
+jqOptions[g_activeTabID].pager="id_pager_"+tblName[g_activeTabID];
+options[g_activeTabID].dlg_width=500;
+options[g_activeTabID].dlg_height=380;
+function afterPost_Announcement()
+{
+	//$("#id_edit_form").find(":input[type=text]").each(function(i,elem){
+		//$(this).val("");})
+	$("#id_Title").val("")
+	$("#id_Title").val("")
+	$("#id_Content").val("")
+
+}
+
+function getjqteoptions(){
+        var varsTitleq = [
+            {title:"文本格式"},
+            {title:"字体"},
+            {title:"颜色"},
+            {title:"粗体",hotkey:"B"},
+            {title:"斜体",hotkey:"I"},
+            {title:"下划线",hotkey:"U"},
+            {title:"有序排列",hotkey:"."},
+            {title:"无需排列",hotkey:","},
+            {title:"下标",hotkey:"down arrow"},
+            {title:"上标",hotkey:"up arrow"},
+            {title:"左进",hotkey:"left arrow"},
+            {title:"右进",hotkey:"right arrow"},
+            {title:"左对齐"},
+            {title:"中间对齐"},
+            {title:"右对齐"},
+            {title:"删除线",hotkey:"K"},
+            {title:"增加链接",hotkey:"L"},
+            {title:"删除链接"},
+            {title:"清除样式",hotkey:"Delete"},
+            {title:"水平线",hotkey:"H"},
+            {title:"源码"}
+            ];
+        var jqteStatus = true;
+        options[g_activeTabID]['titletext']=varsTitleq
+        options[g_activeTabID]['status']=jqteStatus
+        options[g_activeTabID]['source']=false
+       // options={'titletext':varsTitleq, 'status':jqteStatus , 'source':false};
+        return options[g_activeTabID];
+}
+
+$(function(){
+        $("#"+g_activeTabID+" #searchbar").val(gettext("标题"))
+	$("#"+g_activeTabID+" #queryButton").hide()
+        
+        var info='<div class=west_info></div><p>1.公告信息用于通知公司下达的各类通知</p><p>2.公告信息公布日期可以重新进行调整，排序规则为：置顶->公布时间->录入日期</p></div>'
+        renderLeftInformation(info);
+        //smenu="<ul><li  class='subnav_on' onclick=submenuClick('/iclock/data/Announcement/',this);><a href='#'>公告维护</a></li></ul>"
+        //$('#menu_div').html(smenu)
+        $("#"+g_activeTabID+" #id_newrec").click(function(event){
+
+                //processNewModel();
+                var currDate=new Date();
+                td=moment().format("YYYY-MM-DD HH:mm:ss")
+                var block_html="<div id='id_form'><form id='id_edit_form' method='post'><table>"
+                +"<tr><th><font color='red'>*</font><label for='id_Title'>标题:</label></th><td><input id='id_Title' type='text' name='Title' maxlength='80'></td></tr>"
+                +"<tr><th><font color='red'>*</font><label for='id_Content'>内容:</label></th><td><textarea id='id_Content' name='Content' type='text' value='' class='jqteadd'/></td></tr>"
+                +"<tr><th><label for='id_PIN'></label></th><td><input id='id_PIN' type='text' readonly='' name='PIN'  style='display: none;'></td></tr>"
+                +"<tr><th><label for='id_Author'>发布人:</label></th><td><input id='id_Author' type='text' readonly='' name='Author' value='{{user.username}}'></td></tr>"
+                +"<tr><th><font color='red'>*</font><label for='id_Pubdate'>发布时间:</label></th><td><input id='id_Pubdate'  type='text'  value='' maxlength='19' name='Pubdate'  style='width:140px '/></td></tr>"
+                
+                +"<tr><th><label for='id_IsTop'>是否置顶:</label></th><td><select id='id_IsTop' name='IsTop'><option selected='selected' value='1'>未知</option><option  value='2'>是</option><option value='3'>否</option></select></td></tr>"
+                +"<tr><th><label for='id_Entrydate'></label></th><td><input id='id_Entrydate' type='text' readonly='' name='Entrydate' value='"+td+"' style='display: none;'></td></tr>"
+                +"<tr><th><label for='id_Channel'></label></th><td><input id='id_Channel' type='text' readonly='' name='Channel' value='0' style='display: none;'></td></tr>"
+                +"<tr><th><label for='id_admin'></label></th><td><input id='id_admin' type='text' readonly='' name='admin' value='0' style='display: none;'></td></tr>"
+                +"</table></form><div id='id_error'></div></div>"
+                var dlg=$(block_html).dialog({	modal:true,
+														resizable:false,
+                                                          width: 800,
+                                                          height:500,
+                                                          title:"增加 公告信息",
+                                                          buttons:[
+                                                               // {id:"btnShowOK",text:"{% trans "save and return" %}",click:function(){ if(typeof beforePost_Announcement=="function"){if(beforePost_Announcement(this,"_new_")==false) return ;}  SaveFormData(this,g_urls[g_activeTabID]+"_new_/",'edit',"Announcement");  }},
+                                                                {id:"btnShowOK",text:"{% trans "save and return" %}",click:function(){ if(typeof beforePost_Announcement=="function"){if(beforePost_Announcement(this,"_new_")==false) return ;}  SaveFormData(this,g_urls[g_activeTabID]+"_new_/",'edit',"Announcement");  }},
+                                                                {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}
+                                                          ],
+                                                          close:function(){$(this).dialog("destroy")}
+                                                        })
+                options2=getjqteoptions()
+                $('.jqteadd').jqte(options2);
+                $(".status").click(function()
+                {
+                        jqteStatus = jqteStatus ? false : true;
+                        $('.jqteadd').jqte({"status" : jqteStatus})
+                });
+				$('#id_edit_form .jqte .jqte_editor').css('width','545px').css('height','150px').css('resize','none')
+                $("#id_Pubdate").val(td);
+				var tpickerOptions=copyObj(datetimepickerOptions)
+				tpickerOptions.showSecond=true
+				tpickerOptions.timeFormat='HH:mm:ss'
+                $("#id_Pubdate").datetimepicker(tpickerOptions);
+                return	dlg;
+	});
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowDep_Announcement();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowDep_Announcement();
+	});	
+	$("#"+g_activeTabID+" #id_export").css('display','none');
+	$("#"+g_activeTabID+" #id_third").html("");
+});
+
+function searchShowDep_Announcement(){
+    var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+    var url="/iclock/data/Announcement/?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+function beforePost_Announcement(obj,actionName){
+        if(actionName=="_new_"){
+                var Title=$("#id_Title",obj).val()
+                var Content=$("id_Content",obj).val()
+                if(Title=="" || Content==""){
+                        $("#id_error",obj).css("display","block");
+                        $("#id_error",obj).html("<ul class='errorlist'><li>{%trans '标题和内容为必填字段!'%}</li></ul>");
+                        return false;
+                }
+        }else {
+                }
+	}
+
+function editDefineclick(key)
+{
+	var Href=g_urls[g_activeTabID].split("?")[0]+key+'/'+"?stamp="+new Date().toUTCString();
+	$.ajax({
+		type:"GET",
+		url:Href,
+		dataType:"html",
+		async:false,
+		success:function(msg){
+                        msg=$.trim(msg)
+			processDefineEdit(msg, Href,key);			  
+		}
+	});
+}
+
+function processDefineEdit(blockHtml,urlAddr,actionName){
+        var str=blockHtml.substr(0,30);
+        if(str.indexOf("result=1")==0)
+        {			
+                var i=str.indexOf("message=");
+                if (i>0)
+                        var message=blockHtml.substr(i+8)
+                else
+                        var message=blockHtml
+                alert(message);
+                return 1;
+        }
+        var temp_div=$(blockHtml);
+        init_dialog(temp_div)
+        if($.isFunction(window["process_dialog_Announcement"]))	process_dialog_Announcement(temp_div);
+        temp_div.dialog({modal:true,
+						resizable:false,
+                        width:800,
+                        height:530,
+                        buttons:[{id:'btnShowOK',text:'{%trans "save and return" %}',click:function(){resetError();if(typeof beforePost_Announcement=="function"){if (beforePost_Announcement(this,actionName)==false){return;}} SaveFormData(this,urlAddr,'edit',"Announcement");  }},{text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}],
+                        close: function() {$('.jqte').remove();$(this).dialog("destroy");}});
+
+        temp_div.dialog("option","title",temp_div.find("#id_span_title").html());
+		var tpickerOptions=copyObj(datetimepickerOptions)
+		tpickerOptions.showSecond=true
+		tpickerOptions.timeFormat='HH:mm:ss'
+        $("#id_Pubdate",temp_div).datetimepicker(tpickerOptions);
+ 
+
+        $('#id_Content',temp_div).removeClass().addClass('jqteedit')
+        options1=getjqteoptions()
+        $('.jqteedit',temp_div).jqte(options1);
+        $(".status",temp_div).click(function()
+        {
+            jqteStatus = jqteStatus ? false : true;
+            $('.jqteedit').jqte({"status" : jqteStatus})
+        });
+		$('#id_edit_form .jqte .jqte_editor').css('width','545px').css('height','150px').css('resize','none')
+	//process_dialog_again(temp_div,"edit",urlAddr)		
+}
+
+function strOfData_Announcement(data)
+{
+	return stripHtml(data.Title);
+}
+//function canEdit()
+//{
+// 	if(!options.canEdit) return;
+//	var rows=$("#id_grid_"+tblName[g_activeTabID]).jqGrid("getCol",2,true)
+//	for(var i=0;i<rows.length;i++)
+//	{
+//		var id=rows[i].id;
+//		var colData=rows[i].value;
+//		var r=$("#id_grid_"+tblName[g_activeTabID]).jqGrid("getRowData",id)
+//		var schid=r.id
+//		var apage="<a class='can_edit' href='#' onclick='editclick("+schid+")'>"+colData+"</a>"
+//		$("#id_grid_"+tblName[g_activeTabID]).jqGrid("setRowData",id,{Title:apage})
+//		
+//	}
+//}
+
+function process_dialog_Announcement(obj)
+{
+         td=moment().format('YYYY-MM-DD HH:mm:ss')
+     
+	$("#id_PIN",obj).parent().parent().html("<th><label for='id_PIN'></label></th>"
+	    		            +"<td><input type='text' id='id_PIN' value='"+($("#id_PIN",obj).val())+"' name='PIN' readonly/></td>");
+	    
+	$("#id_Author",obj).parent().parent().html("<th><label for='id_Author'>{%trans 'Author'%}</label></th>"
+		    		            +"<td><input type='text' id='id_Author' value='{{user.username}}' name='Author' readonly/></td>");
+		    
+    
+    //$("#id_Pubdate",obj).parent().parent().html("<th><label for='id_Pubdate'>发布时间</label></th>"
+    	//	            +"<td><input type='text' id='id_Pubdate' value='"+($("#id_Pubdate",obj).val())+"' name='Pubdate' /></td>");
+    
+    $("#id_Channel",obj).parent().parent().html("<th><label for='id_Channel'></label></th>"
+       		            +"<td><input type='text' id='id_Channel' value='"+($("#id_Channel",obj).val())+"' name='Channel' readonly/></td>");
+       
+
+    $("#id_admin",obj).parent().parent().html("<th><label for='id_admin'></label></th>"
+       		            +"<td><input type='text' id='id_admin' value='"+($("#id_admin",obj).val())+"' name='admin' readonly/></td>");
+
+    $("#id_Channel",obj).val("0");
+    $("#id_admin",obj).val("0");
+	$("#id_PIN",obj).css("display","none");
+
+    $("#id_Channel",obj).css("display","none");
+    $("#id_admin",obj).css("display","none");
+	f=$(obj).find("#id_edit_form").get(0)
+	$(f).validate({
+			rules: {
+					"Title": {"required":true},
+					"Content": {"required":true},
+                    "Author": {"required":true}
+				}
+			});
+
+}
+{% endblock %}
+

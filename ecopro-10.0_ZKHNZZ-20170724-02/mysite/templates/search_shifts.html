@@ -1,0 +1,679 @@
+{% load i18n %}
+{% load iclock_tags %}
+<script>
+var flag=false;
+
+jqOptions[g_activeTabID]=null;
+
+ 
+
+
+function get_search_shift_url() {
+	var urlStr=''
+	if (page_style=="id_show_NoShift2") {
+		 urlStr="/iclock/att/searchNoShift/"	
+	
+	}
+	else if (page_style=="id_show_Shift2") {
+		urlStr="/iclock/att/searchComposite/?flag=shift2"	
+		
+	}
+	else if (page_style=="id_show_tmpShift") {
+		urlStr="/iclock/data/USER_TEMP_SCH/?o=ComeTime&t=empOftmpShifts.js&SchclassID__gt=-1"
+		
+	}
+	else if (page_style=="id_show_EmpShift") {
+	 urlStr="/iclock/data/USER_OF_RUN/?t=empOfShifts.js"	
+	}
+	
+	var deptID=getSelected_dept("showTree_search_shifts");
+	 if(deptID!=''){
+		 var ischecked=0;
+		 if($("#id_cascadecheck_search_shifts").prop("checked"))
+			 ischecked=1;
+			 if (urlStr.indexOf("?")==-1) {
+				 urlStr=urlStr+"?deptIDs="+deptID+"&isContainChild="+ischecked
+			 }
+			else
+				 urlStr=urlStr+"&deptIDs="+deptID+"&isContainChild="+ischecked
+			
+	 }
+	 var ComeTime=$("#id_ComeTime_search_shifts").val();
+	 var EndDate=$("#id_EndTime_search_shifts").val();
+	if (page_style=="id_show_tmpShift") {
+	  urlStr=urlStr+"&ComeTime__gte="+ComeTime+"&LeaveTime__lt="+EndDate
+	}
+	 else
+	  urlStr=urlStr+"&startDate="+ComeTime+"&endDate="+EndDate;
+
+	//savecookie("search_urlstr",urlStr);
+	return urlStr;
+}
+
+
+
+//正常排班列表
+function renderEmpShiftsTbl(p,page_style){
+//	var emp_tmp=$.cookie("emp")
+
+	var emp="";
+	var ComeTime="";
+	var dept="";
+	var EndDate="";
+	 jqOptions[g_activeTabID]=copyObj(jq_Options)
+	var w=$("#"+g_activeTabID+" #id_content").width()
+	 jqOptions[g_activeTabID].autowidth=false
+	 jqOptions[g_activeTabID].width=w-30
+//	if(typeof(emp_tmp)!='undefined'&&emp_tmp!=null && emp_tmp!="")
+//		emp=emp_tmp;
+	var urlStr=get_search_shift_url()//"/iclock/data/USER_OF_RUN/?t=empOfShifts.js"//+dept+"&isContainChild="+ischecked+"&UserID__id__in="+emp;//+"&StartDate="+ComeTime+"&EndDate="+EndDate;
+
+
+
+
+	savecookie("search_urlstr",urlStr);
+	tblname="id_show_EmpShift"
+	$("#id_grid_"+page_style).jqGrid('GridUnload')
+	//$.jgrid.gridUnload("#id_"+page_style+'_grid')
+	 jqOptions[g_activeTabID].url=urlStr
+
+//	var IsGridExist=$("#id_"+page_style+"_grid").jqGrid('getGridParam','records')
+//	if(typeof(IsGridExist)!='undefined')
+//	{
+		$.ajax({
+				type:"get",
+				url:urlStr,
+				dataType:"json",
+				data:{flagpage:"1",tblName:tblname},
+				success:function(data){
+					grid_disabledfields[g_activeTabID]=data['disabledcols']
+				     jqOptions[g_activeTabID].colModel=data['colModel']
+					get_grid_fields( jqOptions[g_activeTabID])
+					hiddenfields( jqOptions[g_activeTabID])
+					tblName[g_activeTabID]=tblname;
+					 jqOptions[g_activeTabID].pager='#id_pager_'+page_style;
+					var height=$("#tabs_select_Schedule").height()-110;
+					 jqOptions[g_activeTabID].height=height;
+					 jqOptions[g_activeTabID].rowNum=data['limit']
+					 jqOptions[g_activeTabID].rowList=[ jqOptions[g_activeTabID].rowNum, jqOptions[g_activeTabID].rowNum*2]
+					$("#id_grid_"+page_style).jqGrid( jqOptions[g_activeTabID]);
+		       }		   
+		})
+//	}
+//	else
+//	{
+		
+//		$("#id_"+page_style+"_grid").jqGrid('setGridParam',{url:urlStr}).trigger("reloadGrid");
+
+//	}
+	
+}
+//临时排班列表
+function renderEmpTmpShiftsTbl(p,page_style ){
+//	var emp_tmp=$.cookie("emp")
+//	var ct=$.cookie("ComeTime");
+//	var et=$.cookie("EndDate");
+//	var d=$.cookie("deptIDs")
+
+//	var d=$("#show_dept_emp_tree_"+page_style).find("#hidden_selDept").val()
+//	var ct=$("#id_ComeTime_"+page_style).val();
+//	var et=$("#id_EndTime_"+page_style).val();
+	var emp="";
+	var ComeTime="";
+	var dept="";
+	var EndDate="";
+	 jqOptions[g_activeTabID]=copyObj(jq_Options)
+	var w=$("#"+g_activeTabID+" #id_content").width()
+	 jqOptions[g_activeTabID].autowidth=false
+	 jqOptions[g_activeTabID].width=w-30
+	//if(typeof(emp_tmp)!='undefined'&&emp_tmp!=null && emp_tmp!="")
+	//	emp=emp_tmp;
+	//if(ct!=null && ct!="")
+	//	ComeTime=ct;
+	//if(et!=null && et!="")
+	//	EndDate=et;
+	//if(d!=null && d!="")
+	//	dept="&deptIDs="+d;
+	//if (dept==""&&p==0)
+	//	dept="&deptIDs=-1";
+	var urlStr=get_search_shift_url();
+	 
+	
+	var ischecked=0;
+	if($("#id_cascadecheck_search_shifts").prop("checked"))
+		ischecked=1;
+	savecookie("search_urlstr",urlStr);
+	tblname="id_show_tmpShift"
+	$("#id_grid_"+page_style).jqGrid('GridUnload')
+	//$.jgrid.gridUnload("#id_"+page_style+'_grid')
+	IsGridExist=$("#id_grid_"+page_style).jqGrid('getGridParam','records')
+	 jqOptions[g_activeTabID].url=urlStr
+	if(typeof(IsGridExist)=='undefined')
+	{	
+		$.ajax({
+				type:"get",
+				url:urlStr,
+				dataType:"json",
+				data:{flagpage:"1",tblName:tblname},
+				success:function(data){
+					grid_disabledfields[g_activeTabID]=data['disabledcols']
+					 jqOptions[g_activeTabID].colModel=data['colModel']
+					get_grid_fields( jqOptions[g_activeTabID])
+					hiddenfields( jqOptions[g_activeTabID])
+					tblName[g_activeTabID]=tblname;
+					 jqOptions[g_activeTabID].pager='#id_pager_'+page_style;
+					var height=$("#tabs_select_Schedule").height()-110;
+					 jqOptions[g_activeTabID].height=height;
+					 jqOptions[g_activeTabID].rowNum=data['limit']
+					 jqOptions[g_activeTabID].rowList=50//[ jqOptions[g_activeTabID].rowNum, jqOptions[g_activeTabID].rowNum*2]
+					
+					$("#id_grid_"+page_style).jqGrid( jqOptions[g_activeTabID]);
+			   }		   
+		})
+	}
+	else
+	{
+		$("#id_grid_"+page_style).jqGrid('setGridParam',{url:urlStr}).trigger("reloadGrid");
+
+	}
+	
+}
+//综合排班列表
+function integratedshift(){
+	var emp="";
+	var ComeTime=$("#id_ComeTime_search_shifts").val();
+	var EndDate=$("#id_EndTime_search_shifts").val();
+	 jqOptions[g_activeTabID]=copyObj(jq_Options)
+	var w=$("#"+g_activeTabID+" #id_content").width()
+	 jqOptions[g_activeTabID].autowidth=false
+	 jqOptions[g_activeTabID].width=w-30
+	 
+	 jqOptions[g_activeTabID].pager="#id_pager_id_show_Shift2";
+	var urlStr=get_search_shift_url();//"/iclock/att/searchComposite/?flag=shift2"	
+		
+	savecookie("search_urlstr",urlStr);
+		
+	$("#id_grid_"+page_style).jqGrid('GridUnload')
+	//$.jgrid.gridUnload("#id_"+page_style+'_grid')
+
+	$.ajax({
+		type:"get",
+		url:urlStr,
+		dataType:"json",
+		success:function(json){
+			tblname="id_show_Shift2";
+			tblName[g_activeTabID]=tblname
+			grid_disabledfields[g_activeTabID]=json["disabledcols"]
+			 jqOptions[g_activeTabID].colModel=json["colModel"]
+			get_grid_fields( jqOptions[g_activeTabID])
+			hiddenfields( jqOptions[g_activeTabID])
+			var height=$("#tabs_select_Schedule").height()-110;
+			 jqOptions[g_activeTabID].height=height;
+			 jqOptions[g_activeTabID].sortname="";
+			 jqOptions[g_activeTabID].sortorder="desc";
+			 jqOptions[g_activeTabID].rowNum=json["limit"]
+			 jqOptions[g_activeTabID].rowList=[json["limit"],json["limit"]*2]
+			
+			 jqOptions[g_activeTabID].url=urlStr//"/iclock/att/searchComposite/?page=1&flag=shift2&"+queryStr
+			$("#id_grid_"+page_style).jqGrid( jqOptions[g_activeTabID]);
+			$("#id_grid_"+page_style).jqGrid('setFrozenColumns');
+			
+
+		}
+	});
+
+
+}
+
+//未排班列表
+function integratedNoshift(){
+	var emp="";
+	var ComeTime=$("#id_ComeTime_search_shifts").val();
+	var EndDate=$("#id_EndTime_search_shifts").val();
+	 jqOptions[g_activeTabID]=copyObj(jq_Options)
+	var w=$("#"+g_activeTabID+" #id_content").width()
+	 jqOptions[g_activeTabID].autowidth=false
+	 jqOptions[g_activeTabID].width=w-30
+	 
+	 jqOptions[g_activeTabID].pager="#id_pager_id_show_NoShift2";
+	// /iclock/report/USER_NO_SCH/
+	var urlStr=get_search_shift_url()//"/iclock/att/searchNoShift/"	
+	 
+	savecookie("search_urlstr",urlStr);
+		
+	$("#id_grid_"+page_style).jqGrid('GridUnload')
+	//$.jgrid.gridUnload("#id_"+page_style+'_grid')
+
+	$.ajax({
+		type:"get",
+		url:urlStr,
+		dataType:"json",
+		success:function(json){
+			tblname="id_show_NoShift2";
+			tblName[g_activeTabID]=tblname
+			grid_disabledfields[g_activeTabID]=json["disabledcols"]
+			 jqOptions[g_activeTabID].colModel=json["colModel"]
+			get_grid_fields( jqOptions[g_activeTabID])
+			hiddenfields( jqOptions[g_activeTabID])
+			var height=$("#tabs_select_Schedule").height()-110;
+			 jqOptions[g_activeTabID].height=height;
+			 jqOptions[g_activeTabID].sortname="";
+			 jqOptions[g_activeTabID].sortorder="desc";
+			 jqOptions[g_activeTabID].rowNum=json["limit"]
+			 jqOptions[g_activeTabID].rowList=[json["limit"],json["limit"]*2]
+			
+			 jqOptions[g_activeTabID].url=urlStr//"/iclock/att/searchComposite/?page=1&flag=shift2&"+queryStr
+			$("#id_grid_"+page_style).jqGrid( jqOptions[g_activeTabID]);
+			$("#id_grid_"+page_style).jqGrid('setFrozenColumns');
+			
+
+		}
+	});
+
+
+}
+
+function ShowShiftsData()
+{
+	
+        var emp="";
+        //var deptIDs=$.cookie("dept_ids");
+        //if (deptIDs!=null){
+        //    emp=getSelected_emp();
+       // }
+       
+        var ComeTime=$("#id_ComeTime_search_shifts").val();
+        var EndDate=$("#id_EndTime_search_shifts").val();
+        var isError=validate_form_search_shifts();
+        //var totalEmp=parseInt($("#Employee").attr("alt"));
+        
+        
+        //$.cookie("emp",emp, { expires: 7 });
+        //$.cookie("deptIDs",deptIDs, { expires: 7 });
+        $("#id_con_error").css("display","none");
+        
+        if(isError){
+            $("#id_con_error").css("display","inline-block");
+            $("#id_con_error").html("<span class='Search_Shift_errorlist'>{%trans 'Please check that you select one or more employees or select department and the date is validate!'%}</span>");
+            return false;
+        }
+        else
+        {	
+		$.cookie("ComeTime",ComeTime, { expires: 7 });
+		$.cookie("EndDate",EndDate, { expires: 7 });
+            //ui_tabs = $( "#tabs_select_Schedule" ).tabs();
+            var select_index = $( "#tabs_select_Schedule" ).tabs('option', 'active');
+            if (select_index==0) {
+		flag=true
+		
+                 page_style="id_show_EmpShift";
+                 renderEmpShiftsTbl(1,page_style);
+                 
+            }else if (select_index==1){
+		flag=true
+                 page_style="id_show_tmpShift";
+                 renderEmpTmpShiftsTbl(1,page_style);
+                 
+            }else if (select_index==2){
+		flag=true
+		page_style="id_show_Shift2"
+                integratedshift();
+            }else if (select_index==3){
+		 flag=true
+                 //page_style="id_show_NoShift";
+		 page_style="id_show_NoShift2"
+                 integratedNoshift();
+	    }
+        }
+	
+	
+	
+}
+
+
+
+
+
+function validate_form_search_shifts(){   //验证表单的合法性(人员(可不选，在计算项目中计算选中单位的人员，其他的就默认值0)、开始时间、结束时间)
+	var t_emp=getSelected_emp();
+	var t_ComeTime=$("#id_ComeTime_search_shifts").val();
+	var cTime=t_ComeTime.split("-");
+	var t_EndDate=$("#id_EndTime_search_shifts").val();
+	var eTime=t_EndDate.split("-");
+    //var deptIDs=$.cookie("dept_ids")
+	var deptIDs=getSelected_dept("showTree_search_shifts");
+    
+    
+	cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+	edate=new Date(parseInt(eTime[0],10),parseInt(eTime[1],10)-1,parseInt(eTime[2],10));
+	//var days=(edate.valueOf()-cdate.valueOf())/(1000*3600*24)+1;
+	if(t_ComeTime=="" || t_EndDate=="" || cdate>edate ||deptIDs==""||deptIDs==null||!valiDate(t_ComeTime)||!valiDate(t_EndDate))
+		return 1;
+	else
+		return 0
+}
+function searchShowEmp_search_shifts(){
+    var v=$("#"+g_activeTabID+" #searchbar").val();
+	if (v=='身份证号、姓名'){
+		v=''
+	}
+    //if (v=='') return;
+
+	url=get_search_shift_url();
+
+
+    if(url.indexOf("&q=")>0){
+		url=url.split("&q=")[0]+"&q="+escape(v);
+    }else{
+		url=url+"&q="+escape(v);
+    }
+    //var url="/iclock/data/employee/?t=employee_shift.js&q="+escape(v)
+    savecookie("search_urlstr",url);
+    $("#id_grid_"+page_style).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+function searchbydept_search_shifts(page){
+   var dept_ids=getSelected_dept("showTree_"+page)
+    if (dept_ids!=null){
+    	if(dept_ids==undefined||dept_ids==''){
+    		alert("{% trans "请选择单位" %}")
+    		return false;
+    	}
+    }else{
+    	alert("{% trans "请选择单位" %}")
+    	return false;
+    }
+    var ischecked=0;
+    if($("#id_cascadecheck_search_shifts").prop("checked"))
+    	ischecked=1;
+    urlStr="deptIDs="+dept_ids+"&isContainChild="+ischecked
+    var emp=getSelected_emp_ex("sel_employee_search");
+    if(emp.length>0){
+	urlStr="UserID__in="+emp
+    }
+    var url=loadcookie("search_urlstr");
+    if(url.indexOf("?")!=-1){
+	url=url.split("?")[0];
+    }
+    var ComeTime=$("#id_ComeTime_search_shifts").val();
+    var EndDate=$("#id_EndTime_search_shifts").val();
+    if(page_style=="id_show_tmpShift"){
+	urlStr=urlStr+"&ComeTime__gte="+ComeTime+"&LeaveTime__lt="+EndDate
+    }else if(page_style=="id_show_Shift2"){
+	urlStr=urlStr+"&flag=shift2&startDate="+ComeTime+"&endDate="+EndDate
+	}else{
+	urlStr=urlStr+"&startDate="+ComeTime+"&endDate="+EndDate
+    }
+    var url=url+"?"+urlStr
+	if (page_style=='id_show_EmpShift'){
+		url +='&t=empOfShifts.js'
+	}
+	//savecookie("search_urlstr",url);
+  $("#id_grid_"+page_style).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+function createQueryDlg_Shift(){
+	createDlgdeptfor10('employee_search',1)
+	$('#dlg_for_query_employee_search').dialog({
+	buttons:[{id:"btnShowOK",text:gettext('搜索'),
+	  click:function(){searchbydept_search_shifts('employee_search');$(this).dialog("destroy"); }},
+	 {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+	}] })
+}
+
+$(function(){
+
+	initwindow_tabs();
+
+
+
+	
+	
+	
+
+	//$(".module1").css("width",$("#id_content").width())
+//		var info='<p>1.正常排班列表用于查询通过人员排班进行排班的详情</p><p>2.临时排班列表用于查询通过临时排班对人员进行排班的详情</p><p>3.综合排班列表用于查询人员全部排班的详情，其中包含正常排班和临时排班</p>'
+//		renderLeftInformation(info);
+
+	var html="<span id=id_opt_tree><input type='checkbox' id='id_cascadecheck_search_shifts'/>{%trans '级联下级单位' %}</span>"
+	$("#"+g_activeTabID+" #id_west").html(html)
+	html="<div id='show_dept_tree_'>"
+		+"<ul id='showTree_search_shifts' class='ztree' style='margin-left: 0px;height:100%;'></ul>"
+		+"</div>"   
+	$("#west_content_tab_iclock_USER_SEARCH_SHIFTS").html(html)
+	//var h=$("#"+g_activeTabID+" #west_content").height()-20
+	//$('#showTree_search_shifts').css('height',h)
+
+        ShowDeptData('search_shifts',true)
+		
+	$("#"+g_activeTabID+" #id_export").iMenu();
+ 	
+	$("#"+g_activeTabID+" #queryButton").click(function(){
+	createQueryDlg_Shift();
+	});
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+		searchShowEmp_search_shifts();
+	})
+
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+		if(event.keyCode==13){
+			searchShowEmp_search_shifts();
+		}	
+	})
+
+	var inputEl = $("#"+g_activeTabID+" .search-input")
+         defVal[g_activeTabID] = inputEl.val();
+    	 inputEl.on("focus",function(){
+		             var _this = $(this);
+				if (_this.val() == defVal[g_activeTabID]) {
+				    _this.val('');
+				    _this.css('color','#000000');
+				    //_this.attr('role','disabled')
+				}
+		})
+	inputEl.on("blur",function(){
+		        var _this = $(this);
+			if (_this.val() == '') {
+			    _this.val(defVal[g_activeTabID]);
+			    _this.css('color','#CCCCCC');
+			    _this.attr('role','defvalue')
+			}
+			else
+			    _this.attr('role','cansearch')
+		})
+	inputEl.on("keydown",function(event) {
+			if (event.which == 13) {
+			      var _this = $(this);
+			       _this.attr('role','cansearch')
+			 }
+		})
+	
+//        loadNULLPage();
+	var zTree = $.fn.zTree.getZTreeObj("showTree_search_shifts");
+	zTree.setting.check.enable = false;
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		ShowShiftsData()
+
+	}
+	
+	$("#"+g_activeTabID+" #id_reload").click(function(){
+	    ShowShiftsData()
+		$("#id_grid_"+page_style).trigger('reloadGrid');
+	});
+	$("#"+g_activeTabID+" #tabs_select_Schedule").css('height',$("#"+g_activeTabID+" #id_content").height()-$("#"+g_activeTabID+" #id_top").height()-5)
+	var tabs1=$("#tabs_select_Schedule").tabs({
+			    heightStyle:'fill',
+			    activate:function(ev,ui){
+				ShowShiftsData()
+
+				}
+	})//.charmingtabs({'closable':false})
+		
+		
+	$("#"+g_activeTabID+" #id_custom").click(function(){
+		if ( jqOptions[g_activeTabID])			
+			ShowCustomField( jqOptions[g_activeTabID]);
+	});
+		
+		
+                var currDate=new Date();
+                var dateTime=currDate.getFullYear()
+                        +"-"
+                        +(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+                        +"-01"
+                $("#id_ComeTime_search_shifts").val(dateTime)
+                var dateTime=currDate.getFullYear()
+                        +"-"
+                        +(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+                        +"-"
+                        +(currDate.getDate()<10?"0"+currDate.getDate():currDate.getDate())
+                
+                
+                $("#id_EndTime_search_shifts").val(dateTime)
+                        
+                
+                $("#id_ComeTime_search_shifts").datepicker(datepickerOptions);
+                $("#id_EndTime_search_shifts").datepicker(datepickerOptions);
+
+
+    //刷新tabs数据
+    $("#tabs_select_Schedule a").click(function(e)
+    {
+	
+	//ShowShiftsData()
+	
+	
+        
+    });
+
+////班次导出
+//$("#id_export").click(function(){
+//var index='id_show_tmpShift';
+//if (index=='undefined' || index=='null') return;
+//var ComeTime=$("#"+g_activeTabID+" #id_ComeTime").val();
+//var EndDate=$("#"+g_activeTabID+" #id_EndTime").val();
+//var emp="";
+//var deptIDs=$.cookie("dept_ids");
+//if (deptIDs!=null){
+//	emp=getSelected_emp();
+//}
+//var totalEmp=parseInt($("#Employee").attr("alt"));
+//
+//if(ComeTime==null ||ComeTime=="" ||deptIDs=="" )
+//{
+//    $("#id_con_error").css("display","inline-block");
+//    $("#id_con_error").html("<span class='Report_errorlist'>{%trans 'Please set conditions!'%}</span>");
+//}
+//else if(totalEmp<=0)
+//{
+//    $("#id_con_error").css("display","inline-block");
+//    $("#id_con_error").html("<span class='Report_errorlist'>"+$("#department").val()+"&nbsp;&nbsp;{%trans 'no employee'%}</span>");
+//
+//}
+//if (flag==true){
+//		
+//}else{
+//	$("#id_con_error").css("display","inline-block");
+//	$("#id_con_error").html("<span class='Report_errorlist'>&nbsp;&nbsp;{%trans '请选择数据导出列表'%}</span>");
+//}
+//
+//})
+
+
+		
+	});
+
+</script>
+<div id="id_top" style="min-width:  600px;">
+	<div class="sear-box quick-sear-box" >
+
+	<div class="s-info left" id="time_area">			
+            <label style="line-height:21px;" >{%trans "Begin Date"%}</label>
+            <input type="text" size="11"  id="id_ComeTime_search_shifts" maxlength="10" name="ComeTime"/>
+            <label style="line-height:21px;" >{%trans "End Date"%}</label>
+            <input type="text" size="11"  id="id_EndTime_search_shifts" maxlength="10" name="EndTime"/>
+	    
+	</div>
+			
+	<div style="display: none;" id="id_con_error" class='left'></div>
+
+ 
+ 
+ 
+ 		<div class="s-info right" id="sear_area">			
+			<div class="nui-ipt nui-ipt-hasIconBtn " >
+				<input id="searchbar" class="search-input" type="text"  value="考勤编号、身份证号、姓名" role='defvalue' autocomplete="off" />
+				<span id ="queryButton" class="nui-ipt-iconBtn">
+					<b id="_icon_2_28" class="nui-ico nui-ico-dArr "></b>
+				</span>
+				
+			</div>
+			
+			<div class="main-search-btn" >
+			
+				<span id="searchButton" class="chaxun icon iconfont icon-chaxun" ></span>
+			</div>
+		</div>
+
+ 
+ 
+ 
+             <span style="padding: 3px; display: none; float: left;"><input type="hidden" id="id_export_con" value="" name="tblName"/>
+		<input type="hidden" id="id_deptIDs" value="" name="deptIDs"/>
+		<input type="hidden" id="id_UserIDs" value="" name="UserIDs"/>
+		<input type="hidden" id="id_l" value="1000000" name="l"/>
+            </span>
+            <!--  <input type="button" id="submmitselecty" class='btnOKClass' value="{%trans 'select'%}" name="submmitselect"/>-->
+        </div>
+
+	<div id="id_toolbar">
+			<UL class="toolbar" id="navi">
+				<LI id="id_reload" ><SPAN  class="icon iconfont icon-shuaxin"></SPAN>{%trans "Reload"%}</LI>
+				<LI id="id_export" ><SPAN   class="icon iconfont icon-daochu"></SPAN>{%trans "Export"%}
+				        <ul id="op_menu_export" class="op_menu">
+						<li><span>{%trans "文件格式"%}</span>
+							<ul>
+							<li onclick="javascript:clickexport(tblName[g_activeTabID],0);"><a href="#">EXCEL</a></li>
+							<li onclick="javascript:clickexport(tblName[g_activeTabID],1);"><a href="#">TXT</a></li>
+							<!-- <li onclick="javascript:clickexport(tblName[g_activeTabID],2);"><a href="#">PDF</a></li> -->
+							</ul>
+						</li>
+					</ul>
+				</LI>
+				<LI id="id_custom" ><SPAN  class="icon iconfont icon-select"></SPAN>{%trans "Preferences"%}</LI>
+
+			</ul>
+
+	</div>
+	
+<!--	<div id="show_field_selected">
+		<div class="title"><span class='close' onclick='hideFields_define();'></span></div>
+		<div id="id_fields_selected"></div>
+	</div>
+-->	
+	
+</div>
+<div id="tabs_select_Schedule" >
+	<ul>
+		<li><a id="id_show_EmpShift_a" href="#id_show_EmpShift">{% trans "周期排班列表"%}</a></li>
+		<li><a id="id_show_tmpShift_a" href="#id_show_tmpShift">{% trans "List Emp.Tmp.Shift"%}</a></li>
+		<li><a id="id_show_Shift2_a" href="#id_show_Shift2">{% trans "List Shift"%}</a></li>
+		<li><a id="id_show_NoShift2_a" href="#id_show_NoShift2">{% trans "未排班列表"%}</a></li>
+	</ul>
+	 <div id="id_show_EmpShift" align="left" > 
+		<table id="id_grid_id_show_EmpShift" ></table> 
+		<div id="id_pager_id_show_EmpShift" ></div>
+	</div>
+	<div id="id_show_tmpShift" >
+		<table id="id_grid_id_show_tmpShift" ></table> 
+		<div id="id_pager_id_show_tmpShift" ></div>
+        
+	</div>
+	<div id="id_show_Shift2" >
+		<table id="id_grid_id_show_Shift2" ></table> 
+		<div id="id_pager_id_show_Shift2" ></div>
+	</div>
+	<div id="id_show_NoShift2" >
+		<table id="id_grid_id_show_NoShift2" ></table> 
+		<div id="id_pager_id_show_NoShift2" ></div>
+	</div>
+</div>
+

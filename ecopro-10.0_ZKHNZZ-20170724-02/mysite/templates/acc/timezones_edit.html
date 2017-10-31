@@ -1,0 +1,53 @@
+{% load iclock_tags %}
+{% load i18n %}
+
+<div id="id_form" >
+
+<form method="post" id="id_edit_form" enctype="multipart/form-data">
+<table>
+<tr><th></th><td>
+	<span  style="display:none" id="id_span_title">
+		{% if add %}{% trans "Add" %}  {% else %} {% trans "Edit" %} {% endif %} {{ dataOpt.verbose_name|escape }}</span>
+	<span  style="display:none" id="id_span_parent">
+		{{ parent_name }}</span>
+</td></tr>
+
+{% autoescape off %}
+<tr>
+    <th>
+    <font color="red">*</font><label for="id_Name" >{%trans "时间段名称"%}:</label>
+    </th>
+    <td style='vertical-align:top;'> {{ form.Name.as_widget }} </td>   
+    <th>
+    <label for="id_remark" >{%trans "备注"%}:</label>
+    </th>
+    <td style='vertical-align:top;'> {{ form.remark.as_widget }} </td>   
+    <td style='display: none;'> {{ form.tz.as_widget }} </td>   
+</tr>
+<tr>
+</tr>
+{% endautoescape %}
+
+<tr id="addition_fields">{% block addfields %}{% endblock %}</tr>
+</td>
+</tr>
+</table>
+</form>
+
+
+<div id='id_timezone'>
+	<table id='id_grid_timezone' >	</table>
+	<div id='id_pager_timezone'></div>
+        
+</div>
+
+
+
+
+
+<div id="id_error"></div>
+
+{% block add_contents %}{% endblock %}
+{% block add_contents_2c %}{% endblock %}
+
+</div>

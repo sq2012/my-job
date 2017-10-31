@@ -1,0 +1,71 @@
+{% extends "base_site9.html" %}
+{% load i18n %}
+{% block content %}
+<script type="text/javascript">
+function checkFileName()
+{
+	var fileName = document.frmComebackDb.fileUpload.value;
+	var postfix = fileName.substring(fileName.length - 4);
+	if ((postfix != ".txt" && postfix !=".TXT") && (postfix != ".csv" && postfix !=".CSV"))
+	{
+		alert("{%trans "Please select .txt or .csv file!"%}");
+		return false;
+	}
+	else
+	{
+		return true;
+	}	
+}
+
+</script>
+<form id='frmComebackDb'name='frmComebackDb' method='POST' enctype='multipart/form-data'>
+<div class='container' style='margin-top:30px; width:420px;'>	
+	<div>
+		<table>
+				<tr><th>{% trans "Support Upload Fields" %}</th><th>{% trans "Index in File" %}</th></tr>
+				<tr><td><input name="pin"  type="checkbox" checked disabled/>{% trans "PIN" %}</td>
+				<td><input name="pin2file" id="id_pin2file" type="text" value="2" style="width:100px !important;"/></td>
+				</tr>
+				<tr><td><input name="name" type="checkbox" checked/>{% trans "name" %}</td>
+				<td><input name="name2file" id="id_name2file" type="text" value="3" style="width:100px !important;"/></td>
+				</tr>
+				<tr><td><input checked name="Password" type="checkbox" checked/>{% trans "Password" %}</td>
+				<td><input name="Password2file" id="id_Password2file" type="text" value="4" style="width:100px !important;"/></td>
+				</tr>
+				<tr><td><input name="sex" type="checkbox" checked/>{% trans "Sex" %}&nbsp;({%trans "Man"%}=<input type="text" value="{% trans 'Man'%}" name="man" style="width:30px !important;"/>&nbsp;{%trans "Woman"%}=<input name="woman" value="{% trans 'Woman'%}" type="text" style="width:45px !important;"/>)</td>
+				<td><input name="sex2file" id="id_sex2file" type="text" value="5" style="width:100px !important;"/></td>
+				</tr>
+				<tr><td><input name="Birthday" type="checkbox" checked/>{% trans "Birthday" %}</td>
+				<td><input name="Birthday2file" id="id_Birthday2file" type="text" value="6" style="width:100px !important;"/></td>
+				</tr>
+				<tr><td><input name="Title" type="checkbox" checked/>{% trans "Title" %}</td>
+				<td><input name="Title2file" id="id_Title2file" type="text" value="7" style="width:100px !important;"/></td>
+				</tr>
+				<tr><td><input name="Card" type="checkbox" checked/>{% trans "Id card" %}</td>
+				<td><input name="Card2file" id="id_Card2file" type="text" value="8" style="width:100px !important;"/></td>
+				</tr>
+				<tr><td><input name="Tele" type="checkbox" checked/>{% trans "Office phone" %}</td>
+				<td><input name="Tele2file" id="id_Tele2file" type="text" value="9" style="width:100px !important;"/></td>
+				</tr>	
+				<tr><td><input name="FPHONE" type="checkbox" checked/>{% trans "Home phone" %}</td>
+				<td><input name="FPHONE2file" id="id_FPHONE2file" type="text" value="10" style="width:100px !important;"/></td>
+				</tr>
+				<tr><td><input name="Mobile" type="checkbox" checked/>{% trans "Mobile" %}</td>
+				<td><input name="Mobile2file" id="id_Mobile2file" type="text" value="11" style="width:100px !important;"/></td>
+				</tr>	
+					
+								
+		</table>
+	</div>
+	<div style="padding:10px">
+		<label for='fileUpload' >{%trans "Upload file location:"%}</label><br />
+		<input type='file' class='text' value='' name='fileUpload' id='fileUpload'/>
+	
+	</div>
+	<div style="padding:10px;padding-left:100px;">
+		<input name='submit' value='{%trans "Submit"%}' type='submit' class='button first' onClick='return checkFileName();'/>
+		<input name='quit' value='{%trans "return"%}' type='button' class='button' onClick='window.close();'/>	
+	</div>
+</div>
+</form>
+{% endblock %}

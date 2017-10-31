@@ -1,0 +1,112 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+hasImport={% if user|HasPerm:"ipos.import_dininghall" %}true{% else %}false{% endif %}
+//jqOptions=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='Dininghall';
+jqOptions[g_activeTabID].pager="id_pager_"+tblName[g_activeTabID];
+jqOptions[g_activeTabID].sortname='code,name';
+options[g_activeTabID].dlg_width=400;
+options[g_activeTabID].dlg_height=380;
+
+$(function(){
+	$("#"+g_activeTabID+" #queryButton").hide()
+
+        var info='<div class="west_info"><p>1,单击餐厅资料页面上的【新增】按钮，进入新增餐厅资料页面</p>' +
+                '<p>2.在餐厅资料列表中，单击“餐厅编号”，进入编辑餐厅资料页面</p>'+
+                '<p>3.在餐厅资料列表中，单击选中需删除的餐厅资料，然后单击餐厅资料列表上方的【删除】按钮，进入删除餐厅资料的确认页面</p>'+
+                '<p>4.在餐厅资料列表中，单击选中【自定义显示字段】按钮，可根据自己的需求显示字段</p></div>'
+
+        renderLeftInformation(info);
+        smenu="<ul><li  class='subnav_on' onclick=submenuClick('/ipos/data/dininghall/',this);><a href='#'>餐厅资料</a></li></ul>"
+        //$('#menu_div').html(smenu)
+        $("#"+g_activeTabID+" #id_newrec").click(function(event){
+                processNewModel();
+	});
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowDep_Dininghall();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowDep_Dininghall();
+	});
+	$("#"+g_activeTabID+" #id_export").css('display','none');
+	$("#"+g_activeTabID+" #id_third").html("");
+
+    //$("#"+g_activeTabID+" #id_search").click(function(){
+		//var search_code=$("#"+g_activeTabID+" #search_id_code").val();
+		//var search_name=$("#"+g_activeTabID+" #search_id_name").val();
+        //var urlnew="";
+        //if (search_code||search_name)
+        //  {urlnew="code="+search_code+"&"+"name="+search_name}
+		//var url="/ipos/data/dininghall/?"
+		//if (urlnew!="" &&  urlnew!=null)
+		//	url+=urlnew;
+		//$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+		//savecookie("search_urlstr",url);
+	//});
+    //$("#"+g_activeTabID+" #id_search_clean").click(function(){
+    //    $("#"+g_activeTabID+" #search_id_code").val('');
+    //    $("#"+g_activeTabID+" #search_id_name").val('');
+    //    var url="/ipos/data/dininghall/"
+	//	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+	//	savecookie("search_urlstr",url);
+    //});
+});
+function searchShowDep_Dininghall(){
+    var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+    var url="/ipos/data/dininghall/?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function process_dialog_Dininghall(obj,flag)
+{
+      $(obj).dialog({resizable:false,modal:true})
+}
+
+
+
+function editDefineclick(key)
+{
+	var Href=g_urls[g_activeTabID].split("?")[0]+key+'/'+"?stamp="+new Date().toUTCString();
+	$.ajax({
+		type:"GET",
+		url:Href,
+		dataType:"html",
+		async:false,
+		success:function(msg){
+                        msg=$.trim(msg)
+			processDefineEdit(msg, Href,key);
+		}
+	});
+}
+
+function strOfData_Dininghall(data)
+{
+	return stripHtml(data.code)+" "+data.name;
+}
+{% endblock %}
+
+{% block otherQuery %}
+	<!--<span style='float:left;'>
+        <span>
+			<label class='required' >{%trans '餐厅编号'%}</label>
+			<input type='text' name=''  id='search_id_code' style='width:120px;'>
+            &nbsp; &nbsp; &nbsp; &nbsp; <label class='required' >{%trans '餐厅名称'%}</label>
+			<input type='text' name=''  id='search_id_name' style='width:120px;'>
+		 </span>
+          &nbsp; &nbsp; &nbsp; &nbsp; <span id='id_search' ><a class='m-btn  zkgreen rnd mini'>{%trans 'Query'%}</a></span>-->
+            <!--<span id='id_search_clean' ><a class='m-btn  zkgreen rnd mini'>{%trans '清除'%}</a></span>-->
+	<!-- </span> -->
+
+
+{% endblock %}

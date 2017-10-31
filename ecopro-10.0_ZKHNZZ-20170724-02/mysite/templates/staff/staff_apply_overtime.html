@@ -1,0 +1,131 @@
+{% load i18n %}
+{% load iclock_tags %}
+<script>
+
+$(function refresh(){
+    var currDate=new Date();
+    td=currDate.getFullYear()
+        +"-"
+        +(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+        +"-"
+        +(currDate.getDate()<10?"0"+currDate.getDate():currDate.getDate())
+        +" "
+        +(currDate.getHours()<10?"0"+currDate.getHours():currDate.getHours())
+        +":"
+        +(currDate.getMinutes()<10?"0"+currDate.getMinutes():currDate.getMinutes())
+        +":"
+        +(currDate.getSeconds()<10?"0"+currDate.getSeconds():currDate.getSeconds())
+
+        setd=currDate.getFullYear()
+            +"-"
+            +(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+            +"-"
+            +(currDate.getDate()<10?"0"+currDate.getDate():currDate.getDate())
+            +" ";
+        $("#id_StartOTDay").val(setd+"00:00");
+        $("#id_EndOTDay").val(setd+"23:59");
+        $("#id_ApplyDate").val(td);
+        $("#id_StartOTDay").datetimepicker(datetimepickerOptions);
+        $("#id_EndOTDay").datetimepicker(datetimepickerOptions);
+})
+
+function validateForm(obj){
+		apply=$("#id_ApplyDate",obj).val();
+	    var t_ComeTime=$("#id_StartOTDay",obj).val();
+	    var t_EndDate=$("#id_EndOTDay",obj).val();
+        var cdate=new Date(t_ComeTime.replace(/-/g,"/"))
+        var edate=new Date(t_EndDate.replace(/-/g,"/"))
+	    var days=(edate.valueOf()-cdate.valueOf())/(1000*3600*24)+1;
+		if(t_ComeTime=="" || t_EndDate==""){
+			return 1;
+		}else if(cdate>edate){
+			return 2;
+		}else{
+			return 0;
+		}
+
+	}
+function beforePost(obj,actionName){
+                if(validateForm(obj)==1)
+                {
+                        $("#id_errors",obj).css("display","block");
+                        $("#id_error",obj).html("{%trans 'Enter a valid date/time' %}").css("color","red");
+                        return false;
+                }else if(validateForm(obj)==2){
+                        $("#id_errors",obj).css("display","block");
+                        $("#id_error",obj).html("{%trans 'End time less than begin time' %}").css("color","red");
+                        return false;	}
+                if(actionName=="_new_"){
+                        var emp="{{ emp_id }}";
+                        $("#id_userid",obj).val(emp);
+                        $("#id_error",obj).css("display","none");
+                        $("#id_userid",obj).val(emp);
+                }else {}
+}
+
+function SaveFormDataEx(FormObj,url,flag)
+{
+	f=FormObj
+	if (!$(f).valid()){$("#id_error").html(gettext("occur error!")).css("color","red").css('display','block'); return 0;}
+	var formStr=formToRequestString(f);
+	$.post(url,
+		formStr,
+		function (ret, textStatus) {
+            $("#id_errors").css("display","block");
+			$("#id_error").html(ret.message).css("color","red").css('display','block');
+            setTimeout("$('#id_errors').css('display','none');", 3000);
+		},
+		"json");
+}
+</script>
+
+<!--<div>
+	<ul id="breadcrumb">
+		<li><a href='/iclock/staff/'>申请中心</a> <span style='color:#CCCCCC'>/</span> <a href="#">{{ location }}</a></li>
+	</ul>
+</div>
+-->
+
+<div align="center" style="margin-top: 10px">
+<table border="1"  height="250" style="border-width: 0px">
+	<!-- MSTableType="layout" -->
+	<tr>
+		<td style="border-style: none; border-width: medium">　<form class="contact_form"  id="id_edit_form" method="post" action='' enctype='multipart/form-data'>
+    <ul>
+        <li>
+              <label for="name" ><h3 style="margin-top: -30px;">申请加班</h3></label>
+        </li>
+        <li id="StartOTDay">
+            <label for="id_StartOTDay">{% trans 'Begin time'%}</label>
+            <input name="StartOTDay" id="id_StartOTDay" type="text" class="radio vam" style="width:140px!important;"  />&nbsp;&nbsp;
+        </li>
+        <li id="EndOTDay">
+            <label for="EndOTDay">{% trans 'End time'%}</label>
+            <input name="EndOTDay" id="id_EndOTDay" type="text" class="radio vam" style="width:140px !important;"  />&nbsp;&nbsp;
+        </li>
+        <li id="AsMinute">
+            <label for="id_AsMinute">{% trans 'As Minute'%}</label>
+            <input name="AsMinute" id="id_AsMinute" type="text" class="radio vam"  value="0" style="width:140px !important;" />&nbsp;&nbsp;
+        </li>
+        <li id="YUANYING">
+            <label for="id_YUANYING">{% trans 'Reson'%}</label>
+           <input id="id_YUANYING" type="text" value="" class="radio vam" name="YUANYING" style="width:140px !important;">
+        </li>
+        <li id="ApplyDate">
+            <label for="id_ApplyDate">{% trans 'ApplyDate'%}</label>
+            <input id='id_ApplyDate'  type='text' value='' class="radio vam"  name='ApplyDate' disabled="disabled" style="width:140px!important;" />&nbsp;&nbsp;
+        </li>
+        <li>
+            <input type='hidden' id='id_userid' value='' name='UserID' />
+            <div id="id_errors" style="width:300px;font-size:12px;display: none;">
+                <span id="id_error" style="width:280px;float: right;"></span>
+                <img src="../media/img/icon_alert.gif"  />
+            </div>
+        </li>
+    </ul>
+</form></td>
+	</tr>
+</table>
+        	<button id="id_staff_apply_user_overtime_save" class="m-btn  zkgreen rnd" type="button" role="button" aria-disabled="false" type="submit" style="width: 100px;" title="保存" onclick="if(typeof beforePost=='function'){if(beforePost(document.getElementById('id_edit_form'),'_new_')==false) return ;}  SaveFormDataEx(document.getElementById('id_edit_form'),'/iclock/apply/USER_OVERTIME/_new_/','edit','_new_');">{%trans 'Save'%}</button>
+</div>
+

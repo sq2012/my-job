@@ -1,0 +1,25 @@
+{% load iclock_tags %}
+{% load i18n %}
+<style media="print">.Noprint {DISPLAY:none;}</style>
+<script src="{{ MEDIA_URL }}jslib/jquery-ui/jquery-1.11.1.min.js?scriptVersion=10.001"></script>
+<script type="text/javascript">
+    {% autoescape off %}
+            var approval="{{approval}}"
+            var id="{{id}}"
+    {% endautoescape %}
+    $(function(){
+        $("#id_speday_body").html(approval)
+        })
+    function exportdate(){
+        window.open("/iclock/export/exportspeday/?id="+id)
+    }
+</script>
+<div id='id_speday_title' style='margin-top: 20px;margin-bottom:30px;text-align: center;height: 30px;'><span style='font-size: 28px;'>员工假期申请单</span></div>
+<div id='id_speday_body' style=''>
+        
+</div>
+<div class='Noprint' style="height: 40px;margin-top: 30px;text-align: center;">
+    <a href="#" onclick="exportdate()">导出excel文件</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="#" onclick="javascript:window.print();">打印</a>
+</div>
+

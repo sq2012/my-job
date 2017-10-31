@@ -1,0 +1,82 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+
+<div id='id_option' style='padding: 20px;'>
+	<form id='id_edit_form_calc' method='post'>
+        <div class='ui-widget-header' style='width:700px;height: 28px;margin-left: 100px;margin-top: 10px;'><h3 style="padding-top: 8px;padding-left: 10px"><a>{%trans '考勤统计任务设置'%}</a></h3></div>
+		<table style="margin-left: 100px;margin-top: 20px;"><tr>
+            <td><input  type='checkbox' maxlength='30'  id='id_auto_' name='auto_'/>{%trans '启用自动统计数据任务'%}</td>
+        </tr>
+		<tr>
+			<td><label for='id_lock_date' >{%trans '开始启用日期'%}</label><input type='text' maxlength='30' name='start_date' id='id_start_date' value=''/></td>
+		</tr>
+		<tr>
+			<td><label for='id_lock_date' >{%trans '开始统计时间'%}</label><input type='text' maxlength='30' name='start_time' id='id_start_time' value='02:00'/>
+			时间格式如02:00,系统在设定的时间进行重新统计上月初至今的数据,白天时段(10-16)每5分钟进行统计一次</td>
+		</tr>
+	</table></form>
+</div>
+<div><ul class='errorlist'><li id='option_calc_id_error' style='display:none;'></li></ul></div>
+	{% if user|HasPerm:"iclock.sys_calc_setting" %}
+    <div style="margin-left: 100px;margin-top: 20px;"><input id='id_submit' type='button' class='m-btn  zkgreen rnd' value='{%trans "Save" %}'/></div>
+    {% endif %}
+
+
+<script>
+{% autoescape off %}
+var _data={{ params }}
+{% endautoescape %}
+
+
+var SaveOptions=function(obj,keys){
+	$("#option_calc_id_error").html('')
+	var formStr=formToRequestString(obj.get(0));
+	var url='/iclock/isys/options/'
+	$.post(url+'?action='+keys, 
+		formStr,
+		function (ret, textStatus) {
+			$("#"+g_activeTabID+" #option").remove()
+				if (keys=='status')
+				reloadData();
+				$("#option_calc_id_error").css("display","block");
+				$("#option_calc_id_error").html(ret.message);
+		},
+		"json");
+}
+
+
+
+
+
+$(function(){
+	$("#"+g_activeTabID+" #id_start_date").datepicker(datepickerOptions)
+        if(_data.is_=='1'){ $("#"+g_activeTabID+" #id_auto_").prop("checked","checked");}  
+	$("#"+g_activeTabID+" #id_start_date").val(_data.st)
+	$("#"+g_activeTabID+" #id_start_time").val(_data.stt)
+	
+
+            $("#"+g_activeTabID+" #id_submit").click(function(){
+				$.blockUI({title:'',theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans '正在更新系统配置......'%}</br></h1>'});
+
+         			var queryStr=$("#"+g_activeTabID+" #id_edit_form_calc").formSerialize();
+        			$.ajax({ 
+        				type: "POST",
+        				url:"/base/isys/option_calcdata/",
+        				data:queryStr,
+        				dataType:"json",
+        				success:function(retdata){
+						$.unblockUI();
+                            var message=retdata.message
+							$("#option_calc_id_error").css("display","block");
+							$("#option_calc_id_error").html(message);
+        					}
+        				});
+        		});
+
+	
+	
+});
+
+</script>
+

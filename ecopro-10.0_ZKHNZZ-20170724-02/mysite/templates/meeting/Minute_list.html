@@ -1,0 +1,347 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block extraSection %}
+<script src="{{ MEDIA_URL }}jslib/jquery-te-1.4.0.min.js?scriptVersion=1.4.0"></script>
+
+{% endblock %}
+{% block tblHeader %}
+//var jqOptions=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{ colModel }}
+dtFields[g_activeTabID] = "{{ dtFields }}"
+tblName[g_activeTabID]='Minute';
+jqOptions[g_activeTabID].sortname='-FileNumber';
+jqOptions[g_activeTabID].pager='#id_pager_'+tblName[g_activeTabID];
+var Meet_json=[]
+
+function datas(id){
+	var r=$("#id_grid_"+tblName[g_activeTabID]).jqGrid("getRowData",id);
+	var id=id
+	var Name=r.FileName
+	var data=[id,Name];
+	return data
+}
+
+function ShowMinuteData(page,tag,isDiy)
+{
+	var setting = {
+            check: {enable: !tag,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},          
+	    async: {
+			    enable: true,
+			    url: "/meeting/getData/?func=Minutes",
+			    autoParam: ["FileNumber"]
+		    }
+	};
+	$.fn.zTree.init($("#showTree_"+page), setting,null);	
+}
+
+function strOfData_Minute(data)
+{
+	return stripHtml(data.FileNumber)+" "+data.FileName;
+}
+/*
+function doAction_Minute(url, action)
+{	
+	var result=getSelected(0,"true");
+	selected_data=datas(result.ss);
+	var shift_id=selected_data[0]
+	if (action == 'meet_add_participants')
+		createDlgmeet();
+}
+*/
+
+
+
+function getjqteoptions(){
+        var varsTitleq = [
+            {title:"文本格式"},
+            {title:"字体"},
+            {title:"颜色"},
+            {title:"粗体",hotkey:"B"},
+            {title:"斜体",hotkey:"I"},
+            {title:"下划线",hotkey:"U"},
+            {title:"有序排列",hotkey:"."},
+            {title:"无需排列",hotkey:","},
+            {title:"下标",hotkey:"down arrow"},
+            {title:"上标",hotkey:"up arrow"},
+            {title:"左进",hotkey:"left arrow"},
+            {title:"右进",hotkey:"right arrow"},
+            {title:"左对齐"},
+            {title:"中间对齐"},
+            {title:"右对齐"},
+            {title:"删除线",hotkey:"K"},
+            {title:"增加链接",hotkey:"L"},
+            {title:"删除链接"},
+            {title:"清除样式",hotkey:"Delete"},
+            {title:"水平线",hotkey:"H"},
+            {title:"源码"}
+            ];
+        var jqteStatus = true;
+        qoptions={'titletext':varsTitleq, 'status':jqteStatus , 'source':false};
+        return qoptions;
+}
+
+function getmeetOptions(){
+        var htl="<option value=''> </option>"
+        for(var i=0;i<Meet_json.length;i++){
+                htl+="<option value='"+Meet_json[i].id+"'>"+Meet_json[i].conferenceTitle+"</option>"
+        }
+        return htl;
+}
+
+function process_dialog_Minute(obj){
+		$(obj).dialog({resizable:false,modal:true})
+        $('#id_Content',obj).removeClass().addClass('jqteedit');
+        var optionse=getjqteoptions()
+        $('.jqteedit',obj).jqte(optionse);
+        $(".status",obj).click(function()
+        {
+            jqteStatus = jqteStatus ? false : true;
+            $('.jqteedit').jqte({"status" : jqteStatus})
+        });
+		$('#id_edit_form .jqte .jqte_editor').css('width','545px').css('height','200px').css('resize','none')
+		tmp_option=copyObj(datetimepickerOptions)
+        tmp_option['showSecond']=true
+        tmp_option['timeFormat']='HH:mm:ss'
+        $("#id_SubTime",obj).datetimepicker(tmp_option);
+		delete tmp_option
+        $("#id_SubmitUser",obj).attr("disabled","disabled");
+        f=$(obj).find("#id_edit_form").get(0);
+	$(f).validate({
+			rules: {
+					FileNumber: {"required":true},
+					FileName: {"required":true}
+				}
+			});
+                        
+}
+function sub(){
+    var result=getSelected(options[g_activeTabID].edit_col,"true");
+    selected_data=datas(result.ss);
+    var selected_id=selected_data[0];
+    var opts = { 
+                url:'/meeting/Minute/savefile_MeetMinute/?FileNumber='+selected_id,
+                dataType:'json',
+                success: showResponsePhoto
+                            };
+     $("#frmPhotoDb_s").ajaxSubmit(opts); 
+    
+}
+function showResponsePhoto(ret, statusText, xhr, $form){
+
+	$("#id_message").html(ret.message).css('color','red').css("display","block");
+
+}
+function downloadfile(){
+        var result=getSelected(options[g_activeTabID].edit_col,"true");
+	if (result.ss.length==1){
+		selected_data=datas(result.ss);
+                var selected_id=selected_data[0];
+	}else if (result.ss.length==0){
+                alert(gettext("必须选择一条数据"));
+		return;
+	}else{
+                alert(gettext("只能选择一条数据"));
+		return;
+        }
+        action=confirm("{%trans "确定要下载档案编号为"%} "+selected_id+" {%trans "的附件么？"%}")
+        if(action){
+            window.open("/meeting/exportfilename/?id="+escape(selected_id))
+        }
+}
+function createDlgShift(){
+	var result=getSelected(options[g_activeTabID].edit_col,"true");
+	if (result.ss.length==1){
+		selected_data=datas(result.ss);
+                var selected_id=selected_data[0];
+	}else if (result.ss.length==0){
+                alert(gettext("必须选择一条数据"));
+		return;
+	}else{
+                alert(gettext("只能选择一条数据"));
+		return;
+        }
+
+        var block_html="<div id='id_conditionss'>"
+                        +"<form id='frmPhotoDb_s' method='POST' action='/iclock/att/savefile_MeetMinute/?Minute="+selected_id+"' enctype='multipart/form-data'>"
+                            +"<table id='id_setField'>"
+                                +"<tr><td>"
+                                    +'{%trans "文件路径"%}<input type="file" id="id_fileUpload" name="fileToUpload" size="15"/>'
+                                +"</td></tr>"
+                                +"<tr><td colspan='2'><span id='id_message'></span></td></tr>"
+                                +"<tr><td>"
+                                    //+"<input class='ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only' type='submit' value="+gettext('Submit')+" h/>"
+                                    //+"&nbsp;<input id='btnCancels' class='ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only' type='button' value="+gettext('Cancel')+" />"
+                                +"</td></tr>"
+                            +"</table>"
+                        +"</form>"
+                        +"</div>"
+        $(block_html).dialog({  modal:true,
+						resizable:false,
+                        width: 700,
+                        height:300,
+                        title:'上传附件',
+                        buttons:[{id:'btnShowOK',text:'{%trans "Submit" %}',click:function(){sub();}},{text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}],
+                        close:function(){$(this).dialog("destroy"); } 
+                        
+                      });
+}
+
+/*function doAction_Minute(url, action)
+{	
+	var result=getSelected(0,"true");
+	selected_data=datas(result.ss);
+	var selected_id=selected_data[0]
+	if (action == 'send_Meet_Email')
+		alert(url)
+}*/
+
+//会议纪要模糊查询
+function searchShowMinute(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+    var url="/meeting/data/Minute/?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function beforePost_Minute(obj,actionName){
+        if(actionName=="_new_"){
+                var FileNumber=$("#id_FileNumber",obj).val()
+                var FileName=$("id_FileName",obj).val()
+                var MeetID=$("id_MeetID",obj).val()
+                if(FileNumber=="" || FileName=="" ||MeetID==""){
+                        $("#id_error",obj).css("display","block");
+                        $("#id_error",obj).html("<ul class='errorlist'><li>{%trans '档案编号、档案名称和会议为必填字段!'%}</li></ul>");
+                        return false;
+                }
+        }else {
+                }
+	}
+
+
+$(function(){
+  
+        $("#"+g_activeTabID+" #queryButton").hide()
+
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	   searchShowMinute();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	   if(event.keyCode==13)
+	  searchShowMinute();
+	});
+      
+
+        $.ajax({
+            type: "POST",
+            url:"/meeting/getData/?func=hasMeets",
+            dataType:"json",
+            success: function(json){
+                    Meet_json=json;
+                    
+                }});
+        
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+                /*processNewModel();
+                var currDate=new Date();
+                td=currDate.getFullYear()
+                        +"-"
+                        +(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+                        +"-"
+                        +currDate.getDate()
+                        +" "
+                        +currDate.getHours()
+                        +":"
+                        +currDate.getMinutes()
+                        +":"
+                        +currDate.getSeconds()
+                        ;*/
+                td=moment().format("YYYY-MM-DD HH:mm:ss")
+                var block_html="<div id='id_form'><form id='id_edit_form' method='post'><table>"
+                +"<tr><th><font color='red'>*</font><label for='id_FileNumber'>档案编号:</label></th><td><input id='id_FileNumber' type='number' name='FileNumber' maxlength='80'></td>"
+                +"<th><font color='red'>*</font><label for='id_FileName'>档案名称:</label></th><td><input id='id_FileName' name='FileName' type='text'/></td></tr>"
+                +"<tr><th><font color='red'>*</font><label for='id_MeetID'>会议</label></th><td><select id='id_MeetID' name='MeetID' class='valid'>"+getmeetOptions()+"</select></td>"
+                +"<th><label for='id_SubTime'>提交时间:</label></th><td><input id='id_SubTime'  type='text'  value='' maxlength='19' name='SubTime'  style='width:140px '/></td></tr>"
+                +"<tr><th><label for='id_Content'>档案内容:</label></th><td colspan=3><textarea id='id_Content' name='Content' type='text' value='' class='jqteadd'/></td></tr>"
+                
+                +"<tr><th><label for='id_SubmitUser' style='display:None;'>记录人:</label></th><td><input id='id_SubmitUser' type='text' name='SubmitUser', value='{{user.username}}', style='display:None;'/></td></tr>"
+
+                +"</table></form><div id='id_error'></div></div>"
+                var dlg=$(block_html).dialog({	modal:true,
+															resizable:false,
+                                                          width: 800,
+                                                          height:500,
+                                                          title:"增加 会议纪要",
+                                                          buttons:[
+                                                               // {id:"btnShowOK",text:"{% trans "save and return" %}",click:function(){ if(typeof beforePost=="function"){if(beforePost(this,"_new_")==false) return ;}  SaveFormData(this,g_urls[g_activeTabID]+"_new_/",'edit','Minute');  }},
+                                                                {id:"btnShowOK",text:"{% trans "save and return" %}",click:function(){ if(typeof beforePost_Minute=="function"){if(beforePost_Minute(this,"_new_")==false) return ;}  SaveFormData(this,g_urls[g_activeTabID]+"_new_/",'edit','Minute');  }},
+                                                                {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}
+                                                          ],
+                                                          close:function(){$(this).dialog("destroy")}
+                                                        })
+               
+                optionses=getjqteoptions()
+                $('.jqteadd').jqte(optionses);
+                $(".status").click(function()
+                {
+                        jqteStatus = jqteStatus ? false : true;
+                        $('.jqteadd').jqte({"status" : jqteStatus})
+                });
+				$('#id_edit_form .jqte .jqte_editor').css('width','545px').css('height','150px').css('resize','none')
+                $("#id_SubTime").val(td);
+				var tpickerOptions=copyObj(datetimepickerOptions)
+				tpickerOptions.showSecond=true
+				tpickerOptions.timeFormat='HH:mm:ss'
+                $("#id_SubTime").datetimepicker(tpickerOptions);
+                return	dlg;
+	});
+
+
+});
+
+{% endblock %}
+
+
+{% block loadData %}
+	//html="<span id=id_opt_tree><input type='checkbox' id='id_cascadecheck_' checked/>{%trans '级联下级部门' %}</span>"
+	//$("#id_west .ui-widget-header").html(html)
+	html="<div id='show_dept_tree_'>"
+		+"<ul id='showTree_"+g_activeTabID+"' class='ztree' style='margin-left: 0px;height:100%;'></ul>"
+		+"</div>"   
+	$("#west_content_tab_meeting_Minute").html(html)
+
+//	var h=$("#"+g_activeTabID+" #west_content").height()-20
+//	$('#showTree_'+g_activeTabID).css('height',h)
+
+        ShowMinuteData(g_activeTabID,true)
+        loadNULLPage('#id_grid_'+tblName[g_activeTabID]);
+	var zTree = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+	zTree.setting.check.enable = false;
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		var deptID=treeNode.id;
+		var deptName=treeNode.name;
+                if (deptID==0)
+                    var urlStr="/meeting/data/Minute/"
+                else
+                    var urlStr="/meeting/data/Minute/?FileNumber="+deptID
+                
+		savecookie("search_urlstr",urlStr);
+		 $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+	}
+
+
+{% endblock %}
+
+
+{% block extractButton %}
+    <!--<LI id="id_send_Meet_Email" class="button-Send"  onclick='batchOp(function(url){doAction_Minute(url, "send_Meet_Email")},undefined,"{%trans '发送参会通知' %}");'><SPAN></SPAN>{%trans "发送参会通知"%}</LI>-->
+    <LI id="id_Upload_File"   onclick=createDlgShift()><SPAN  class="icon iconfont icon-shangchuanfujian"></SPAN>{%trans "上传附件"%}</LI>
+    <LI id="id_Download_File"   onclick="downloadfile()"><SPAN class="icon iconfont icon-xiazaifujian1"></SPAN>{%trans "下载附件"%}</LI> 
+
+{% endblock %}
+

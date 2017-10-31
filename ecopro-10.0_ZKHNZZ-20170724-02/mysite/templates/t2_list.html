@@ -1,0 +1,27 @@
+{% extends "data_list.html" %}
+
+{% block tblHeader %}
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}/css/flexigrid.css" />
+
+<script src="{{ MEDIA_URL }}/jslib/flexigrid.js"></script>
+<script>
+fieldHeaders=["{{ cl.FieldName.UserID }}","{{ cl.FieldName.TTime }}","{{ cl.FieldName.State }}","{{ cl.FieldName.Verify }}","{{ cl.FieldName.SN }}"
+];
+options.disableCols=[0];
+{% endblock %}
+{% block rowdata %}
+{% for item in latest_item_list %}
+["{{ item.id }}", "{{ item.employee.PIN }} {{ item.employee.EName }}","{{ item.TTime }}","{{ item.get_State_display }}","{{ item.get_Verify_display }}","{{ item.Device }}"]
+{% endfor %}
+{% endblock %}
+
+{% block extraSection %}
+<script>
+$(function(){
+$("#tbl").flexigrid({
+	height: 300,//"auto", 
+	resizable: true //resizable table
+	});
+});
+</script>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% load i18n %}
+{% load iclock_tags %}
+<script src="{{ MEDIA_URL }}jslib/jquery-ui/jquery-1.11.1.min.js?scriptVersion=10.001"></script>
+<script src="{{ MEDIA_URL }}jslib/jquery.cookie.js?scriptVersion=10.001"></script>
+<script src="{{ MEDIA_URL }}jslib/jquery.form.js?scriptVersion=10.001"></script>
+<script>
+$(function(){
+	getstatemeet1(0)
+})
+function getstatemeet1(val){
+    $.ajax({type: "POST", 
+		url:'/meeting/getphotolocation/?id='+{{ meetid }}+'&local='+val ,
+		dataType:"json",
+		success: function(data){
+			if(data.ret>0){
+				$("#photo_location").html(data.message)
+				val+=1;
+				setTimeout("getstatemeet1("+val+")",3000); 
+			}else{
+				$("#photo_location").html(data.message)
+			}
+		},
+		error: function(obj, msg, exc){
+		}
+	});
+    
+}
+
+</script>
+
+<div id="photo_location"  >
+    
+</div>

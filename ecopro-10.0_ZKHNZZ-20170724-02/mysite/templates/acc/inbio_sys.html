@@ -1,0 +1,24 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+<script>
+
+$(function(){
+	outerLayout.show('west')
+{% autoescape off %}
+	
+var html={{sub_menu}}
+
+{% endautoescape %}
+$("#west_content").html(html)
+//submenuClick('/base/isys/option_basic/',)	
+$("#menu_div ul").find('li').get(0).click()	
+		
+});
+
+
+
+</script>
+
+
+

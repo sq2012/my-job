@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+
+{% block extrastyle %}		
+<style>
+	.div_title_blue   
+		{
+				text-align: center;
+				font-size: 36px;
+				color: red;
+				font-weight: bold;
+		}
+		.div_time_blue {
+				text-align: right;
+				font-size: 30px;
+				color:cornsilk;
+				padding-right:14px;
+		}
+		.div_photo_blue {
+				width: 33%;
+				height: 100%;
+				color: red;
+				position:absolute;
+				text-align: center;
+				font-size: 20px;
+				font-weight: bold;
+				
+		}
+		.div_employee_blue {
+				width: 33%;
+				height: 100%;
+				color: red;
+				position:absolute;
+				left: 33%;
+				font-size: 20px;
+				font-weight: bold;
+		}
+		
+		.div_group_blue {
+				width: 33%;
+				height: 100%;
+				color: red;
+				position:absolute;
+				left: 66%;
+				font-size: 20px;
+				font-weight: bold;
+		}
+		
+		.div_employee_blue div {
+				padding: 10px;
+		}
+		.div_group_blue  div {
+				padding: 5px;
+		}
+		.div_body_blue{
+				width: 100%;
+				height: 100%;
+				
+				
+		}
+		
+</style>
+
+{% endblock %}
+{% block extrahead %}
+<script>
+var lastId=0
+function showemp(emp){
+		var pin=emp['pin'];
+		var name=emp['name'];
+		var deptname=emp['deptname'];
+		var ttime=emp['ttime'];
+		var sn=emp['sn'];
+		var ssn=emp['ssn'];
+		var eno=emp['event_no'];
+		var urls=emp['urls'];
+		var inorout=emp['inorout'];
+		var feifa=emp['feifa'];
+		var html=""
+		if(pin!=undefined){
+				translist(eno,feifa)
+				html+="<div>工号：&nbsp;&nbsp;&nbsp;&nbsp;"+pin+"</div>"
+		}
+		if(name!=undefined){
+				html+="<div>姓名：&nbsp;&nbsp;&nbsp;&nbsp;"+name+"</div>"
+		}
+		if(ttime!=undefined){
+				html+="<div>出入时间：&nbsp;&nbsp;&nbsp;&nbsp;"+ttime+"</div>"
+		}
+		
+		if(inorout!=undefined){
+				html+="<div>事件类型：&nbsp;&nbsp;&nbsp;&nbsp;"+inorout+"</div>"
+		}
+		if(sn!=undefined){
+				html+="<div>事件点：&nbsp;&nbsp;&nbsp;&nbsp;"+sn+"</div>"
+		}
+		if(ssn!=undefined){
+				html+="<div>身份证号：&nbsp;&nbsp;&nbsp;&nbsp;"+ssn+"</div>"
+		}
+		if(deptname!=undefined){
+				html+="<div>部门：&nbsp;&nbsp;&nbsp;&nbsp;"+deptname+"</div>"
+		}
+		if(pin!=undefined){
+				$("#div_2").html(html)
+		}
+		if(urls!=undefined){
+				if(urls==""){
+						var phtml='暂无照片'
+				}else{
+						var phtml='<img style="width:300px;height:400px;" src="/iclock/file/photo/'+pin+'.jpg">'
+				}
+				$("#div_1").html(phtml)
+		}
+		
+}
+function showgroup(emp){
+	var html=""
+	for(var i=0;i<emp.length;i++){
+		html+=emp[i]
+	}
+	if(html!=""){
+		$("#div_3").html(html)
+	}
+}
+
+function flashimg(){
+    clearTimeout(logtimer1);
+    var urlstr="/acc/_checkinoutlog_/?lasttid="+lastId
+    $.ajax({type: "POST", 
+	url:urlstr,
+	dataType:"json",
+	success: function(data){
+		var emp=data.emp_date
+		var depts=data.depts_date
+		showemp(emp)
+		showgroup(depts)
+		lastId=data.lastId
+		var currDate=new Date();
+		td=currDate.getFullYear()
+		+"年"
+		+(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+		+"月"
+		+currDate.getDate()
+		+"日"
+		+" "+currDate.getHours()
+		+":"
+		+currDate.getMinutes()
+		$("#id_time").html(td)
+		
+		logtimer1=setTimeout("flashimg()", 10000);
+	},error: function(obj, msg, exc){
+		    logtimer1=setTimeout("flashimg()", 300000);
+	}})
+}	
+
+function translist(type,feifa){
+		var  rtlisthtml =""
+		var  content=""
+		if (type == 0){
+		    content = "正常刷卡"
+		    rtlisthtml ='NewCommonLog'
+		}
+		else if (type == 27){
+		    if (card == '99999999'){
+			content = "非法通过"
+			rtlisthtml ='NewAlarmLog'
+		    }
+		    else if (card == '66666666'){
+			content = "刷卡未通过"
+			rtlisthtml ='NewAlarmLog'
+		    }else{
+			content = "无进出权限"
+			rtlisthtml ='NewAlarmLog'
+		    }
+		}
+		else if (type == 8){
+		    content = "远程开门"
+		    rtlisthtml ='NewCommonLog'
+		}
+		else if (type == 9){
+		    content = "远程关门"
+		    rtlisthtml ='NewCommonLog'
+		}else{
+		    content = "其它"
+		    rtlisthtml ='NewCommonLog'
+		}
+		if ( feifa=="F" ){
+		    content = "非法潜入"
+		    rtlisthtml ='NewAlarmLog'    
+		}
+		
+		if(rtlisthtml=='NewAlarmLog'){
+				$("#div_2").css('color','red')
+				$("#div_3").css('color','red')
+		}else{
+				$("#div_2").css('color','greenyellow')
+				$("#div_3").css('color','greenyellow')
+		}
+}
+$(function(){
+		logtimer1=setTimeout("flashimg()", 10000);
+		var currDate=new Date();
+		td=currDate.getFullYear()
+		+"年"
+		+(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+		+"月"
+		+currDate.getDate()
+		+"日"
+		+" "+currDate.getHours()
+		+":"
+		+currDate.getMinutes()
+		$("#id_time").html(td)
+		
+		flashimg()
+})
+
+</script>
+{% endblock %}
+
+{% block content %}
+<div style="width: 100%;height: 800px;background:url(../../media/img/full_background.jpg) repeat scroll center center transparent">
+		<div class="div_title_blue">{{ title }}</div><div id="id_time" class="div_time_blue"></div>
+		<div class="div_body_blue">
+				<div id='div_1' class='div_photo_blue'></div>
+				<div id='div_2' class='div_employee_blue'></div>
+				<div id='div_3' class='div_group_blue'></div>
+		</div>
+</div>
+
+{% endblock %}
+

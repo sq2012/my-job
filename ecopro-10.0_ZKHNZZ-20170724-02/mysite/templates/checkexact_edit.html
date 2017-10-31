@@ -1,0 +1,30 @@
+﻿{% load iclock_tags %}
+{% load i18n %}
+{% autoescape off %}
+
+<div id="id_form" >
+
+<form method="post" id="id_edit_form" enctype="multipart/form-data">
+<table>
+<tr><th></th><td>
+	<span  style="display:none" id="id_span_title">
+		{% if add %}{% trans "Add" %}  {% else %} {% trans "Edit" %} {% endif %} {{ dataOpt.verbose_name|escape }}</span>
+</td></tr>
+	<tr>{{form.UserID|field_as_td_h:1 }}</tr>
+	<tr>{{form.CHECKTYPE|field_as_td_h:1 }}</tr>
+	<tr>
+    <th> <font color='red'>*</font>{{ form.CHECKTIME.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.CHECKTIME.as_widget }} </td>
+	</tr>
+	<tr>{{form.YUYIN|field_as_td_h:1 }}</tr>
+	<tr>{{form.ApplyDate|field_as_td_h:1 }}</tr>
+</td>
+</tr>
+</table>
+</form>
+{% endautoescape %}
+
+<div id="id_error"></div>
+
+
+</div>
+ 

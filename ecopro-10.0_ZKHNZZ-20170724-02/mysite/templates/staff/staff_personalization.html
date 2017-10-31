@@ -1,0 +1,104 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+
+<div>
+	<ul id="breadcrumb">
+		<li><a href='/iclock/staff/'>个人中心</a> <span style='color:#CCCCCC'>/</span> <a href="#">{{ location }}</a></li>
+	</ul>
+</div>
+
+
+<div align="center" style="margin-top: 10px">
+<table border="1" width="47%" height="250" style="border-width: 0px">
+	<!-- MSTableType="layout" -->
+	<tr>
+		<td style="border-style: none; border-width: medium">　<form class="contact_form"  id="id_staffmethd_form" method="post" name="staffmethd_form" action='' enctype='multipart/form-data'>
+    <ul>
+        <li>
+              <label for="name" ><h3 style="margin-top: -30px;">登录方式</h3></label>
+        </li>
+        <li id="pin_pw">
+            <label for="pin_pw">{% trans '考勤号+密码'%}:</label>
+            <input name="pin_pw" id="p_p" type="checkbox" class="radio vam" value="0" />&nbsp;&nbsp;
+        </li>
+        <li id="username_pw">
+            <label for="username_pw">{% trans '用户名+密码'%}:</label>
+            <input name="username_pw" id="u_p" type="checkbox" class="radio vam" value="1" />&nbsp;&nbsp;
+        </li>
+        <li>
+            <label for="StaffUsername">{% trans '用户名'%}:</label>
+            <input type='text' maxlength='20' name="StaffUsername" id='id_StaffUsername' title="请填写用户名"  value="{{emp.StaffUsername}}" />
+        </li>
+        <li>
+            <div id="id_errors" style="width:300px;font-size:12px;display: none;">
+                <span id="id_error" style="width:280px;float: right;"></span>
+                <img src="../media/img/icon_alert.gif"  />
+            </div>
+        	<button id="id_staffmethd_save" class="m-btn  blue rnd" type="submit" style="width: 100px;" title="保存个性化设置">{%trans 'Save'%}{{ emp.PIN }}</button>
+        	<button id="id_staffmethd_reset" class="m-btn  blue rnd" type="reset" style="width: 100px;" title="重置新编辑的内容">{%trans 'Reset'%}</button>
+        </li>
+    </ul>
+</form></td>
+	</tr>
+</table>
+</div>
+
+<script>
+$(function(){
+	if ("{{emp.LoginMethod}}" === "0"){
+		$("#p_p").attr("checked","checked");
+	}
+	else if("{{emp.LoginMethod}}"=="1"){
+		$("#u_p").attr("checked","checked");}
+    else if("{{emp.LoginMethod}}"=="2"){
+		$("#u_p").attr("checked","checked");
+		$("#p_p").attr("checked","checked");}
+});
+
+var jmz = {};
+jmz.GetLength = function(str) {
+	//<summary>获得字符串实际长度，中文2，英文1</summary>
+	//<param name="str">要获得长度的字符串</param>
+	var realLength = 0, len = str.length, charCode = -1;
+	for (var i = 0; i < len; i++) {
+		charCode = str.charCodeAt(i);
+		if (charCode >= 0 && charCode <= 128) realLength += 1;
+		else realLength += 2;
+	}
+	return realLength;
+};
+
+function hide_errors(){
+	$("#id_errors").css("display","none");
+	$("#id_error").css("display","none");
+}
+
+function showResponsestaff(ret, statusText, xhr, $form){
+	$("#id_errors").css("display","block").css('background',ret.color);
+	$("#id_error").html(ret.message).css('color','black').css("display","block");
+	setTimeout("hide_errors()", 4000);
+}
+
+$("#id_staffmethd_save").click(function(){
+		if($("#p_p").prop("checked"))
+			var pw=$("#p_p").val();
+		else
+			var pw=''
+		if($("#u_p").prop("checked"))
+			var uw=$("#u_p").val();
+		else
+			var uw=''
+        var usernames=$("#id_StaffUsername").val();
+		var opts = {
+					type: "GET",
+					url:'/iclock/staff/save_staff_username/?pin_pw='+pw+'&username_pw='+uw+'&StaffUsername='+usernames,
+					dataType:'json',
+					success: showResponsestaff
+					};
+            $(".form_hint").css({"display":"none"});
+			$("#id_staffmethd_save").ajaxSubmit(opts);
+		return false;
+});
+</script>
+

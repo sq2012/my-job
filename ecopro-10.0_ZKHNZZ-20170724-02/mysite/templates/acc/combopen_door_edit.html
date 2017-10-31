@@ -1,0 +1,123 @@
+{% load iclock_tags %}
+{% load i18n %}
+
+<div id="id_form" >
+
+<form method="post" id="id_edit_form" enctype="multipart/form-data">
+<table>
+<tr><th></th><td>
+	<span  style="display:none" id="id_span_title">
+		{% if add %}{% trans "Add" %}  {% else %} {% trans "Edit" %} {% endif %} {{ dataOpt.verbose_name|escape }}</span>
+	<span  style="display:none" id="id_span_parent">
+		{{ parent_name }}</span>
+</td></tr>
+
+{% autoescape off %}
+<tr>
+    <th>
+    <label for="id_name" class="required">{%trans "开门组合名称"%}:</label>
+    </th>
+    <td style='vertical-align:top;'> {{ form.name.as_widget }} </td>
+    <th>
+    <label for="id_name" class="required">{%trans "门名称"%}:</label>
+    </th>
+     <td style='vertical-align:top;'> {{ form.door.as_widget }} <input id='id_combopen_door_data' name='combopen_door_data' type='hidden' />请从左面树形列表选择门</td>
+     
+</tr>
+
+<tr>
+</tr>
+{% endautoescape %}
+
+<tr id="addition_fields">{% block addfields %}{% endblock %}</tr>
+</td>
+</tr>
+</table>
+</form>
+
+
+<div id='id_combopen' style='height: 290px;'>
+	<div style='border: 1px solid #77b7de;float: left;width: 210px;height: 270px;overflow: hidden;'>
+           <span style='display: inline-block;border: 1px solid #EEEEEE;'>
+	    <ul style='width:200px;height:260px;color:black;overflow:auto;' class='ztree' id='combopen_door_tree' ></ul>
+	   </span>
+
+
+	</div>
+	<div id='id_comb_group' style='border: 1px solid #77b7de;float: right;width: 500px;height: 270px;overflow: hidden;'>
+        <table width='100%' class='tableStyle'>
+            <colgroup>
+                <col width='15%'>
+                <col width='*'>
+                <col width='*'>
+                <col width='*'>
+                 
+            </colgroup>
+            <tr>
+                <th>组1</th>
+                <td><select id='group1' name='groupId' onchange="getGroupEmpCount(this,'1',1);"></select></td>
+                <td><select id='openNumber1' name='openNumber'></select></td>
+                <td><span id='allEmpCount1'></span></td>
+            </tr>
+            <tr>
+                <th>组2</th>
+                <td><select id='group2' name='groupId' onchange="getGroupEmpCount(this,'2',1);"></select></td>
+                <td><select id='openNumber2' name='openNumber'></select></td>
+                <td><span id='allEmpCount2'></span></td>
+                
+            </tr>
+            <tr>
+                <th>组3</th>
+                <td><select id='group3' name='groupId' onchange="getGroupEmpCount(this,'3',1);"></select></td>
+                <td><select id='openNumber3' name='openNumber'></select></td>
+                <td><span id='allEmpCount3'></span></td>
+                
+            </tr>
+            
+             <tr>
+                <th>组4</th>
+                <td><select id='group4' name='groupId' onchange="getGroupEmpCount(this,'4',1);"></select></td>
+                <td><select id='openNumber4' name='openNumber'></select></td>
+                <td><span id='allEmpCount4'></span></td>
+                
+            </tr>
+            <tr>
+                <th>组5</th>
+                <td><select id='group5' name='groupId' onchange="getGroupEmpCount(this,'5',1);"></select></td>
+                <td><select id='openNumber5' name='openNumber'></select></td>
+                <td><span id='allEmpCount5'></span></td>
+                
+            </tr>
+           
+            
+        </table>
+
+
+
+
+	</div>
+ 
+        
+</div>
+
+
+
+
+
+<div id="id_error"></div>
+
+{% block add_contents %}
+	
+		<h3>多人开门 </h3><br />
+		<p>为【多人开门人员组】中的成员设置权限。 </p><br />
+		<p>某些特定门禁场合需要启用该功能：即要求几个人同时到场，依次刷卡门才开，某个人单独到场门刷卡不开。 </p><br />
+		<p>多人开门组合是对一个或多个多人开门人员组以及组内人员的组合。在设置各组内的人数时，可以配置一个组（如一个组内2个人同时开门）或多个组（如一组内2人和二组内2人，四个人同时开门），至少有一个组需填入不为0的开门人数，同时所有开门人数总和不能大于5。另外，如果用户填入的人数大于当前组内的人数，多卡开门功能将无法正常实现。 </p><br />
+		<p>多人开门人数最多5人同时开门,括号内为该组中当前实际人数。设置某个组中需要同时开门的人数。</p><br /><br />
+	
+	
+	
+	
+{% endblock %}
+{% block add_contents_2c %}{% endblock %}
+</div>
+

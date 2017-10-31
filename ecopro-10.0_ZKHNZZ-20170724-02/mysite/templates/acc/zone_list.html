@@ -1,0 +1,276 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+<script>
+{% block tblHeader %}
+hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+jqOptions[g_activeTabID].colModel={{ colModel }}
+dtFields = "{{ dtFields }}"
+tblName[g_activeTabID]='zone';
+jqOptions[g_activeTabID].sortname='parent,code';
+jqOptions[g_activeTabID].pager="#id_pager_"+tblName[g_activeTabID];
+
+options[g_activeTabID].dlg_height=500;
+options[g_activeTabID].dlg_width=650;
+
+function ShowZoneTree(page,tag,obj,code)
+{
+	var d_url="/acc/getData/?func=zonetree&code="+code
+	var setting = {
+            check: {enable: true,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},          
+	    async: {
+			    enable: true,
+			    url: d_url,
+			    autoParam: ["id"]
+		    }
+	};
+	$.fn.zTree.init($("#showTree_"+page), setting,null);	
+	if(tag){
+		var zTree = $.fn.zTree.getZTreeObj("showTree_"+page);
+		zTree.setting.check.enable = false;
+		zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+				var id=treeNode.id;
+				$("#department",obj).val(treeNode.name);
+				$("#id_parent",obj).val(id);
+				hideDeptment();
+			
+		}
+	}
+}
+
+function strOfData_zone(data) {
+	return stripHtml(data.code)+' '+data.name
+}
+
+function afterPost_zone(flag,obj)
+{	//ShowZoneData('',true)
+    //    loadNULLPage();
+	ShowZoneData(g_activeTabID,true)
+    $('#id_code',obj).val('')
+	$('#id_name',obj).val('')
+	$('#id_remark',obj).val('')
+        reloadData()
+	var zTree = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		var code=treeNode.id;
+		var ischecked=0;
+		if($("#id_cascadecheck_"+g_activeTabID).prop("checked"))
+		    ischecked=1;
+		if(code!=0){
+			var urlStr="/acc/data/zone/?mod_name="+mod_name+"&zone_code="+code+"&isContainChild="+ischecked
+		}else{
+			var urlStr="/acc/data/zone/"
+		}
+		savecookie("search_urlstr",urlStr);
+		 $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+	}
+}
+
+function afterPost_zone11()
+{
+	
+	var treeObj = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+    var nodes = treeObj.getSelectedNodes();
+    if (nodes.length>=0) {
+         treeObj.reAsyncChildNodes(nodes[1], "refresh");
+    }
+}
+
+function beforePost_zone(obj,actionName){
+	var flag=true;
+	if($("#id_span_param",obj).val()!=1){
+        
+		var dept =$("#department",obj).val()
+		if(dept==""){
+			$("#id_error",obj).css("display","block");
+			$("#id_error",obj).html("<ul class='errorlist'><li>{%trans '请选择区域' %}</li></ul>");
+//{#			$("#id_error",obj).html("<ul class='errorlist'><li>{%trans '请选择区域' %}</li></ul>");#}
+//{#			flag=false;#}
+			flag=true;
+		}
+                else
+                {
+               
+                }
+		
+	}
+	return flag
+	
+}
+function process_dialog_again_zone(obj,flag,urlAddr,other){
+	if (flag=='edit'){
+		$('#department',obj).val(($('#department',obj).val()+'  '+other))
+	}
+}
+//处理区域维护时对话框
+function process_dialog_zone(obj,flag){
+        $(obj).dialog({resizable:false,modal:true})
+		var depName=''
+                if (flag=='edit')
+		{
+        		var depName=$("#id_span_parent",obj).html();
+			did=$("#id_span_param",obj).val();
+                        pid=$('#id_parent',obj).val()
+                        if(pid>0){
+                            $('#id_parent',obj).after('<div>'
+                            +'<span style="float:left;border-top:1 solid #5B80B2;"><input alt="department" type="text" style="width:200px !important;" readOnly="readOnly"  id="department"  value="'+pid+'"></span>'
+                            +'<span style="float:left;"><img  alt="{%trans '打卡区域'%}" src="/media/img/sug_down_on.gif" id="id_drop_dept"/></span>'
+                            +'</div>'
+                            +'<div id="show_deptment">'
+                            +'<div class="title"><span class="close" style="margin-top:1px;" onclick="hideDeptment()"></span></div>'
+                            +"<div id='show_dept_tree_dept'>"
+                            +"<ul id='showTree_dept' class='ztree' style='margin-left: 0px;overflow:auto;height:250px;'></ul>"
+                            +"</div>"
+                            
+                            
+                            
+                            
+                            +'</div>'
+                            );
+                            
+                            $("#id_drop_dept",obj).click(function(){
+                            
+                                ShowZoneTree('dept',true,obj,$('#id_code').val())
+				showDeptment(obj);
+                            });
+			}
+			
+			
+			
+		}	
+                else
+                {
+			var treeObj = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+			var nodes = treeObj.getSelectedNodes();
+			var pid=0;
+			if (nodes.length>0)
+			{
+			   var pid=nodes[0].id;
+			   depName=nodes[0].name;
+			   $('#id_parent',obj).val(pid)
+			}
+			
+			$('#id_parent',obj).after('<div>'
+			+'<span style="float:left;border-top:1 solid #5B80B2;"><input alt="department" type="text" style="width:200px !important;" readOnly="readOnly"  id="department"  value="'+depName+'"></span>'
+			+'</div>'
+			);
+	
+                 }
+                depName=$.trim(depName)
+		$("#id_parent",obj).css("display","none");
+		f=$(obj).find("#id_edit_form").get(0)
+		$(f).validate({
+				rules: {
+						DeptNumber: {required:true},
+						DeptName: {required:true}
+					}
+				});
+
+}
+//部门维护里列表样式和树形样式之间的切换
+//function process_style(){
+//}
+
+
+
+//部门模糊查询
+function searchShowDep_zone(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+    var url="/acc/data/zone/?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+$(function(){
+        $("#"+g_activeTabID+" #queryButton").hide()
+	$("#"+g_activeTabID+" #id_import").click(function(){
+	  importDepartment();
+	});
+
+	$("#"+g_activeTabID+" #id_third").html("");
+	$("#"+g_activeTabID+" #id_clearrec").css('display','none')
+	
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+            var treeObj = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+            var nodes = treeObj.getSelectedNodes();
+            if(nodes.length==0){alert('请首先选择上级区域');return;}
+            processNewModel();
+	});
+
+
+
+
+
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowDep_zone();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowDep_zone();
+	});	
+
+
+})
+
+
+{% endblock %}
+</script>
+<script>
+{% block loadData %}
+	html="<span id=id_opt_tree><input type='checkbox' id='id_cascadecheck_" +g_activeTabID+"'"
+        +" checked/>{%trans '级联下级区域' %}&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp<a onclick='afterPost_zone11()'><span class='icon iconfont icon-shuaxin'></span></a></span>"
+	$("#"+g_activeTabID+" #id_west").html(html)
+	html="<div id='show_dept_tree_'>"
+		+"<ul id='showTree_" +g_activeTabID+"'"
+                +" class='ztree' style='margin-left: 0px;overflow:auto;height:550px;'></ul>"
+		+"</div>"   
+	$("#west_content_tab_acc_zone").html(html)
+
+	//var h=$("#"+g_activeTabID+" #west_content").height()-20
+	//$('#showTree_'+g_activeTabID).css('height',h)
+	
+	    ShowZoneData(g_activeTabID,true)
+        loadNULLPage('#id_grid_'+tblName[g_activeTabID]);
+
+//        ShowZoneData('',true)
+//        loadNULLPage();
+	var zTree = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+//	zTree.setting.check.enable = false;
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		var code=treeNode.id;
+		var ischecked=0;
+		if($("#id_cascadecheck_"+g_activeTabID).prop("checked"))
+		    ischecked=1;
+		if(code!=0){
+			var urlStr="/acc/data/zone/?mod_name="+mod_name+"&zone_code="+code+"&isContainChild="+ischecked
+		}else{
+			var urlStr="/acc/data/zone/"
+		}
+		savecookie("search_urlstr",urlStr);
+		 $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+	}
+
+
+{% endblock %}
+</script>
+
+
+{% block importOp %}
+
+{% endblock %}
+
+
+
+
+
+{% block allDelete %}
+{% endblock %}
+
+
+
+

@@ -1,0 +1,418 @@
+{% load iclock_tags %}
+{% load i18n %}
+{% block content_title %}{% endblock %}
+<script>
+function ActionHint(action, aName){return ""}
+pageQueryString=location.search;
+var groupHeaders=[]
+jqOptions[g_activeTabID]=copyObj(jq_Options);
+jqOptions[g_activeTabID].rowNum={{limit}}
+canDefine={% if user|HasPerm:"iclock.preferences_user" %}true{% else %}false{% endif %}
+{% block additionDataOptions %}
+{% endblock %}
+isSelectAll=false;
+extraBatchOp=[];
+tblName[g_activeTabID]='{{reportName}}';
+var Custom_Jqgrid_Height=""
+var page_tab=""
+jqOptions[g_activeTabID].rowList=[]
+
+
+
+function validate_form_meeting(){   //验证表单的合法性(人员(可不选，在计算项目中计算选中单位的人员，其他的就默认值0)、开始时间、结束时间)
+	var t_ComeTime=$("#"+g_activeTabID+" #id_ComeTime").val();
+	if(t_ComeTime==""){
+		t_ComeTime="2012-01-01"
+	}
+	var cTime=t_ComeTime.split("-");
+	var t_EndDate=$("#"+g_activeTabID+"  #id_EndTime").val();
+	if(t_EndDate==""){
+		t_EndDate="2212-01-01"
+	}
+	var eTime=t_EndDate.split("-");
+	cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+	edate=new Date(parseInt(eTime[0],10),parseInt(eTime[1],10)-1,parseInt(eTime[2],10));
+	var days=(edate.valueOf()-cdate.valueOf())/(1000*3600*24)+1;
+	if(cdate>edate || t_ComeTime=="" || t_EndDate==""||!valiDate(t_ComeTime)||!valiDate(t_EndDate)||days>31){
+		return 1;
+	}else{
+		return 0
+	}
+}
+
+function ShowMeetData(page,tag,isDiy)
+{
+	var setting = {
+            check: {enable: !tag,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},          
+	    async: {
+			    enable: true,
+			    url: "/meeting/getData/?func=meets",
+			    autoParam: ["id"]
+		    }
+	};
+	$.fn.zTree.init($("#showTree_"+page), setting,null);	
+}
+
+
+{% block RenderReportGrid %}
+
+function RenderReportGrid(urlStr){
+    $("#id_grid_report").jqGrid("GridUnload")
+    //$.jgrid.gridUnload("#id_grid")
+    
+	if(urlStr.indexOf("?")!=-1){
+		urlStr=urlStr+"&stamp="+moment().unix();
+	}
+	else{
+		urlStr=urlStr+"?stamp="+moment().unix();
+	}
+    
+    $.ajax({
+	    type:"GET",
+	    url:urlStr+"&title=1",
+	    dataType:"json",
+	    success:function(json){
+		    jqOptions[g_activeTabID]=copyObj(jq_Options)
+		    grid_disabledfields[g_activeTabID]=json['disabledcols']
+		    jqOptions[g_activeTabID].colModel=json['colModel']
+		    var groupHeaders=[]
+
+		    if (json['groupHeaders'])
+			var groupHeaders=json['groupHeaders']
+		    
+		    get_grid_fields(jqOptions[g_activeTabID])
+		    hiddenfields(jqOptions[g_activeTabID])
+		    jqOptions[g_activeTabID].url=urlStr 
+		    var hcontent=$("#"+g_activeTabID+" #id_content").height();
+		    var hbar=$("#"+g_activeTabID+" #id_top").height();
+		    var height=hcontent-hbar-65;
+		    if (groupHeaders.length>0)
+		     height=height-30;
+		    
+		    if(typeof(Custom_Jqgrid_Height)!='undefined'&&Custom_Jqgrid_Height!=""){
+			    jqOptions[g_activeTabID].height=Custom_Jqgrid_Height;
+		    }else{jqOptions[g_activeTabID].height=height;}
+		    
+		    jqOptions[g_activeTabID].sortname=getSidx()//getSidx('original_records')
+			jqOptions[g_activeTabID].url=urlStr 
+			jqOptions[g_activeTabID].pager='id_pager_report'
+			
+		    $("#id_grid_report").jqGrid(jqOptions[g_activeTabID]);
+		    $("#id_grid_report").jqGrid('setFrozenColumns');
+		    $("#id_grid_report").jqGrid('setGroupHeaders', {useColSpanStyle: true,groupHeaders:groupHeaders})
+	 }
+    });        
+}
+{% endblock %} 
+
+{% block sidxblock %}
+	function getSidx() {
+		return ''
+	}
+{% endblock %} 
+
+{% block getDateUrl %}
+
+function getDateUrl()
+{
+	var ComeTime=$("#"+g_activeTabID+" #id_ComeTime").val();
+	var EndDate=$("#"+g_activeTabID+"  #id_EndTime").val();
+	var isError=validate_form_meeting();
+	$.cookie("ComeTime",ComeTime, { expires: 7 });
+	$.cookie("EndDate",EndDate, { expires: 7 });
+	$("#id_con_error").css("display","none");
+
+	var urlStr=g_urls[g_activeTabID]
+
+	if(!isError){
+		if(urlStr.indexOf("?")!=-1)
+			urlStr+="&startDate="+ComeTime+"&endDate="+EndDate
+		else
+			urlStr+="?startDate="+ComeTime+"&endDate="+EndDate
+
+	}else{
+		alert(gettext("请检查时间格式是否正确，且最多查询31天！"));
+		urlStr='';
+	}
+	return urlStr
+
+}
+{% endblock %} 
+
+
+$(function(){
+	$("#id_export_report").iMenu();
+	
+	
+	dateTime=moment().format("YYYY-MM-DD")
+	dateTime1=moment().startOf('month').format("YYYY-MM-DD")
+	
+{% block date_set_range %}	
+	//if($.cookie("ComeTime")){
+	//	$("#"+g_activeTabID+" #id_ComeTime").val($.cookie("ComeTime"))
+	//	$("#"+g_activeTabID+"  #id_EndTime").val($.cookie("EndDate"))
+	//};
+	//if (validate_form_meeting()){
+	//	$("#"+g_activeTabID+" #id_ComeTime").val(dateTime1)
+	//	$("#"+g_activeTabID+"  #id_EndTime").val(dateTime)
+	//}
+	//else{
+	//	$("#"+g_activeTabID+" #id_ComeTime").val(dateTime)
+	//	$("#"+g_activeTabID+"  #id_EndTime").val(dateTime)
+	//}
+	$("#"+g_activeTabID+" #id_ComeTime").val(dateTime1)
+	$("#"+g_activeTabID+"  #id_EndTime").val(dateTime)	
+	$("#"+g_activeTabID+" #id_ComeTime").datepicker(datepickerOptions);
+	$("#"+g_activeTabID+"  #id_EndTime").datepicker(datepickerOptions);
+{% endblock %}
+	
+	
+	
+	
+	var hcontent=$("#"+g_activeTabID+" #id_content").height();
+	var hbar=$("#"+g_activeTabID+" #id_top").length>0?$("#id_top").height():0;
+	var h=hcontent-hbar
+	$('#report_module').css('height',h)
+	
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+			searchShowReport();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+		if(event.keyCode==13)
+			searchShowReport();
+	});
+	$("#"+g_activeTabID+" #id_search").click(function(){
+		deptID=0
+		var zTree = $.fn.zTree.getZTreeObj("showTree_report");
+		node=zTree.getSelectedNodes(true)
+		if(node.length>0) {
+			deptID=node[0].id
+		}
+		var ischecked=0;
+        if($("#id_cascadecheck_report").prop("checked"))
+                ischecked=1;
+        urlStr=getDateUrl()
+        if (urlStr=='')return
+        if(urlStr.indexOf("?")!=-1)
+                var urlStr=urlStr+"&deptIDs="+deptID+"&isContainChild="+ischecked
+        else
+                var urlStr=urlStr+"?deptIDs="+deptID+"&isContainChild="+ischecked
+
+        savecookie("search_urlstr",urlStr);
+        RenderReportGrid(urlStr)
+	});
+	$("#id_reload_report").click(function(){
+		reloadData("report");
+	});
+	
+	$("#"+g_activeTabID+" #id_custom").click(function(){
+		ShowCustomField(jqOptions[g_activeTabID]);
+	});
+	
+	{% block loadData %}
+	initInnerWindow()	
+	//var h=$("#"+g_activeTabID+" #west_content").height()-20
+	//$('#showTree_report').css('height',h)
+        //ShowDeptData('')
+	ShowMeetData('report',true,"")
+	$("#id_opt_tree").hide()
+	var zTree = $.fn.zTree.getZTreeObj("showTree_report");
+	zTree.setting.check.enable = false;
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		
+		var IsGridExist=$("#id_grid_report").jqGrid('getGridParam','records')
+		if(typeof(IsGridExist)=='undefined')
+		{
+			//alert('请首先选择报表类型')
+			return false
+		}
+		
+		
+		var deptID=treeNode.id;
+		var deptName=treeNode.name;
+		$.cookie("dept_ids",deptID, { expires: 7 });
+		var ischecked=0;
+		if($("#id_cascadecheck_report").prop("checked"))
+			ischecked=1;
+
+		urlStr=getDateUrl()
+		if (urlStr=='')return
+		if(urlStr.indexOf("?")!=-1)
+			var urlStr=urlStr+"&deptIDs="+deptID+"&isContainChild="+ischecked
+		else
+			var urlStr=urlStr+"?deptIDs="+deptID+"&isContainChild="+ischecked
+ 
+                savecookie("search_urlstr",urlStr);
+                RenderReportGrid(urlStr)
+                
+	}
+
+	{% endblock %}
+
+
+
+
+	urlStr=getDateUrl()
+	if (urlStr=='') return
+
+
+	savecookie("search_urlstr",urlStr);
+	RenderReportGrid(urlStr)
+
+	var inputEl = $("#"+g_activeTabID+" .search-input")
+         defVal[g_activeTabID] = inputEl.val();
+    	 inputEl.bind("focus",function(){
+		             var _this = $(this);
+				if (_this.val() == defVal[g_activeTabID]) {
+				    _this.val('');
+				    _this.css('color','#000000');
+				    //_this.attr('role','disabled')
+				}
+		})
+	inputEl.bind("blur",function(){
+		        var _this = $(this);
+			if (_this.val() == '') {
+			    _this.val(defVal[g_activeTabID]);
+			    _this.css('color','#CCCCCC');
+			    _this.attr('role','defvalue')
+			}
+			else
+			    _this.attr('role','cansearch')
+		})
+	inputEl.bind("keydown",function(event) {
+			if (event.which == 13) {
+			      var _this = $(this);
+			       _this.attr('role','cansearch')
+			 }
+		})
+	{% block queryButton %}	
+	
+	$('#'+g_activeTabID+' #queryButton').hide()
+	{% endblock %}
+
+
+});
+
+function resetError()
+{
+	$("#id_error").hide();
+	$("#id_error").html('')
+
+}
+function searchShowReport(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	   var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	   var v=""
+	urlStr=getDateUrl()
+	if (urlStr=='') return
+	if(v!='')
+	{
+		if(urlStr.indexOf("?")==-1){
+			urlStr+="?q="+escape(v)
+		}
+		else{
+			urlStr+="&q="+escape(v)
+		}
+	}
+	savecookie("search_urlstr",urlStr);
+	$("#id_grid_report").jqGrid('setGridParam',{url:urlStr,datatype:"json"}).trigger("reloadGrid");	
+	
+}
+
+</script>
+<div id="id_top">
+	{% block top %}
+	<div class="sear-box quick-sear-box" >
+		{% block date_range %}
+		
+
+		<div id="search_Time" class='left' style="width:400px;display: none;">
+		   <label  >{%trans "Begin Date"%}</label>
+		   <input type="text" name="ComeTime" maxlength="10" id="id_ComeTime" style='width:80px !important;'>
+
+		   <label >{%trans "End Date"%}</label>
+		   <input type="text" name="EndTime" maxlength="10" id="id_EndTime"  style='width:80px !important;'>
+
+		</div>
+
+		{% endblock %}
+		
+		
+		{% block search %}
+		<div class="s-info right" id="sear_area" style="display: block">
+			<div class="nui-ipt nui-ipt-hasIconBtn " >
+				<input id="searchbar" class="search-input" type="text"  value="身份证号,姓名" role='defvalue' autocomplete="off" />
+				<span id ="queryButton" class="nui-ipt-iconBtn">
+					<b id="_icon_2_28" class="nui-ico nui-ico-dArr "></b>
+				</span>
+				
+			</div>
+			
+			<div class="main-search-btn">
+			
+				<span id="searchButton" class="chaxun icon iconfont icon-chaxun"></span>
+			</div>
+		</div>
+		{% endblock %}	
+	</div>
+	{% endblock %} 
+
+	{% block toolbar %}
+
+	<div id="id_toolbar">
+			<UL class="toolbar" id="navi">
+				<LI id="id_reload_report" ><SPAN class="icon iconfont icon-shuaxin"></SPAN>{%trans "Reload"%}</LI>
+				<LI id="id_export_report" ><SPAN class="icon iconfont icon-daochu"></SPAN>{%trans "Export"%}
+				        <ul id="op_menu_export" class="op_menu">
+						<li><span>{%trans "文件格式"%}</span>
+							<ul>
+							<li onclick="javascript:clickexport(tblName[g_activeTabID],0);"><a href="#">EXCEL</a></li>
+							<li onclick="javascript:clickexport(tblName[g_activeTabID],1);"><a href="#">TXT</a></li>
+							<li onclick="javascript:clickexport(tblName[g_activeTabID],2);"><a href="#">PDF</a></li>
+							</ul>
+						</li>
+					</ul>
+				</LI>
+				<LI id="id_custom" ><SPAN class="icon iconfont icon-select"></SPAN>{%trans "Preferences"%}</LI>
+
+			</ul>
+        </div>
+
+	{% endblock %} 
+	
+</div>
+
+<!-- 
+	<div id="show_field_selected">
+		<div class="title"><span class='close' onclick='hideFields_define();'></span></div>
+		<div id="id_fields_selected"></div>
+	</div> -->
+
+
+<div id="report_module" style="position:relative; width: 99%;margin-top: 2px;">
+	{% block Data %}
+		<div class="ui-layout-west">
+			<div class="ui-widget-header" style="height: 20px;">
+				<span id=id_opt_tree>
+				<input type='checkbox' id='id_cascadecheck_report'/>{%trans "级联下级单位" %}
+				</span>
+			</div>
+			<div id='show_dept_tree_'   class="inner-west-content">
+				<ul id='showTree_report' class='ztree' style='margin-left: 0px;'></ul>	
+			</div>   
+		</div>
+		<div class="ui-layout-center" >
+			<table id="id_grid_report">	</table>
+			<div id="id_pager_report"></div>
+		</div>
+	{% endblock %} 
+	 
+{% block extraSection %}{% endblock %}
+</div>
+<div id="id_tip" class="tip" style="visibility:hidden"></div>
+
+
+

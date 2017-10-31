@@ -1,0 +1,121 @@
+﻿{% load iclock_tags %}
+{% load i18n %}
+<script type="text/javascript">
+totalRecCnt_emp={{ item_count }};
+item_from_emp={{ from }}
+page_index_emp={{ page }};
+page_limit_emp={{ limit }};
+page_number_emp={{ page_count }};
+$(function(){
+var page_style=21;
+$("#id_pages_trans").html(getPagers_trans("", item_from_emp-1, totalRecCnt_emp, page_limit_emp, page_index_emp, page_number_emp,page_style));
+});
+function getPagers_trans(title, startRecord, totalRecords, pageSize, currPg, totPg,page_style,flag) {
+    var last = startRecord + pageSize;
+    if (last > totalRecords) {
+        last = totalRecords;
+    }
+	
+	if(title!="")
+		title+=":"
+	var s=title+ (startRecord + 1) + "-" + last + $.validator.format(gettext('(total {0})'),totalRecords)+ "&nbsp;&nbsp;";
+	
+	
+	if (totPg<=1)
+	{
+		if(totalRecords>0)
+			return $.validator.format(gettext('total {0}'),totalRecords)
+		else
+			return gettext('None')
+	}
+	if(typeof(flag)=='undefined')
+		pf=gettext('Page:')+" <input id=id_trans_pageNumInput value="+currPg+" type='text' onkeypress='return gotoPage_trans(event,"+page_style+")' style='width: 35px !important;'> "
+    else
+		pf=gettext('Page:')+" <input id=id_trans_pageNumInput1 value="+currPg+" type='text' onkeypress='return gotoPage_trans(event,"+page_style+",1)' style='width: 35px !important;'> "
+    if (currPg < 5) {
+        s += pf;
+        for (i = 1; i <= totPg && i <= currPg + 1; i++) {
+            if (i == currPg) {
+                s += "<font color=red>" + i + "</font> ";
+            } else {
+                s += pageUrl_trans(i,page_style);
+            }
+        }
+    } else {
+        s += pf + pageUrl_trans(1,page_style) + "... " + pageUrl_trans((currPg - 1),page_style) + " <font color=red>" + currPg + "</font> " + (currPg == totPg ? "" : pageUrl_trans((currPg + 1),page_style));
+    }
+    if (totPg - 3 <= currPg) {
+        for (i = currPg + 2; i <= totPg; i++) {
+            s += pageUrl_trans(i,page_style);
+        }
+    } else {
+        s += "... " + pageUrl_trans(totPg,page_style);
+    }
+    return s;
+}
+
+function pageUrl_trans(pgNum,page_style) {
+	if(typeof(page_style)=='undefined')
+		return "<a href='"+getQueryStr(window.location.href, ["p"], "p="+pgNum)+"'>"+pgNum+"</a> ";
+	else if(page_style==21)
+		return "<a href='#' onclick='renderstafftrans("+pgNum+");'>"+pgNum+"</a> ";
+}
+
+function gotoPage_trans(e,page_style,flag)
+{
+	var keynum;
+	var keychar;
+	var numcheck;
+	if(window.event) // IE
+	{
+		keynum = e.keyCode;
+	}
+	else if(e.which) // Netscape/Firefox/Opera
+	{
+		keynum = e.which;
+	}
+	if(13!=keynum) return true;
+	if(typeof(flag)=='undefined')
+		pnum=parseInt($('#id_trans_pageNumInput').val());
+	else
+		pnum=parseInt($('#id_trans_pageNumInput1').val());
+	if(isNaN(pnum)) pnum=1;
+	if(typeof(page_style)=='undefined')
+		window.location.href=getQueryStr(window.location.href, ["p"], "p="+pnum);
+	else if(page_style==21)
+		renderstafftrans(pnum);
+	return false;
+}
+
+function renderstafftrans(p){
+    var ftime=$("#id_StartSpecDay").val()
+    var ttime=$("#id_EndSpecDay").val()
+	var text=$.ajax({
+		type:"POST",
+		url:"/iclock/staff/transactions/?p="+p+"&t=staff_transaction.html&UserID__id__exact="+uid+"&fromTime="+ftime+"&toTime="+ttime,
+		async: false
+		}).responseText;
+		$('#r_transaction').html(text);
+}
+
+</script>
+
+<table style="width:  95%;">
+{% autoescape off %}
+<tr><td colspan="4">
+<span id="id_pages_trans"></span>
+</td></tr>
+<tr>
+<table id="tbl">
+    <thead><tr height="30px"><th>&nbsp;</th><th width="150px">{% trans 'Time' %}</th><th width="100px">{% trans 'State' %}</th><th width="100px">{% trans 'Verification' %}</th><th width="200px">{% trans 'device' %}</th></tr></thead> {% endautoescape %}
+    {% for item in latest_item_list %}
+        {%if forloop.counter|isOdd%}
+            <tr class='row1' height="25px"><td>&nbsp;</td><td>{{ item.TTime|stdTime }}</td><td>{{ item.State|getRecordState }}</td><td>{{ item.getComVerifys|default:"" }}</td><td>{{ item.Device|default:"" }}</td></tr>
+        {%else%}
+            <tr class='row2' height="25px"><td>&nbsp;</td><td>{{ item.TTime|stdTime }}</td><td>{{ item.State|getRecordState }}</td><td>{{ item.getComVerifys|default:"" }}</td><td>{{ item.Device|default:"" }}</td></tr>
+        {%endif%}
+    {% endfor %}
+    <tr></tr>
+</table>
+</tr>
+</table>

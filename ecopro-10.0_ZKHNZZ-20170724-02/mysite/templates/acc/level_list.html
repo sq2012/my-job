@@ -1,0 +1,257 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+
+{% block tblHeader %}
+//options.disableCols=["0","12","13"];
+//hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+//hasImport={% if user|HasPerm:"iclock.import_ACGroup" %}true{% else %}false{% endif %}
+TimeZones=[];
+jqOptions[g_activeTabID].colModel={{colModel}}
+//jqOptions.ondblClickRow=function(){alert(1)}
+tblName[g_activeTabID]='level';
+jqOptions[g_activeTabID].sortname='id';
+options[g_activeTabID].dlg_width=400;
+options[g_activeTabID].dlg_height=500;
+jqOptions[g_activeTabID].pager='id_pager_'+tblName[g_activeTabID]
+function datas(id){
+	var r=$("#id_grid_"+tblName[g_activeTabID]).jqGrid("getRowData",id);
+	var id=id
+	var Name=r.Name
+	var data=[id,Name];
+	return data
+}
+function doAction_level(url, action)
+{	
+	var result=getSelected(0,"true");
+	selected_data=datas(result.ss);
+	var shift_id=selected_data[0]
+	if (action == 'add_level_emp')
+		createDlglevel_emp();
+}
+
+
+function afterPost_level(flag,obj)
+{
+	$("#id_edit_form",obj).find(":input[type=text]").each(function(i,elem){
+		$(this).val("");})
+}
+$(function(){
+
+
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+		processNewModel();
+	});
+	$("#"+g_activeTabID+" #queryButton").hide()
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowlevel();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowlevel();
+	});
+	$("#"+g_activeTabID+" #id_export").css('display','none');
+	$("#"+g_activeTabID+" #id_third").html("");
+	
+	$.ajax({ 
+			type: "POST",
+			url:"/acc/getData/?func=ACTimeZones",
+			dataType:"json",
+			success:function(data){
+			TimeZones=data;
+			}
+		});
+});
+//模糊查询
+function searchShowlevel(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+	var url=g_urls[g_activeTabID]+"?q="+escape(v)
+	savecookie("search_urlstr",url);
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function searchShowlevelbylevelid(id){
+	var v=$("#id_searchsn").val();
+	var url='/acc/data/level_emp/?level='+id+"&q="+escape(v)
+	$("#id_grid_mini").jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}  
+   
+
+
+function strOfData_level(data)
+{
+	return stripHtml(data.name)
+}
+
+function process_dialog_level(obj)
+{
+}
+
+
+function checkint(val){
+    var tt=/^\d{1,9}$|^\d{1,9}[.]\d{1,3}$/.test(val)
+    if(val!=''){
+        return tt
+    }else{
+        return true
+    }
+}
+function beforePost_level(obj,actionName){
+            if($('#id_name',obj).val()==''){
+                alert('权限组名称不能为空')
+                return false;
+            
+            }
+	     doorid=getSelected_dept('level_door_tree')
+             doorids=[]
+             for(var i=0 ;i< doorid.length;i++){
+                if(checkint(doorid[i]))
+                    doorids.push(doorid[i])
+             }
+	     $("#id_AuthedDoor",obj).val(doorids);
+             return true
+}
+
+
+function process_dialog_again_level(obj,flag,key)
+{
+	     if (flag=='add')
+	     urlStr="/acc/getData/?func=level_door"
+	     else if (flag=='edit')
+	     urlStr="/acc/getData/?func=level_door&key="+key
+	var setting = {
+	     check: {enable: true,chkStyle: "checkbox",chkboxType: { "Y": "s", "N": "ps" }},          
+             data: {simpleData: {enable: true,idKey: "id", pIdKey: "pid",  rootPId: 0}},
+	     async: {
+			    enable: true,
+			    url: urlStr
+		    }
+	};
+	$.fn.zTree.init($("#level_door_tree"), setting,null);	
+}
+
+
+function Check_level_emp(id)
+{
+    createDataDialog('level_emp', "{%trans '门禁权限组人员名单' %}",  1024,'/acc/data/level_emp/?level='+id,1)
+    $("#btnShowSearch").click(function(){searchShowlevelbylevelid(id)})
+}
+
+function del_level_emp(id)
+{
+        $.ajax({type: "POST",
+                        url: "/acc/data/level_emp/?action=del",
+                        data: 'K='+id,
+                        dataType:"json",
+                        success: function(){$("#id_grid_mini").jqGrid("delRowData",id);
+},
+                        error: function(request){
+                                alert($.validator.format(gettext('{0} failed!\n\n{1}'), opName, request.statusText)); $.unblockUI(); 
+                                }
+                        });
+}
+
+function createDlglevel_emp(id)
+{
+        if(typeof id=='undefined')
+	{
+		var result=getSelected(0,"true");
+		//if (result.ss.length > 1){
+		//	alert(gettext("仅允许选择一个模板"));
+		//	return;
+		//}else
+			selected_data=datas(result.ss);
+	}
+	else
+        {
+		  var result={ss:id}
+		  selected_data=datas(id);
+
+         }
+    createDlgdeptfor10('employee_search_level',1)
+    $('#dlg_for_query_employee_search_level').dialog({
+    buttons:[{id:"btnShowOK",text:gettext('提交'),
+      click:function(){searchempbydept_level('employee_search_level',selected_data);$(this).dialog("destroy"); }},
+     {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+    }] })
+    createDlgother_level('employee_search_level')
+}
+function createDlgother_level(page){//添加附件条件
+	var html="<div id='faceorfp' style='width:400px'>"
+    +"<form  method='POST'  enctype='multipart/form-data'>"
+	+"<table id='id_setField'>"
+	+"<tr><td>"+gettext('仅选择部门不选择人员时,默认为该部门的人员 ')+"</td></tr>"
+	+"</table>"
+    +"</form>"
+	+"<span id='id_message'></span></div>"
+	$("#dlg_other_"+page).html(html)
+        $("#dlg_other_"+page).css("display","block")
+        $("#dlg_other_"+page).position({
+		  my: "left top",
+		  at: "left bottom",
+		  of: "#dlg_dept_"+page
+		});
+}
+
+function searchempbydept_level(page,selected_data){
+    var dept_ids=getSelected_dept("showTree_"+page)
+    if (dept_ids!=null){
+    	if(dept_ids==undefined||dept_ids==''){
+    		alert("{% trans "请选择部门" %}")
+    		return false;
+    	}
+    }else{
+    	alert("{% trans "请选择部门" %}")
+    	return false;
+    }
+    var ischecked=0;
+    if($("#id_cascadecheck_"+page).prop("checked"))
+    	ischecked=1;
+    urlStr="deptIDs="+dept_ids+"&isContainChild="+ischecked
+    var emp=getSelected_emp_ex("sel_employee_search_level");
+    if(emp.length>0){
+	urlStr="UserIDs="+emp
+    }else{
+        var text="添加部门"
+        if(ischecked==1){
+            text+="及其下级部门"
+        }
+        text+="下所有人员"
+        var action=confirm(text);
+	if(!action){
+            return false;
+        }
+    }
+    $.blockUI({title:'',theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans '请稍等......'%}</br></h1>'});
+    $.ajax({type: "POST",
+                url: "/acc/employeeforlevel/?levelid="+selected_data[0],
+                data: urlStr,
+                dataType:"json",
+                success: function(){
+                     reloadData()
+                    $.unblockUI();
+                },
+                error: function(request){
+                $.unblockUI();
+               
+                alert("保存失败")}
+                });
+}
+
+
+{% endblock %}
+
+{% block extractButton %}
+    <LI id="id_add_level_emp" onclick='batchOp(function(url){doAction_level(url, "add_level_emp")},undefined,"{%trans '添加人员' %}");'><SPAN class='icon iconfont icon-tianjiarenyuan'></SPAN>{%trans "添加人员"%}</LI>
+    <LI id="id_delete_level_emp"   onclick="batchOp('?action=level_emp_del',null,'{%trans "清除人员"%}');"><SPAN class='icon iconfont icon-qingchurenyuan'></SPAN>{%trans "清除人员"%}</LI>
+
+{% endblock %}
+
+
+
+

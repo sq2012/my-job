@@ -1,0 +1,362 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+
+<div class='alert' style='height: 20px;margin-left: 20px;margin-top: 20px;'>维护IC卡密码或初始化扇区数据</div>
+<div style='height: 320px;'>
+	<div class='left' style='width:  400px;margin-left: 50px;height: 300px;'>
+		<form id='id_edit_form_consume' method='post'>
+			<table width='90%' id='tbl'><tbody>
+			<tr><td colspan=2>
+				<div class='ui-widget-header' style='height: 28px;margin-top: 20px;margin-bottom: 10px;'><h3 style="padding-top: 8px;padding-left: 10px;"><a>{%trans '功能选择'%}</a></h3></div>
+			</td></tr>
+			<tr><th></th><td>
+			     <input type="radio"  id="change_pwd" name="cardtype" value = "0" checked>{%trans "密码修改"%}
+			     <input type="radio" id="init_area" name="cardtype" value = "1" >{%trans "初始化扇区"%}
+			
+			</td></tr>
+			<tr id="tr_pwd">
+				<td  colspan=2>
+					<div class='ui-widget-header' style='height: 28px;margin-top: 20px;margin-bottom: 10px;'><h3 style="padding-top: 8px;padding-left: 10px;"><a>{%trans '卡密码'%}</a></h3></div>
+					<table id="id_pos_info_tbl" border="0" cellspacing="0" cellpadding="0">
+					<tr>
+					    <th><label for='id_null_pwd' >{%trans '空密码'%}</label></th>
+						<td><input  type='checkbox' id='id_null_pwd' name='null_pwd'/></td>
+						
+					    <th>&nbsp;&nbsp;&nbsp;&nbsp;<label for='id_old_pwd' >{%trans '原密码'%}</label></th>
+					    <td><input type='text' maxlength='30' name='old_pwd' id='id_old_pwd' value=''/></td>
+					</tr>
+                        <tr style="height: 40px;"></tr>
+                        <tr>
+					        <th><label for='id_init_area_1' >{%trans '同时初始化扇区'%}</label></th>
+						    <td><input  type='checkbox' id='id_init_area_1' name='init_area_1'/></td>
+                        </tr>
+
+
+
+
+
+					</table>
+				</td>
+			</tr>
+	
+	
+			
+		</td></tr></table></form>
+	</div>
+ 	<div class='left' style='width:  400px;'>
+		<table id="id_grid_" >	</table>
+		<div id="id_pager_"></div>
+	</div>
+</div>
+<input type="hidden" id="id_card_no"  value=""/>
+
+<div id='id_error'></div>
+	<div style='margin-left: 100px;'>
+	
+               <button type="button" disabled="disabled" class='m-btn  zkgreen rnd' id="btnstart">批量开始</button>
+		<button type="button" disabled="disabled" class='m-btn  zkgreen rnd'  id="btnend">批量结束</button>
+               <button type="button" id="btnclear" class='m-btn  zkgreen rnd'>清除列表</button>
+	
+</div>
+
+
+<script>
+
+var id_card_setinterval;
+var curi = 0;
+var re_val = "";
+var read_tag = 0
+
+{% autoescape off %}
+var _data={{params}}
+{% endautoescape %}
+var card_type=_data.itype
+var sys_pwd = _data.pwd
+var main_fan = _data.main
+var minor_fan = parseInt(main_fan)+1;
+var zk_key=_data.pass_key;
+jqOptions=copyObj(jq_Options);
+jqOptions.colModel=[
+		{'name':'id','width':100,'sortable':false,'label':'{% trans '序号' %}'},
+		{'name':'card_no','width':200,'sortable':false,'label':'{% trans '卡号' %}'}
+		]
+
+function init_area(pwdbyte) {
+		var card = $("#id_card_no").val();
+        $.ajax({type: "POST",
+                url: "/ipos/getData/?func=check_card&card="+card,
+                dataType:"json",
+                async:false,
+                success: function(retdata){
+                        if (retdata.ret==1) {
+                                re_val =ZK_PosClearICCard(0,pwdbyte,main_fan,minor_fan);
+                                if (re_val == 0)
+                                {
+                                    $("#id_error").html('<ul class="errorlist"><li>初始化成功，请放下一张卡！</li></ul>').show();
+                                    show_card_data()
+                                }
+                                else
+                                {
+                                    $("#btnend").click();
+                                    check_card(re_val);
+                                }
+                        }
+                        else {
+                                $("#btnend").click();
+                                $("#id_error").html('<ul class="errorlist"><li>初始化失败,此卡正在使用中</li></ul>').show();
+                        }
+
+
+
+                },
+                error: function(){
+                    $("#btnend").click();
+			    $("#id_error").html('<ul class="errorlist"><li>初始化失败,网络出现故障！</li></ul>').show();
+
+		    }
+                });
+
+
+}
+
+
+function write_card()
+{
+    var pwdbyte = sys_pwd;//系统密码
+    var old_pwd_byte = "";
+    if ($("#change_pwd").prop("checked"))
+    {
+        if ($("#id_null_pwd").prop("checked"))
+        {
+            old_pwd_byte = "FFFFFFFFFFFF";
+        }
+        else
+        {
+            var old_pwd = $("#id_old_pwd").val()
+            if (old_pwd !="")
+            {
+                if (old_pwd.length<6)
+                {
+                    alert(gettext("请输入六位数密码！"))
+                    return;
+                }
+                else
+                {
+                    old_pwd_byte = old_pwd;
+                }
+            }
+            else
+            {
+                old_pwd_byte = "FFFFFFFFFFFF";
+            }
+        }
+        re_val = ZK_PosWriteICCardPassword(0,old_pwd_byte,pwdbyte,main_fan,minor_fan);
+        if (re_val == 0)
+			{
+                if ($("#id_init_area_1").prop("checked"))
+                    init_area(pwdbyte);
+                else
+				    $("#id_error").html('<ul class="errorlist"><li>密码修改成功，请放下一张卡！</li></ul>').show();
+
+
+				show_card_data()
+			}
+			else
+			{
+                $("#btnend").click();
+				check_card(re_val);
+			}
+    }
+    else
+    {
+         init_area(pwdbyte)
+
+
+//          re_val = zkonline.ZK_PosClearICCard(0,pwdbyte,main_fan,minor_fan);
+//        var cardInfo = zkonline.ZK_PosReadICCard(0,pwdbyte,main_fan,minor_fan).split(',');
+//        if (cardInfo.length>1)
+//        {
+//            var card_blance = cardInfo[6].split('=')[1];
+//            if (card_blance == 0)
+//            {
+//                re_val = zkonline.ZK_PosClearICCard(0,pwdbyte,main_fan,minor_fan);
+//            }
+//            else
+//            {
+//                $("#id_info").remove();
+//                $("#id_edit_form_consume").append('<div id="id_info" style="display: block;"><ul class="errorlist"><li>初始化失败，当前卡片余额不为零，请放下一张卡！</li></ul></div>');
+//                return;
+//            }
+//        }
+//        else
+//        {
+//            check_card(cardInfo);
+//            return;
+//        }
+    }
+   
+    
+}
+
+
+
+
+//显示读卡数据
+function show_card_data()
+{
+	curi+=1;
+	var card = $("#id_card_no").val();
+	$('#id_grid_').jqGrid('addRowData',curi,{id:curi,card_no:card},'first');
+    
+}
+
+
+		
+function read_card()
+ {
+     //if(isOnline()){
+            reval = readCard();
+           if (reval.length>5)
+                {
+                    if (reval != $("#id_card_no").val() || read_tag==0 )
+                    {
+                        $("#id_card_no").val(reval);
+                        write_card();
+                    }
+                    else
+                    {
+                        $("#id_error").html('<ul class="errorlist"><li>请放另外一张卡！</li></ul>');
+                    }
+                }
+            else
+                {
+                    check_card(reval);
+                }
+   // }
+ }
+		
+//开始读卡初始化
+function Init_begin()
+{
+
+    id_card_setinterval=setInterval("read_card()",2000);
+    read_tag+=1;
+}
+
+
+function is_info_right()
+{
+    if ($("#change_pwd").prop("checked"))
+    {
+        if ($("#id_null_pwd").prop("checked"))
+        {
+		return true;
+        }
+        else
+        {
+            var old_pwd = $("#id_old_pwd").val()
+            if (old_pwd !="")
+            {
+                if (old_pwd.length>=6)
+                {
+                    return true;
+                }
+		
+            }
+            else
+            {
+                return true;
+            }
+        }
+	return false;
+    }
+    else
+    return true;
+}
+
+
+
+
+
+$(function()
+  {
+	{% if "POS_IC"|filter_config_option %}
+		addZKOnline()	
+	{%endif%}
+	if(sys_pwd==''||card_type=='0')
+	{
+		if(sys_pwd=='')	
+		 $("#id_error").html('<ul class="errorlist"><li>该系统还未设置IC卡密码，请首先进入<系统>-><系统选项>-><消费参数设置>进行参数配置</li></ul>').show();
+	       else
+		 $("#id_error").html('<ul class="errorlist"><li>该系统还未设置卡类型，请首先进入<系统>-><系统选项>-><消费参数设置>进行参数配置</li></ul>').show();
+	
+			
+	}
+	else if(isOnline())
+	{
+	     $("#btnstart").removeProp("disabled");
+	     //$("#btnstart").attr('style','none');
+	     $("#btnend").prop("disabled","disabled");
+	}
+	
+	
+	jqOptions.datatype='local'
+	jqOptions.height=200
+	jqOptions.multiselect=false
+	jqOptions.width='auto'
+	jqOptions.pager=''
+	jqOptions.caption='已初始化IC卡'
+	$("#id_grid_").jqGrid(jqOptions);
+	
+	$("#change_pwd").click(function()
+	{
+              $("#tr_pwd").show();
+	});
+	$("#init_area").click(function()
+        {
+                  $("#tr_pwd").hide();
+        });
+	$("#btnclear").click(function() {
+		$('#id_grid_').jqGrid('clearGridData')
+	});
+
+
+
+
+	$("#btnstart").click(function()
+         {
+		$("#id_error").hide()
+		if(!is_info_right()){
+			$("#id_error").html('<ul class="errorlist"><li>空密码未勾选或原密码位数不正确</li></ul>').show();
+			return;
+		}
+             Init_begin();
+             $("#btnend").removeProp("disabled");
+             $("#change_pwd").prop("disabled","disabled");
+             $("#init_area").prop("disabled","disabled");
+             $("#btnstart").prop("disabled","disabled");
+            $("#id_null_pwd").prop("disabled","disabled");
+            $("#id_old_pwd").prop("disabled","disabled");
+         });
+	$("#btnend").click(function()
+         {
+             clearInterval(id_card_setinterval);
+             read_tag = 0;
+             $("#id_card_no").val("");
+             $("#change_pwd").removeProp("disabled");
+             $("#init_area").removeProp("disabled");
+             $("#btnstart").removeProp("disabled");
+            // $("#btnstart").attr('style','none');
+             $("#btnend").prop("disabled","disabled");
+             $("#id_null_pwd").removeProp("disabled");
+             $("#id_old_pwd").removeProp("disabled");
+
+         });
+
+	
+	
+});
+
+</script>
+

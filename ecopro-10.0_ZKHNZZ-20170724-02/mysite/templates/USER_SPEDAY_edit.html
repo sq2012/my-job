@@ -1,0 +1,45 @@
+{% load iclock_tags %}
+{% load i18n %}
+{% autoescape off %}
+
+<div id="id_form" >
+
+<form method="post" id="id_edit_form" enctype="multipart/form-data">
+<table>
+<tr><th></th><td>
+	<span  style="display:none" id="id_span_title">
+		{% if add %}{% trans "Add" %}  {% else %} {% trans "Edit" %} {% endif %} {{ dataOpt.verbose_name|escape }}</span>
+</td></tr>
+	<tr>{{form.UserID|field_as_td_h:1 }}</tr>
+
+	<tr>
+    <th> <font color='red'>*</font>{{ form.StartSpecDay.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.StartSpecDay.as_widget }} </td>
+	</tr>
+	<tr>
+    <th> <font color='red'>*</font>{{ form.EndSpecDay.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.EndSpecDay.as_widget }} </td>
+	</tr>
+	<tr>{{form.DateID|field_as_td_h:1 }}</tr>
+	<tr>{{form.clearance|field_as_td_h:1 }}</tr>
+	<tr>{{form.YUANYING|field_as_td_h:1 }}</tr>
+	<tr>{{details_form.successor|field_as_td_h:1 }}</tr>
+	<tr>{{details_form.Place|field_as_td_h:1 }}</tr>
+	<tr>{{details_form.mobile|field_as_td_h:1 }}</tr>
+	<tr>{{details_form.remarks|field_as_td_h:1 }}</tr>
+	<tr>{{form.ApplyDate|field_as_td_h:1 }}</tr>
+	<tr><td align='right'>{%trans '文件上传'%}:</td><td><input type='file' name='spedy_file' id='id_spedy_file1'/></td></tr>
+</td>
+</tr>
+</table>
+</form>
+<script>
+$("#id_StartSpecDay").datetimepicker(datetimepickerOptions);
+$("#id_EndSpecDay").datetimepicker(datetimepickerOptions);
+$("#id_ApplyDate").attr('readonly',true)
+</script>
+{% endautoescape %}
+
+<div id="id_error"></div>
+
+
+</div>
+ 

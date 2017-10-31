@@ -1,0 +1,170 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+<style>
+	#id_photo table{
+		margin-top: -25px; margin-bottom: 0px;
+	}
+#tbl_monitor th{
+	text-align: right;
+}
+.altclass{
+	background: #eeeeee;
+}
+	
+</style>
+
+
+<script>
+	jqOptions[g_activeTabID]=copyObj(jq_Options);
+{% autoescape off %}
+	jqOptions[g_activeTabID].colModel={{attModel}}
+{% endautoescape %}	
+	
+	var lastId=-1
+	var meetid=-1
+	var maxLine=50;
+	var maxLineopp=50;
+	var isFresh=false
+	
+function refreshLines(data){
+		lastId=data.lasttId;
+		if(isFresh)
+			$('#id_grid_monitor').jqGrid('clearGridData')
+		
+		for(var i=0;i<data.ret;i++)
+		{
+			 var ids = $("#id_grid_monitor").jqGrid('getDataIDs');
+			if (ids.length>100)
+			$('#id_grid_monitor').jqGrid('clearGridData')
+			
+			$('#id_grid_monitor').jqGrid('addRowData',data.data[i].id,data.data[i],'first');
+		}
+		isFresh=false
+	
+}
+
+
+function refreshPhoto(data)
+{
+		for(var i=0;i<data.photo_lines.length;i++)
+		{
+			$('#id_grid_monitor').jqGrid('setCell',data.photo_lines[i].id,'urls',data.photo_lines[i].urls)
+		}
+}
+	
+	
+	
+//function timeStr(){
+//	return moment().format('YYYY-MM-DD HH:mm:ss')
+//}
+	
+	
+	
+	Uid=0;
+	class_name="";
+	
+function getNewTrans(){   
+		clearTimeout(logtimer1);
+		var treeObj = $.fn.zTree.getZTreeObj("showTree_monitor");
+		var nodes = treeObj.getSelectedNodes();
+		
+		nodes=getSelected_dept('showTree_monitor')
+		var urlstr="/iclock/_checktranslog_/?lasttid="+lastId
+		
+		$.ajax({type: "POST", 
+			url:urlstr ,
+			dataType:"json",
+			data:{SN:nodes.join(",")},
+			success: function(data){
+				if(data.ret>0){
+					$("#net_info").html(data.tm+"| {%trans "get"%} "+(data.ret)+" {%trans " new transaction"%}")
+					refreshLines(data);
+				}
+				else{
+					$("#net_info").html(data.tm+"|{%trans "no new records"%}");
+					lastId=data.lasttId;
+				}
+				refreshPhoto(data)
+				
+				logtimer1=setTimeout("getNewTrans()", 5000);
+			},
+			error: function(obj, msg, exc){
+				$("#net_info").html("|{%trans "access to the latest data errors"%}");
+				logtimer1=setTimeout("getNewTrans()", 10000);
+			}
+		});
+	}
+	
+	function getKeyQuery(key){
+		var q=window.location.href;
+		if(q.indexOf('?')<0) return "";
+		var qry=q.split("?")[1].split("&");
+		for(var i in qry)
+			if(qry[i].split("=")[0]==key) return qry[i];
+		return "";
+	}
+
+	
+	
+function ShowDeviceData(page,tag,isDiy)
+{
+	var setting = {
+            check: {enable: !tag,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},          
+	    async: {
+			    enable: true,
+			    url: "/iclock/att/getData/?func=devs_tree",
+			    autoParam: ["id"]
+		    },
+		view:{txtSelectedEnable:true}
+	};
+	$.fn.zTree.init($("#showTree_"+page), setting,null);	
+}
+
+$(function(){
+		initwindow_tabs();
+
+		html="<div id='show_dept_tree_'>"
+			+"<ul id='showTree_monitor' class='ztree' style='margin-left: 0px;height:100%;'></ul>"
+			+"</div>"   
+		$("#west_content_tab_iclock__checktranslog_").html(html)
+	
+		//var h=$("#"+g_activeTabID+" #west_content").height()-10
+		//$('#showTree_monitor').css('height',h)
+	
+		ShowDeviceData('monitor',false)
+		var zTree = $.fn.zTree.getZTreeObj("showTree_monitor");
+		zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+			
+			isFresh=true
+			
+		}
+		
+		jqOptions[g_activeTabID].datatype='local'
+		jqOptions[g_activeTabID].height=480
+		jqOptions[g_activeTabID].multiselect=false
+		jqOptions[g_activeTabID].width='auto'
+		jqOptions[g_activeTabID].pager='id_pager_monitor'
+		jqOptions[g_activeTabID].altRows=true
+		jqOptions[g_activeTabID].altclass='altclass'
+		$("#id_grid_monitor").jqGrid(jqOptions[g_activeTabID]);
+		getNewTrans();
+		
+	})
+</script>
+<div id='id_top'>
+	<div class="sear-box quick-sear-box" >
+
+		<img src="/media/img/load.gif"><span  id="net_info">Starting ... </span>
+	</div>
+</div>
+<div id='att-monitor'>
+	<div style='overflow: hidden;'>
+		<table id="id_grid_monitor" >	</table>
+		<div id="id_pager_monitor"></div>
+	</div>
+
+</div>
+
+
+

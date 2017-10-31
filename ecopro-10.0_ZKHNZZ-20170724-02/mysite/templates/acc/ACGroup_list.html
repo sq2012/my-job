@@ -1,0 +1,179 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% block tblHeader %}
+//options.disableCols=["0","12","13"];
+
+hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+hasImport={% if user|HasPerm:"iclock.import_ACGroup" %}true{% else %}false{% endif %}
+TimeZones=[];
+jqOptions[g_activeTabID]=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='ACGroup';
+jqOptions[g_activeTabID].sortname='GroupID';
+jqOptions[g_activeTabID].pager='#id_pager_'+tblName[g_activeTabID];
+options[g_activeTabID].dlg_width=360;
+options[g_activeTabID].dlg_height=270;
+function afterPost_ACGroup(flag,obj)
+{
+	$("#id_edit_form",obj).find(":input[type=text]").each(function(i,elem){
+		$(this).val("");})
+}
+$(function(){
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+		processNewModel();
+	});
+	$("#"+g_activeTabID+" #queryButton").hide()
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowACCGroup();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowACCGroup();
+	});
+	$("#"+g_activeTabID+" #id_export").css('display','none');
+	$("#"+g_activeTabID+" #id_third").html("");
+	
+	$.ajax({ 
+			type: "POST",
+			url:"/acc/getData/?func=ACTimeZones",
+			dataType:"json",
+			success:function(data){
+			TimeZones=data;
+			}
+		});
+});
+//模糊查询
+function searchShowACCGroup(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+	var url=g_urls[g_activeTabID]+"?q="+escape(v)
+	savecookie("search_urlstr",url);
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+//得到ACTimeZones列表
+function getTimeZones_html()
+{
+	var options_html=""
+	for(i=0;i<TimeZones.length;i++)
+	{
+		if(i==0)
+			options_html+="<option value='"+TimeZones[i].TimeZoneID+"' name='"+TimeZones[i].Name+"' selected>"+TimeZones[i].TimeZoneID+"("+TimeZones[i].Name+")"+"</option>"
+		else
+			options_html+="<option value='"+TimeZones[i].TimeZoneID+"' name='"+TimeZones[i].Name+"'>"+TimeZones[i].TimeZoneID+"("+TimeZones[i].Name+")"+"</option>"
+			
+		
+	}
+	return options_html
+}
+
+function showState_ACGroup(value)
+{
+   var block_html="<div id='emp_to_dev'>"
+   		+ 	"<div>"
+   		+ 	"<lable>"+$.validator.format(gettext('Please Select {0}'),"{%trans "TimeZones" %}")+"</label>"
+   		+	"<div>"
+		+   "<input id='id_selvalue' type='text' style='display:none; width: 263px;' />"
+		+ 	"<select size=15 id='md_slt' style='width: 316px;height:245px'>"
+		+	getTimeZones_html()
+		+ 	"</select>"
+		+	"</div>"
+   		+ 	"</div>"
+   		+	"<div id='id_message'></div>"
+   		+ 	"</div>"
+   
+     
+   $(block_html).dialog({ modal:true,
+   						  width: 350,
+   						  height:415,
+   						  title:"{%trans "device ACTimeZones"%}",
+   						  buttons:[{id:"btnShowOK",text:gettext("Submit"),click:function(){setTimeZone(value)}},
+   								 {id:"btnShowCancel",text:gettext("Cancel"),click:function(){$("#emp_to_dev").remove();}
+   								}],
+   						  close:function(){$("#emp_to_dev").remove();}		
+   						})
+}
+  
+   
+
+var setTimeZone=function(value){
+	if (value==1)
+	{
+		$("#id_TimeZone1").val($("#md_slt").val());
+		$("#emp_to_dev").remove();
+	}
+	else if(value==2)
+	{
+		$("#id_TimeZone2").val($("#md_slt").val());
+		$("#emp_to_dev").remove();
+		
+	}
+	else
+	{
+		$("#id_TimeZone3").val($("#md_slt").val());
+		$("#emp_to_dev").remove();
+	
+	}
+	
+}
+
+function strOfData_ACGroup(data)
+{
+	return data[1];
+}
+<!-- function canEdit()
+{
+	if(!options.canEdit) return;
+	var rows=$("#id_grid").jqGrid("getCol",options.edit_col,true)
+	for(var i=0;i<rows.length;i++)
+	{
+		var id=rows[i].id;
+		var colData=rows[i].value;
+		var apage="<a class=\"can_edit\" href=\"#\" onclick=\"editclick('"+colData+"')\">"+colData+"</a>"
+		$("#id_grid").jqGrid('setRowData',id,{GroupID:apage})
+	}	
+ 	
+} -->
+function process_dialog_ACGroup(obj)
+{
+	var html="<select id='id_GroupID' name='GroupID' class='valid' style='width:132px;' >"
+		html+=$("#id_GroupID",obj).html()+"</select>";
+		$("#id_GroupID",obj).parent().html(html);
+	
+	$("#id_TimeZone1",obj).parent().parent().html("<th><label for='id_TimeZone1'>{%trans 'TimeZone1' %}</label></th>"
+		            +"<td><input type='text' id='id_TimeZone1' value='"+($("#id_TimeZone1",obj).val())+"' name='TimeZone1' readonly/>"
+					+"<span id='aGetTime1' align='center' style='color:green' onclick='showState_ACGroup(1)'>[{%trans 'select TimeZone'%}]</span></td>");
+	$("#id_TimeZone2",obj).parent().parent().html("<th><label for='id_TimeZone2'>{%trans 'TimeZone2' %}</label></th>"
+			            +"<td><input type='text' id='id_TimeZone2' value='"+($("#id_TimeZone2",obj).val())+"' name='TimeZone2' readonly/>"
+						+"<span id='aGetTime2' align='center' style='color:green' onclick='showState_ACGroup(2)'>[{%trans 'select TimeZone'%}]</span></td>");
+	$("#id_TimeZone3",obj).parent().parent().html("<th><label for='id_TimeZone3'>{%trans 'TimeZone3' %}</label></th>"
+			            +"<td><input type='text' id='id_TimeZone3' value='"+($("#id_TimeZone3",obj).val())+"' name='TimeZone3' readonly/>"
+						+"<span id='aGetTime3' align='center' style='color:green' onclick='showState_ACGroup(3)'>[{%trans 'select TimeZone'%}]</span></td>");
+	
+
+	
+	f=$(obj).find("#id_edit_form").get(0)
+	$(f).validate({
+			rules: {
+					"GroupID": {"required":true}
+					//"Name": {"required":true}
+				}
+			});
+
+}
+
+
+
+{% endblock %}
+
+{% block extractButton %}
+      {% if user|HasPerm:"iclock.Upload_AC_Options" %}
+  
+    <LI id="id_to_device" class="button-timezone"  onclick='setToDevs("ACGroup");'><SPAN></SPAN>{%trans "上传设置到设备"%}</LI>
+{%endif%}
+
+{% endblock %}

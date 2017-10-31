@@ -1,0 +1,93 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% block filters %}{% endblock %}
+{% block tblHeader %}
+<script>
+$(function(){
+$("#content").html("<h1><img src='/media/img/blogmarks.png' />{%trans 'Register FingerPrint' %}</h1>"
++"<div class='module' style='position:relative; width: 100%;'>"
++"<table style='margin-bottom: 2px; float: left; width: 100%;'><tr>"
+	+"<td style='vertical-align:top;'><div id='show_dept_emp_tree' style='min-height: 200px;'></div></td>"
+	+"<td style='vertical-align:top;width:40%;'><div id='id_conditions'>"
+	+"{%trans 'If you can use the function,you will support URU4000/4000B、ZK6000 and setup driver.Now only support IE' %}"
+		+"<form id='id_edit_form' method='POST'><table id='id_setField'>"
+		+"<input type='hidden' id='id_hidden_emp' value='' name='UserIDs' />"
+        +"<input type='hidden' id='id_hidden_depts' value='' name='deptIDs' />"
+		+"<input type='hidden' id='id_template' value='' name='templates' />"
+		+"<input type='hidden' id='id_fingerid' value='' name='fingerid' />"
+		+"<tr><td>"
+		//+'<OBJECT classid="clsid:A318A9AC-E75F-424C-9364-6B40A848FC6B"  style="width:20px;height:20px;" id=zkonline >'
+		//+'</OBJECT>'
+		
+		//+'<COMMENT>'
+		//+'    <EMBED type="application/x-eskerplus" classid="clsid:A318A9AC-E75F-424C-9364-6B40A848FC6B" codebase="ZKOnline.ocx" width=20 height=20></EMBED>'
+		//+'</COMMENT>'
+		+"<input type='button'  id='id_register' alt='' alt1='' onclick='javascript:if(zkonline.Register()){fingerids=[];template=[];for(i=1;i<=10;i++){if(zkonline.GetRegFingerTemplate(i).length>2){fingerids.push(i);template.push(zkonline.GetRegFingerTemplate(i));}this.alt1=fingerids;this.alt=template;}}' class='btnOKClass' value='{%trans "Register" %}'/>&nbsp;"
+		+"<input type='button'  id='id_forget' class='btnOKClass' value='{%trans "Submit" %}'/>&nbsp;<input type='submit' class='btnCancelClass' onclick='window.history.back(); return false;' value='{%trans "Return" %}'/></td></tr>"
+		+"<tr><td colspan='2'><span id='id_error'></span></td></tr>"
+	+"</table></form></div></td>"
++"</tr></table></div>"
+); 
+getDept_to_show_emp(500);  //生成单位员工
+$("#id_register").click(function(){
+	var emp=getSelected_emp()
+		if(emp.length<=0){
+			$("#id_error").css("display","block");
+			$("#id_error").html("<ul class='errorlist'><li>{%trans 'Please select employee'%}</li></ul>");
+		}
+		else{
+			$("#id_template").val($(this).attr('alt'));
+			$("#id_fingerid").val($(this).attr('alt1'))
+		}
+});
+
+$("#id_forget").click(function(){
+	var deptIDs=$("#hidden_depts").val()
+	var emp=getSelected_emp()
+		if(emp.length<=0 || $("#id_template").val()==""){
+			$("#id_error").css("display","block");
+			$("#id_error").html("<ul class='errorlist'><li>{%trans 'Please select employee and Register Fingerprint'%}</li></ul>");
+		}
+		else{
+			$("#id_hidden_emp").val(emp[0]);
+			$("#id_hidden_depts").val(deptIDs);
+			var queryStr=$("#id_edit_form").formSerialize();
+			$.ajax({ 
+					type: "POST",
+					url:"/iclock/att/saveFingerprint/",
+					dataType:"json",
+					data:queryStr,
+					success:function(retdata){
+						if(retdata.ret==0){
+								$("#id_error").css("display","block");
+								$("#id_error").html("<ul class='errorlist'><li>{%trans 'Save Successfully!'%}</li></ul>");
+								
+							}
+						else
+							{
+								$("#id_error").css("display","block");
+								$("#id_error").html("<ul class='errorlist'><li>{%trans 'Save Fail!'%}</li></ul>");
+							}
+					}
+			   });
+		
+		}
+});
+});
+</script>
+
+<style>
+form th {
+text-align:left;
+padding-top:4px;
+vertical-align: top;
+}
+</style>
+
+
+
+{% endblock %}
+
+
+
+

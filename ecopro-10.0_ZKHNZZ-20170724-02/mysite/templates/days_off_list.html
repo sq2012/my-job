@@ -1,0 +1,418 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+
+        jqOptions[g_activeTabID].colModel={{colModel}}
+        tblName[g_activeTabID]='days_off';
+        jqOptions[g_activeTabID].sortname='ApplyDate';
+        jqOptions[g_activeTabID].sortorder="desc";
+        jqOptions[g_activeTabID].pager="id_pager_"+tblName[g_activeTabID]
+        //leaveClass_days_off=[]
+        function createNewDlg_days_off(){
+                var title="{%trans '新增调休' %}";
+                createDlgdeptfor('days_off_add',1)
+                $('#dlg_for_query_days_off_add').dialog({title:title,
+                buttons:[
+                        {id:"btnSaveAndContinue",text:"{% trans "save and continue" %}",click:function(){ if(typeof beforePost_days_off=="function"){if(beforePost_days_off(this,"_new_")==false) return ;} SaveFormData(this,g_urls[g_activeTabID]+"_new_/",'add',"days_off");  }},
+                        {id:"btnShowOK",text:"{% trans "save and return" %}",click:function(){ if(typeof beforePost_days_off=="function"){if(beforePost_days_off(this,"_new_")==false) return ;}  SaveFormData(this,g_urls[g_activeTabID]+"_new_/",'edit',"days_off");  }},
+                        {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}
+                ] })
+        
+                createDlgother_days_off('days_off_add')
+        
+                $("#id_ApplyDate").attr("readonly", true);  
+        
+                var currDate=new Date();
+                td=currDate.getFullYear()
+                        +"-"
+                        +(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+                        +"-"
+                        +(currDate.getDate()<10?"0"+currDate.getDate():currDate.getDate())
+                        +" ";
+        
+                $("#id_ApplyDate").val(td+(currDate.getHours()<10?"0"+currDate.getHours():currDate.getHours())
+                                        +":"
+                                        +(currDate.getMinutes()<10?"0"+currDate.getMinutes():currDate.getMinutes())
+                                        +":"
+                                        +(currDate.getSeconds()<10?"0"+currDate.getSeconds():currDate.getSeconds()))
+        
+                $("#id_FromDate").datepicker(datepickerOptions);
+                $("#id_ToDate").datepicker(datepickerOptions);
+        
+                $("#id_days_off th").css("text-align","left");
+        }
+
+        function createDlgother_days_off(page){
+                var html="<div id='alldev' style='margin:3px'><form id='id_edit_form' method='POST'><table id='id_setField'>"
+                +"<tr><td><label for='id_FromDate'><font color='red'>*</font>{% trans '调休日期'%}</label><input id='id_FromDate'  type='text'  value='' maxlength='19' name='FromDate'  style='width:135px !important;'/></td></tr>"
+                
+                +"<tr><td><label for='id_ToDate' ><font color='red'>*</font>{% trans '调至日期'%}</label><input id='id_ToDate'  type='text'  value='' maxlength='19' name='ToDate' style='width:135px !important;'/></td></tr>"
+                        
+                +"<tr><td><label for='id_ApplyDate'><font color='white'>*</font>{% trans '操作时间'%}</label><input id='id_ApplyDate'  type='text' value='' maxlength='19' name='ApplyDate' style='width:135px !important;background:#E3E3E3;color:#B8AF9F'/></td></tr>"
+                
+                +"<tr><td></td></tr>"
+                +"<tr><td colspan='2'>"
+                +"<input type='hidden' id='id_userid' value='' name='UserID' />"
+                +"<input type='hidden' id='id_isContainChild' value='' name='isContainChild' />"
+                +"<input type='hidden' id='id_deptid' value='' name='DeptID' />"
+                +"</td></tr>"
+                +"<tr><td colspan='2'><span id='id_error'></span></td>"
+                +"</table></form></div>"
+                
+                $("#dlg_other_body_"+page).html(html)
+                $("#dlg_other_title_"+page).addClass('cascadecheck')
+                $("#dlg_other_"+page).css("width",'240')
+                $("#dlg_emp_"+page).css("width",'470')
+                $("#dlg_other_"+page).css("height",$("#dlg_emp_"+page).height())
+                $("#dlg_other_"+page).addClass('dlgempdiv')
+                $("#dlg_for_query_"+page).dialog({dialogClass: "",width:'982',height:'438'})
+                $("#dlg_other_"+page).position({
+                        my: "left top",
+                        at: "right top",
+                        of: "#dlg_emp_"+page
+                });
+        }
+        function validate_form_days_off(){   //验证表单的合法性(人员(可不选，在计算项目中计算选中单位的人员，其他的就默认值0)、开始时间、结束时间)
+                var t_ComeTime=$("#id_ComeTime_days_off").val();
+                var cTime=t_ComeTime.split("-");
+                var t_EndDate=$("#id_EndTime_days_off").val();
+                var eTime=t_EndDate.split("-");
+                cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+                edate=new Date(parseInt(eTime[0],10),parseInt(eTime[1],10)-1,parseInt(eTime[2],10));
+                var days=(edate.valueOf()-cdate.valueOf())/(1000*3600*24)+1;
+                if(cdate>edate || t_ComeTime=="" || t_EndDate==""||!valiDate(t_ComeTime)||!valiDate(t_EndDate)){
+                        return 1;
+                }else{
+                        return 0
+                }
+        }
+        function searchShowTrans(){
+                var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+                if (flag!='cansearch'&&flag!='defvalue') return;
+                if (flag!='defvalue')
+                    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+                else
+                    var v=""
+				begin = $('#id_ComeTime_days_off').val()
+				end = $('#id_EndTime_days_off').val()
+                if(begin>end){
+                    alert('开始时间不能大于结束时间')
+                    return
+                }
+				type = $('#tab_iclock_days_off #id_date_days_off').val()
+                var url="/iclock/data/days_off/?x="+escape(v)+"&"+type+"__gte="+begin+"&"+type+"__lte="+end
+                savecookie("search_urlstr",url);
+                $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+        }
+        function createQueryDlg_days_off(){
+        	createQueryDlgbypage('days_off')
+        	$('#dlg_for_query_days_off').dialog({position: { my: "right top", at: "right bottom",of:"#"+g_activeTabID+" #id_searchbar"},
+        	buttons:[{id:"btnShowOK",text:gettext('搜索'),
+        	  click:function(){searchbydept_days_off('days_off');}},
+        	 {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+        	}] })
+        }
+        
+        function searchbydept_days_off(page){
+        	var dept_ids=getSelected_dept("showTree_"+page)
+        	if (dept_ids!=null){
+        		if(dept_ids==undefined||dept_ids==''){
+        			alert("{% trans "请选择单位" %}")
+        			return false;
+        		}
+        	}else{
+        		alert("{% trans "请选择单位" %}")
+        		return false;
+        	}
+        	var ischecked=0;
+        	if($("#id_cascadecheck_"+page).prop("checked"))
+        		ischecked=1;
+        	urlStr="deptIDs="+dept_ids+"&isContainChild="+ischecked    
+        	var url="/iclock/data/days_off/?"+urlStr
+        	savecookie("search_urlstr",url);
+        	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+        }
+        function department_tree(){
+		var title="";
+		var urlStr=g_urls[g_activeTabID];
+		createDlgdeptfor('days-off')
+		$('#dlg_for_query_days-off').dialog({
+			title:'员工调休',
+			buttons:[{id:"btnShowOK",text:gettext('确定'),click:function(){getSelectData();}},
+				{id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+				}]
+		})	
+	}
+        function getSelectData(){
+		var dept_ids=getSelected_dept("showTree_days-off")
+		$.cookie("dept_ids",dept_ids, { expires: 7 });
+		var dept_names=getSelected_deptNames("showTree_days-off");
+		$("#department").val(dept_names);
+		var emp = getSelected_emp_ex('days-off')
+		$.cookie("emp",emp, { expires: 7 });
+		if($("#id_cascadecheck_days-off").prop("checked")){
+			$("#id_cascadecheck").prop("checked", "true");
+		} else {
+			$("#id_cascadecheck").removeAttr("checked");
+		}
+		dlgdestroy('days-off')
+	}
+        
+        $(function(){
+                var info='<div class="west_info"><p>1.员工调休功能，可以将已经排好的班调到另一天去上</p></div>'
+                $("#"+g_activeTabID+" #queryButton").hide()
+                renderLeftInformation(info);
+                $("#tab_iclock_days_off #id_reload").click(function(){
+                        var ComeTime=$("#id_ComeTime_days_off").val();
+                        var EndDate=$("#id_EndTime_days_off").val();
+                        if(ComeTime>EndDate) {
+                            alert('开始时间不能大于结束时间')
+                            return
+                        } else{
+                            reloadData('days_off')
+                        }
+                });
+                $("#"+g_activeTabID+" #searchButton").click(function(){
+                        searchShowTrans();
+                });
+                $("#"+g_activeTabID+" #searchbar").keypress(function(event){
+                        if(event.keyCode==13)
+                                searchShowTrans();
+                });
+                $("#"+g_activeTabID+" #searchbar").val(gettext("考勤编号,身份证号"))
+        
+                $("#"+g_activeTabID+" #id_newrec").click(function(){
+                        createNewDlg_days_off();
+                });
+                $("#"+g_activeTabID+" #id_export").css('display','block');
+                var width=$("#"+g_activeTabID+" #id_content").width();
+                
+                $('#id_ComeTime_days_off').val(moment().startOf('month').format('YYYY-MM-DD'))
+                $('#id_EndTime_days_off').val(moment().endOf('day').format('YYYY-MM-DD'))                
+                $("#id_ComeTime_days_off").datepicker(datepickerOptions);
+                $("#id_EndTime_days_off").datepicker(datepickerOptions);
+                
+                $("#"+g_activeTabID+" #id_search").click(function(){
+                        var emp="";
+                        var deptIDs=$.cookie("dept_ids");
+                        //if (deptIDs!=null){
+                                //emp=getSelected_emp();
+                        //}
+                        emp=$.cookie("emp");
+                        var FromDate=$("#id_ComeTime_days_off").val();
+                        var ToDate=$("#id_EndTime_days_off").val();
+                        $.cookie("FromDate",FromDate, { expires: 7 });
+                        $.cookie("ToDate",ToDate, { expires: 7 });
+                        var isError=validate_form_days_off();
+                        var ischecked=0;
+                        if($("#id_cascadecheck_days_off").prop("checked"))
+                                ischecked=1;
+                        if(deptIDs==undefined)
+                                deptIDs=''
+                        var deptnames=$("#department").val();
+                        if (deptnames==undefined)
+                                deptnames='';
+                        if( typeof(emp)=="object")
+                        {
+                                var maxUrlLength=20*1024;
+                                while((emp.join(",").length>maxUrlLength))
+                                        emp.pop(0);
+                        }
+                        var urlTime="";
+                        var urlTime1="";
+                        if(!isError){
+                                exporttag=1;
+                                urlTime1=$("#id_date_days_off").val()+"__gte="+FromDate+"&"+$("#id_date_days_off").val()+"__lt="+ToDate
+                        }
+                        urlTime="&"+urlTime1
+                        var urlStr="";
+                        urlStr="deptIDs="+deptIDs+"&UserID__id__exact="+emp+urlTime+"&isContainChild="+ischecked
+                        var url="/iclock/data/days_off/?"
+                
+                        if (urlStr!="" &&  urlStr!=null)
+                                url+=urlStr;
+                        $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+                        savecookie("search_urlstr",url);
+        
+                
+                });
+                
+        });
+
+        function strOfData_days_off(data)
+        {
+                return stripHtml(data.PIN)+" "+data.EName+' '+data.FromDate+' '+data.ToDate;
+        }
+        
+        //function canEdit()
+        //{
+        //        if(!options[g_activeTabID].canEdit) return 0;
+        //        var rows=$("#id_grid_"+tblName[g_activeTabID]).jqGrid("getCol",options.edit_col+1,true)
+        //        for(var i=0;i<rows.length;i++)
+        //        {
+        //                var id=rows[i].id;
+        //                var r=$("#id_grid_"+tblName[g_activeTabID]).jqGrid("getRowData",id)
+        //                var colData=rows[i].value;
+        //                var apage="<a class='can_edit' href='#' onclick='editclick("+id+")'>"+colData+"  "+"</a>"
+        //                $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setRowData',id,{DeptNumber:apage})
+        //        }
+        //}
+        function beforePost_days_off(obj,actionName){
+                if(validateForm_days_off(obj)==1){
+                        $("#id_error",obj).css("display","block");
+                        $("#id_error",obj).html("<ul class='errorlist'><li>{%trans 'Enter a valid date/time' %}</li></ul>");					
+                        return false;	
+                }
+                if(validateForm_days_off(obj)==2){
+                        $("#id_error",obj).css("display","block");
+                        $("#id_error",obj).html("<ul class='errorlist'><li>{%trans '开始时间不能大于结束时间' %}</li></ul>");
+                        return false;
+                }
+                if(actionName=="_new_"){
+                        var deptid=getSelected_dept("showTree_days_off_add");
+                        if(deptid.length==0){
+                                $("#id_error",obj).css("display","block");
+                                $("#id_error",obj).html("<ul class='errorlist'><li>{%trans 'Please select one or more employee!'%}</li></ul>");
+                                return false;
+                        }
+                        else{
+                                $("#id_error",obj).css("display","none");
+                                $("#id_deptid",obj).val(deptid);
+                                var ischecked=0;
+                                if($("#id_cascadecheck_days_off_add").prop("checked"))
+                                        ischecked=1;
+                                $("#id_isContainChild",obj).val(ischecked)
+                        }
+                        var emp=getSelected_emp_ex("days_off_add");
+                        $("#id_userid",obj).val(emp);
+                }
+        }
+        function process_dialog_days_off(obj,actionName)
+        {
+                 $(obj).dialog({resizable:false,modal:true});
+                var currDate=new Date();
+                td=currDate.getFullYear()
+                        +"-"
+                        +(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+                        +"-"
+                        +currDate.getDate()
+                        +" "
+                        +currDate.getHours()
+                        +":"
+                        +currDate.getMinutes()
+                        +":"
+                        +currDate.getSeconds()
+        
+                $("#id_ApplyDate",obj).val(td);
+                var leng=arguments.length;
+                begin=$("#id_FromDate",obj).val();
+                end=$("#id_ToDate",obj).val();
+                apply=$("#id_ApplyDate",obj).val();
+                username=''//$("#id_UserID",obj).get(0).options[$("#id_UserID",obj).get(0).selectedIndex].text;
+                if(actionName=='edit'){
+                        $("#id_ApplyDate",obj).attr('readonly', true);
+                        $("#id_ApplyDate",obj).css('background','#E3E3E3').css('color','#B8AF9F');
+                        var depName=$("#id_span_DeptID",obj).html();
+                        depName=$.trim(depName)
+                        var deptid=$("#id_DeptID",obj).val(depName)
+                        var userName=$("#id_span_UserID",obj).html();
+                        userName=$.trim(userName)
+                        var userid=$("#id_UserID",obj).val(userName)
+                        options.dlg_width=400;
+                        options.dlg_height=370;
+                }
+                $("#id_FromDate",obj).datepicker(datepickerOptions);
+                $("#id_ToDate",obj).datepicker(datepickerOptions);
+        
+        }
+        
+        
+        function validateForm_days_off(obj){
+                apply=$("#id_ApplyDate",obj).val();
+                var t_ComeTime=$("#id_FromDate",obj).val();
+                var cTime=t_ComeTime.split("-");
+                var t_EndDate=$("#id_ToDate",obj).val();
+                var eTime=t_EndDate.split("-");
+                var cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+                var edate=new Date(parseInt(eTime[0],10),parseInt(eTime[1],10)-1,parseInt(eTime[2],10));
+                var days=(edate.valueOf()-cdate.valueOf())/(1000*3600*24)+1;
+                if(t_ComeTime=="" || t_EndDate==""){
+                        return 1;
+                }else if(cdate>edate){
+                        return 2;
+                }else{
+                        return 0;
+                }
+                
+        }
+
+
+{% endblock %}
+</script>
+
+
+<script>
+{% block loadData %}
+	html="<span id=id_opt_tree><input type='checkbox' id='id_cascadecheck_days_off'/>{%trans '级联下级单位' %}</span>"
+	$("#"+g_activeTabID+" #id_west").html(html)
+	html="<div id='show_dept_tree_'>"
+		+"<ul id='showTree_days_off' class='ztree' style='margin-left: 0px;height:100%;'></ul>"
+		+"</div>"   
+	$("#west_content_tab_iclock_days_off").html(html)
+
+	//var h=$("#"+g_activeTabID+" #west_content").height()-20
+	//$('#showTree_days_off').css('height',h)
+
+        ShowDeptData('days_off')
+        loadNULLPage('#id_grid_'+tblName[g_activeTabID]);
+	var zTree = $.fn.zTree.getZTreeObj("showTree_days_off");
+	zTree.setting.check.enable = false;
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		var deptID=treeNode.id;
+		var deptName=treeNode.name;
+		$.cookie("dept_ids",deptID, { expires: 7 });
+		var ischecked=0;
+		if($("#id_cascadecheck_days_off").prop("checked"))
+			ischecked=1;
+                var ComeTime=$("#id_ComeTime_days_off").val();
+                var EndDate=$("#id_EndTime_days_off").val();
+                $.cookie("ComeTime",ComeTime, { expires: 7 });
+                $.cookie("EndDate",EndDate, { expires: 7 });
+                     
+                var isError=validate_form_days_off();
+                var urlTime="";
+                var urlTime1="";
+                if(!isError){
+                        urlTime1=$("#id_date_days_off").val()+"__gte="+ComeTime+"&"+$("#id_date_days_off").val()+"__lte="+EndDate
+                } else{
+                    alert('开始时间不能大于结束时间')
+                    return
+                }
+                urlTime="&"+urlTime1
+                var urlStr="";                
+		var urlStr="/iclock/data/days_off/?deptIDs="+deptID+"&isContainChild="+ischecked+urlTime
+		savecookie("search_urlstr",urlStr);
+		//$.blockUI({title:'',theme: true ,message: '<h1><img src="/iclock/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}<br /></h1>'});
+		 $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+		//$.unblockUI()
+	}
+{% endblock %}
+
+{% block otherQuery %}
+		<div class="s-info left" id="time_area">			
+                                <span>
+                                        <label  >{%trans 'Begin Date'%}</label>
+                                        <input type='text' name='ComeTime' maxlength='10' id='id_ComeTime_days_off' style='width:80px !important;'>
+                                        <label  >{%trans 'End Date'%}</label>
+                                        <input type='text' name='EndTime' maxlength='10' id='id_EndTime_days_off' style='width:80px !important;'>
+                                </span>
+                                 <span style='width:80px;'>
+                                        <select name='id_date_days_off' id='id_date_days_off'><option value='FromDate'>{%trans '调休日期'%}</option><option value='ToDate'>{%trans '调至日期'%}</option><option value='ApplyDate'>{%trans '操作时间'%}</option></select>
+                                </span>
+                               
+                                
+                        </div>
+                  
+
+{% endblock %}

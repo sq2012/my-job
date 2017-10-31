@@ -1,0 +1,30 @@
+{% load iclock_tags %}
+{% load i18n %}
+<script type="text/javascript">
+totalRecCnt_attSh={{ item_count }};
+item_from_attSh={{ from }}
+page_index_attSh={{ page }};
+page_limit_attSh={{ limit }};
+page_number_attSh={{ page_count }};
+dis={{ disabledcols }}
+fieldCaption={% autoescape off %} {{ fieldcaptions }} {% endautoescape %}
+$(function(){
+var page_style=3;
+$("#id_result_pages").html(getPagers("", item_from_attSh-1, totalRecCnt_attSh, page_limit_attSh, page_index_attSh, page_number_attSh,page_style,1));
+});
+var fieldValues=[
+  {% for item in latest_item_list %}
+  ["{{ item.employee.Dept.DeptName }}","{{ item.employee.PIN }}","{{ item.employee.EName }}","{{ item.AttDate|shortDate4 }}","{{ item.SchId|default:"" }}","{{ item.ClockInTime|onlyTime }}","{{ item.ClockOutTime|default:""|onlyTime }}","{{ item.StartTime|default:""|onlyTime}}","{{ item.EndTime|default:""|onlyTime}}","{{ item.WorkDay|default:"" }}","{{ item.RealWorkDay|default:"" }}","{{ item.Late|default:"" }}","{{ item.Early|default:""  }}","{{ item.Absent|isYesNo  }}","{{ item.OverTime|default:""  }}","{{ item.WorkTime|hourAndMinute  }}","{{ item.ExceptionID|ExceptionStr }}","{{ item.MustIn|isYesNo  }}","{{ item.MustOut|isYesNo  }}","{{ item.SSpeDayNormal|default:""  }}","{{ item.SSpeDayWeekend|default:""  }}","{{ item.SSpeDayHoliday|default:""  }}","{{ item.AttTime|hourAndMinute  }}","{{ item.SSpeDayNormalOT|default:""  }}","{{ item.SSpeDayWeekendOT|default:""  }}","{{ item.SSpeDayHolidayOT|default:""  }}"]{%if not forloop.last%},{%endif%}{% endfor %}
+]
+renderReport(fieldCaption,fieldValues,dis);
+</script>
+<table>
+<tr><td align="left" style="border:0px;">
+<span id="id_result_pages"></span>
+</td></tr>
+<tr><td style="border:0px;">
+    <table id="tbl">    
+    </table>
+</td></tr>
+</table>
+

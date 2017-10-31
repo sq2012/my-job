@@ -1,0 +1,125 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+//options.disableCols=["0","12","13"];
+
+hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+hasImport={% if user|HasPerm:"visitors.import_reservation" %}true{% else %}false{% endif %}
+jqOptions[g_activeTabID]=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='reservation';
+jqOptions[g_activeTabID].pager="id_pager_"+tblName[g_activeTabID];
+jqOptions[g_activeTabID].sortname='';
+options[g_activeTabID].dlg_width=600;
+options[g_activeTabID].dlg_height=400;
+options[g_activeTabID].edit_col=1;
+//dtFields = "{{ dtFields }}";
+$(function(){
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+                processNewModel();
+	});
+	//$("#id_custom").remove()
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowLib_reservation();
+	});
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowLib_reservation();
+	});
+        $("#"+g_activeTabID+" #queryButton").hide()
+            $.ajax({
+	type: "POST",
+	url:"/visitors/vis/hasReasons/",
+	dataType:"json",
+	success: function(json){
+	     Reason_json=json;
+	    }});
+	var info='<div><p>访客预约用于访客预约相关信息管理，使用前请预先在“来访事由”设置好可能使用到的来访事由</p></div>'
+        renderLeftInformation(info);
+        smenu="<ul><li  class='subnav_on' onclick=submenuClick('/visitors/data/reservation/',this);><a href='#'>访客预约维护</a></li></ul>"
+        //$('#menu_div').html(smenu)
+});
+
+//部门模糊查询
+function searchShowLib_reservation(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+		var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+		var v=""
+    var url="/visitors/data/reservation/?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+};
+
+function process_dialog_reservation(htmlObj){
+	     $(htmlObj).dialog({resizable:false,modal:true})
+        var ti=$("#id_visReason",htmlObj).val()
+        var htl="<option value=' '> </option>"
+        for(var i=0;i<Reason_json.length;i++){
+            if(ti==Reason_json[i]){
+                htl+="<option value='"+Reason_json[i]+"' selected>"+Reason_json[i]+"</option>"
+            }else{
+                htl+="<option value='"+Reason_json[i]+"'>"+Reason_json[i]+"</option>"
+            }
+        }
+       $("#id_visReason",htmlObj).parent().html("<select id='id_visReason' name='visReason' class='valid'>"+htl+"</select>");
+
+        var currDate=new Date();
+        td=currDate.getFullYear()
+                +"-"
+                +(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+                +"-"
+                +(currDate.getDate()<10?"0"+currDate.getDate():currDate.getDate())
+                +" ";
+	f=$(htmlObj).find("#id_edit_form").get(0)
+        var tpickerOptions=copyObj(datetimepickerOptions)
+		tpickerOptions.showSecond=true
+		tpickerOptions.timeFormat='HH:mm:ss'
+        $("#id_visDate",htmlObj).datetimepicker(tpickerOptions);
+        var visDate = $("#id_visDate",htmlObj).val();
+        if (visDate==''){
+                $("#id_visDate",htmlObj).val(td+" "+(currDate.getHours()<10?"0"+currDate.getHours():currDate.getHours())
+                                        +":"
+                                        +(currDate.getMinutes()<10?"0"+currDate.getMinutes():currDate.getMinutes())
+                                        +":"
+                                        +(currDate.getSeconds()<10?"0"+currDate.getSeconds():currDate.getSeconds()));
+        }
+	$(f).validate({
+				rules: {
+					id: {required:true},
+					visDate: {required:true}
+				}
+	});	
+}
+function strOfData_reservation(data)
+{
+	return stripHtml(data.id)+"   "+stripHtml(data.visDate);
+}
+
+
+{% endblock %}
+		{% block sear_area %}
+		
+		
+		
+		
+		<div class="s-info right" id="sear_area">			
+			<div class="nui-ipt nui-ipt-hasIconBtn " >
+				<input id="searchbar" class="search-input" type="text"  value="访客姓名,拜访对象" role='defvalue' autocomplete="off" style="width: 154px;"/>
+				<span id ="queryButton" class="nui-ipt-iconBtn">
+					<b id="_icon_2_28" class="nui-ico nui-ico-dArr "></b>
+				</span>
+				
+			</div>
+			
+			<div class="main-search-btn">
+			
+				<span id="searchButton" class="chaxun icon iconfont icon-chaxun"></span>
+			</div>
+			
+			
+		</div>
+		{% endblock %}

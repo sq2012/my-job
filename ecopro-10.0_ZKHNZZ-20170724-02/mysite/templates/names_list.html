@@ -1,0 +1,11 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% block tblHeader %}
+fieldHeaders=["{{ cl.FieldName.PIN }}", "{{ cl.FieldName.EName }}", "{{ cl.FieldName.DeptID }}","{{ cl.FieldName.Title }}","{{ cl.FieldName.Tele }}","{{ cl.FieldName.Mobile }}","{{ cl.FieldName.PostCode }}"];
+{%endblock%}
+{% block rowdata %}
+
+{% for item in latest_item_list %}
+["{{ item.PIN }}", "{{ item.EName }}", "{{ item.Dept }}", "{{ item.Title }}","{{ item.Tele }}","{{ item.Mobile }}","{{ item.PostCode }}"],
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,118 @@
+{% extends "data_list.html" %}
+{% load iclock_tags %}
+{% load i18n %}
+
+{% block tblHeader %}
+//options.disableCols=["0"];
+options[g_activeTabID].canDelete=false;
+options[g_activeTabID].canEdit=false;
+options[g_activeTabID].canAdd=false;
+hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+hasImport={% if user|HasPerm:"iclock.import_adminLog" %}true{% else %}false{% endif %}
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='adminLog';
+jqOptions[g_activeTabID].pager = "id_pager_"+tblName[g_activeTabID]
+jqOptions[g_activeTabID].sortname='time';
+jqOptions[g_activeTabID].sortorder="desc";
+//show_left=false
+using_m='{{app }}'
+
+function strOfData_adminLog(data)
+{
+	return "{% trans "User" %} "+data.User+"{% trans "at" %} "+data.time+" "+data.action;
+}
+
+//function canEdit()
+//{
+//}
+function searchShowAdminLog(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+    var url="/iclock/data/adminLog/?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+    
+}
+
+$(function(){
+//if(IsShowLeftInfo)
+//{
+	var info='<p>1.查看对系统进行操作及维护的日志，可以查看到整个系统的所有管理用户的所有操作情况，在什么时间哪个管理员做了什么操作都可以一一查看到</p>'
+        renderLeftInformation(info);
+        smenu="<ul><li  class='subnav_on' onclick=submenuClick('/iclock/data/adminLog/',this);><a href='#'>管理员操作</a></li></ul>"
+        //$('#menu_div').html(smenu)
+//	}
+
+	//savecookie("search_urlstr",g_urls[g_activeTabID])
+	
+	if(!options[g_activeTabID].canAdd)$("#"+g_activeTabID+" #id_newrec").css('display','none');
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+			searchShowAdminLog();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+		if(event.keyCode==13)
+		searchShowAdminLog();
+	});
+	$("#"+g_activeTabID+" #queryButton").hide()
+        $("#id_ComeTime_adminLog").val(moment().startOf('month').format('YYYY-MM-DD'))
+        $("#id_EndTime_adminLog").val(moment().endOf('day').format('YYYY-MM-DD'))
+	$("#id_ComeTime_adminLog").datepicker(datepickerOptions);
+	$("#id_EndTime_adminLog").datepicker(datepickerOptions);
+	$("#"+g_activeTabID+" #id_search").click(function(){
+		var ComeTime=$("#id_ComeTime_adminLog").val();
+		var EndDate=$("#id_EndTime_adminLog").val();
+		$.cookie("ComeTime",ComeTime, { expires: 7 });
+		$.cookie("EndDate",EndDate, { expires: 7 });
+		var isError=validate_form_adminLog();
+		var urlTime="";
+		var urlTime1="";
+		if(!isError){
+			exporttag=1;
+			urlTime1="time__gte="+ComeTime+"&time__lt="+EndDate
+		}
+		urlTime=urlTime1
+		var url="/iclock/data/adminLog/?"
+		if (urlTime!="" &&  urlTime!=null)
+			url+=urlTime;
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+		savecookie("search_urlstr",url);
+	});
+
+})
+function validate_form_adminLog(){   //验证表单的合法性(、开始时间、结束时间)
+	var t_ComeTime=$("#id_ComeTime_adminLog").val();
+	var cTime=t_ComeTime.split("-");
+	var t_EndDate=$("#id_EndTime_adminLog").val();
+	var eTime=t_EndDate.split("-");
+	cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+	edate=new Date(parseInt(eTime[0],10),parseInt(eTime[1],10)-1,parseInt(eTime[2],10));
+	if(cdate>edate || t_ComeTime=="" || t_EndDate==""){
+		return 1;
+	}else{
+		return 0
+	}
+}
+
+{% endblock %}
+{% block otherQuery %}
+	
+	<span style='float:left; '>
+			<span>
+			<label  >{%trans 'Begin Date'%}</label>
+			<input type='text' name='ComeTime' maxlength='10' id='id_ComeTime_adminLog' style='width:120px !important;'>
+			<label >{%trans 'End Date'%}</label>
+			<input type='text' name='EndTime' maxlength='10' id='id_EndTime_adminLog' style='width:120px !important;'>
+		</span>
+		<span id='id_search' ><a class='m-btn  zkgreen rnd mini'>{%trans 'Query'%}</a></span>
+			
+		</span>
+	
+		
+		
+		
+		
+{% endblock %} 

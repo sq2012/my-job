@@ -1,0 +1,374 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+<script>
+var count=1;
+$(function(){
+
+initwindow_tabs();
+
+var info='<div class="west_info"><p>1.年假规则中可以设置年假的清零和计算规则。</p><p>2.可以根据法定或者公司年假规则进行年假设置。</p></div>'
+renderLeftInformation(info);
+//smenu="<ul><li  class='subnav_on' onclick=submenuClick('/iclock/data/annual_settings/',this);><a href='#'>年假规则</a></li></ul>"
+//$('#menu_div').html(smenu)
+	
+$("#"+g_activeTabID+" #id_newrec").remove();
+$("#"+g_activeTabID+" #id_clearrec").remove();
+//$("#content").html("");
+$.ajax({ 
+        type: "POST",
+        url:"/iclock/att/getannualsettings/",
+        dataType:"json",
+        success:function(json){
+            $("#content_annual_set").html("<div id='id_param' style='overflow-x:hidden;padding-left:50px;'><div ><h1 style='width:600px;'>{%trans '年休假基本规则' %}</h1></div>"
+            +"<form id='id_edit_form' method='post'><table><tbody><tr><td>"
+            +"<fieldset width='600px' style='border:1px solid #77B7DE;'><legend><font  size='4'>{%trans '年休假设置'%}</font></legend><table><tbody>"
+            +"<tr>"
+                +"<td><label >{%trans '年休假清零日期:'%}{%trans '每年'%}<select id='id_month_s' style='width:50px !important' onchange='setdays()'><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option></select>{%trans '月'%}</label><label><select id='id_day_s' style='width:50px !important'><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option><option>15</option><option>16</option><option>17</option><option>18</option><option>19</option><option>20</option><option>21</option><option>22</option><option>23</option><option>24</option><option>25</option><option>26</option><option>27</option><option>28</option><option>29</option><option>30</option><option>31</option></select>{%trans '日'%}</label></td>"
+            +"</tr>"
+            +"<tr>"
+                +"<td><label >{%trans '年休假计算方式:'%}<input id='id_radio_f' name='radio_b' value='1' type='radio' checked/></label><label>{%trans '法定年休假规定'%}<input id='id_radio_g' name='radio_b' value='2' type='radio'/></label><label>{%trans '公司年休假规定'%}"//<input id='id_radio_fg' name='radio_b' type='radio' value='0' />{%trans '公司年休假规定没有时采用法定年休假规定'%}</label></td>"
+            +"</tr>"
+            +"<tr>"
+                +"<td><label >{%trans '年休假舍入方式(计算年休假总数时使用):'%}</label><label><input id='id_RemaindProc0' name='RemaindProc' value='0' type='radio' checked>{%trans '向下(舍弃)'%}</label><label><input id='id_RemaindProc1' name='RemaindProc' value='1' type='radio'>{%trans '四舍五入'%}</label><label><input id='id_RemaindProc2' name='RemaindProc' value='2' type='radio'>{%trans '向上(进位)'%}</label></td>"
+            +"</tr>"
+            +"</tbody></table></fieldset></td></tr>"
+
+
+            +"<tr><td><fieldset width='600px' style='border:1px solid #77B7DE;'><legend><font  size='4'>{%trans '法定年休假规定'%}</font></legend><table><tbody>"
+             +"<tr>"
+                +"<td><label>{%trans '职工累计工作已满1年不满10年的，年休假5天；已满10年不满20年的，年休假10天；已满20年的，年休假15天。'%}</label></td>"
+            +"</tr>"
+             +"<tr>"
+                +"<td><label>{%trans '年休假起始计算日期：'%}<select id='id_type_f' style='width:80px !important'><option value='Hiredday'>{%trans '聘用日期'%}</option><!-- <option value='Trialstarttime'>{%trans '试用开始'%}</option><option value='Trialendtime'>{%trans '试用结束'%}</option><option value='Contractstarttime'>{%trans '合同开始'%}</option> --></select></label></td>"
+            +"</tr>"
+            +"</tbody></table></fieldset></td></tr>" 
+
+            +"<tr><td><fieldset width='600px' style='border:1px solid #77B7DE;'><legend><font  size='4'>{%trans '公司年休假规定'%}</legend></font><table><tbody>"
+            +"<tr>"
+              +"<td><label><input type='radio' id='id_guize_1' value='1' name='guize'/></label><label>{%trans '公司年休规则1：'%}{%trans '从本单位'%}<select id='id_type_g1' style='width:80px !important'><option value='Hiredday'>{%trans '聘用日期'%}</option><!-- <option value='Trialstarttime'>{%trans '试用开始'%}</option><option value='Trialendtime'>{%trans '试用结束'%}</option><option value='Contractstarttime'>{%trans '合同开始'%}</option> --></select></label><label>{%trans '开始'%},{%trans '每'%}<input id='id_month_g1' name='month_g1' style='width:20px !important'/></label><label>{%trans '月可休'%}<input id='id_day_g1' name='day_g1' style='width:20px !important'/>{%trans '天'%}</label></td>"
+            +"</tr>"
+            +"<tr>"
+              +"<td><label><input type='radio' id='id_guize_2' value='2' name='guize'/></label><label>{%trans '公司年休规则2：'%}{%trans '从本单位'%}<select id='id_type_g2' style='width:80px !important'><option value='Hiredday'>{%trans '聘用日期'%}</option><!-- <option value='Trialstarttime'>{%trans '试用开始'%}</option><option value='Trialendtime'>{%trans '试用结束'%}</option><option value='Contractstarttime'>{%trans '合同开始'%}</option> --></select></label><label>{%trans '开始'%},{%trans '工作不满1年。年休假为上班天数乘以系数'%}<input id='id_xi_g1' style='width:20px !important'/></label><label>{%trans '天'%}{%trans '除以365'%},{%trans '满1年可休'%}<input id='id_man1_g' style='width:20px !important'/></label><label>{%trans '天'%},{%trans '每年递增'%}<input id='id_zeng_g' style='width:20px !important'/></label><label>{%trans '天'%}。{%trans '最大年休假为'%}<input id='id_max_g' style='width:20px !important'/>{%trans '天'%}</label></td>"
+            +"</tr>"
+            +"<tr>"
+              +"<td><label><input type='radio' id='id_guize_3' value='3' name='guize' checked/></label><label>{%trans '公司年休规则3：'%}{%trans '从本单位'%}<select id='id_type_g3' style='width:80px !important'><option value='Hiredday'>{%trans '聘用日期'%}</option><!-- <option value='Trialstarttime'>{%trans '试用开始'%}</option><option value='Trialendtime'>{%trans '试用结束'%}</option><option value='Contractstarttime'>{%trans '合同开始'%} --></option></select></label><label>{%trans '开始'%},{%trans '工作不满1年。年休假为上班天数乘以系数'%}<input id='id_xi_g2' style='width:20px !important'/></label><label>{%trans '天'%}{%trans '除以365'%},{%trans '已满1年不满10年的，年休假'%}<input id='id_day_1_10' style='width:20px !important'/></label><label>{%trans '天'%};{%trans '已满10年不满20年的，年休假'%}<input id='id_day_10_20' style='width:20px !important'/></label><label>{%trans '天'%};{%trans '已满20年的，年休假'%}<input id='id_day_20' style='width:20px !important'/>{%trans '天'%}</label></td>"
+            +"</tr>"
+            +"<tr>"
+              +"<td><label><input type='radio' id='id_guize_4' value='4' name='guize'/></label><label>{%trans '公司年休规则4：'%}{%trans '从本单位'%}<select id='id_type_g4' style='width:80px !important'><option value='Hiredday'>{%trans '聘用日期'%}</option><!-- <option value='Trialstarttime'>{%trans '试用开始'%}</option><option value='Trialendtime'>{%trans '试用结束'%}</option><option value='Contractstarttime'>{%trans '合同开始'%}</option> --></select></label><label>{%trans '开始'%},{%trans '工作不满1年。年休假为上班天数乘以系数'%}<input id='id_xi_g3' style='width:20px !important'/></label><label>{%trans '天'%}{%trans '除以365'%},{%trans '已满'%}<input id='id_nian_1_s' style='width:20px !important'/></label><label id='id_nian_1_span'><label>{%trans '年不满'%}<input id='id_nian_1_e' style='width:20px !important'/></label><label>{%trans '年的，年休假'%}<input id='id_nian_day_1' style='width:20px !important'/></label><label>{%trans '天'%};</label></label><label><span id='id_tiaojian'></span></label><label>{%trans '已满'%}<input id='id_nian_end' style='width:20px !important'/></label><label>{%trans '年的，年休假'%}<input id='id_nian_day_end' style='width:20px !important'/></label><label>{%trans '天'%}</label><label><input id='id_new_nian' class='m-btn  zkgreen rnd' type='button' value='{%trans '增加条件'%}' onclick='addtiaojian()'/></label>&nbsp;&nbsp;<label><input id='id_del_nian' class='m-btn  zkgreen rnd' type='button' value='{%trans '删除条件'%}' onclick='deltiaojian()'/></label></td>"
+            +"</tr>"
+           // +"<tr  id='id_guiz_new'><td><input type='button' value='{%trans '新增年休规则'%}' onclick='addguize()'/></td></tr>"
+            +"</tbody></table></fieldset></td></tr>"
+            +'<tr><td colspan="2"><span id="id_error" style="display:none;"></span></td></tr>'
+            +"<tr align='center'><td color>"
+            +(({% if request|reqHasPerm:"add" %}true{% else %}false{% endif %} || {% if request|reqHasPerm:"change" %}true{% else %}false{% endif %})?"<input id='id_submit_annual' type='button' class='m-btn  zkgreen rnd' value='{%trans "Submit" %}'/>":"")
+            +"</td></tr>"
+            
+            +"</table></tbody></form></div>"
+            );
+	     var h=$('#'+g_activeTabID+' #id_content').height()-20;
+	   var data=json['message']
+        var htmls=""
+        for(var i=2;i<=data['maxcount'];i++){
+            htmls+="<label id='id_nian_"+i+"_span'>{%trans '已满'%}<input id='id_nian_"+i+"_s' style='width:20px !important'/>{%trans '年不满'%}<input id='id_nian_"+i+"_e' style='width:20px !important'/>{%trans '年的，年休假'%}<input id='id_nian_day_"+i+"' style='width:20px !important'/>{%trans '天'%};</label>"
+        }
+        $("#id_tiaojian").html(htmls)
+       $("#id_month_s").val(data['month_s__'])
+       $("#id_day_s").val(data['day_s__'])
+       if(data['type_b__']==1){
+            $("#id_radio_f").attr("checked","checked")
+       }else if(data['type_b__']==2){
+            $("#id_radio_g").attr("checked","checked")
+       }else if(data['type_b__']==0){
+            $("#id_radio_fg").attr("checked","checked")
+       }
+        if(data['guize__']==1){
+             $("#id_guize_1").attr("checked","checked")
+        }else if(data['guize__']==2){
+             $("#id_guize_2").attr("checked","checked")
+        }else if(data['guize__']==3){
+             $("#id_guize_3").attr("checked","checked")
+        }else if(data['guize__']==4){
+             $("#id_guize_4").attr("checked","checked")
+        }
+        if(data['RemaindProc__']==0){
+             $("#id_RemaindProc0").attr("checked","checked")
+        }else if(data['RemaindProc__']==1){
+             $("#id_RemaindProc1").attr("checked","checked")
+        }else if(data['RemaindProc__']==2){
+             $("#id_RemaindProc2").attr("checked","checked")
+        }
+        $("#id_type_f").val(data['type_f__'])
+        $("#id_type_g1").val(data['type_g_1_'])
+        $("#id_type_g2").val(data['type_g_2_'])
+        $("#id_type_g3").val(data['type_g_3_'])
+        $("#id_type_g4").val(data['type_g_4_'])
+        $("#id_month_g1").val(data['month_g_1_'])
+        $("#id_day_g1").val(data['day_g_1_'])
+        $("#id_xi_g1").val(data['xi_g_2_'])
+        $("#id_xi_g2").val(data['xi_g_3_'])
+        $("#id_xi_g3").val(data['xi_g_4_'])
+        $("#id_man1_g").val(data['man_g_2_'])
+        $("#id_zeng_g").val(data['zeng_g_2_'])
+        $("#id_max_g").val(data['max_g_2_'])
+        $("#id_day_1_10").val(data['day_1_10_3_'])
+        $("#id_day_10_20").val(data['day_10_20_3_'])
+        $("#id_day_20").val(data['day_20_3_'])
+        for(var i=1;i<=data['maxcount'];i++){
+           $("#id_nian_"+i+"_s").val(data['nian_s_4_'+i])
+           $("#id_nian_"+i+"_e").val(data['nian_e_4_'+i])
+           $("#id_nian_day_"+i+"").val(data['nian_day_4_'+i])
+        }
+        $("#id_nian_end").val(data['nian_end_4_'])
+        $("#id_nian_day_end").val(data['nian_day_end_4_'])
+        count=data['maxcount']
+            $("#id_submit_annual").click(function(){
+                    var ll=[]
+                    var m=$("#id_month_s").val()
+                    var rr="{'Name':'month_s','Type':'','Value':'"+m+"','Sequence':''}"
+                    ll.push(rr)
+                    var d=$("#id_day_s").val()
+                    var rr="{'Name':'day_s','Type':'','Value':'"+d+"','Sequence':''}"
+                    ll.push(rr)
+                    var r=$(':radio[name=radio_b]:checked').val()
+                    var rr="{'Name':'type_b','Type':'','Value':'"+r+"','Sequence':''}"
+                    ll.push(rr)
+                    var g=$(':radio[name=guize]:checked').val()
+                    var rr="{'Name':'guize','Type':'','Value':'"+g+"','Sequence':''}"
+                    ll.push(rr)
+                    var r=$(':radio[name=RemaindProc]:checked').val()
+                    var rr="{'Name':'RemaindProc','Type':'','Value':'"+r+"','Sequence':''}"
+                    ll.push(rr)
+                    var f=$("#id_type_f").val()
+                    var rr="{'Name':'type_f','Type':'','Value':'"+f+"','Sequence':''}"
+                    ll.push(rr)
+                    var g1=$("#id_type_g1").val()
+                    var rr="{'Name':'type_g','Type':'1','Value':'"+g1+"','Sequence':''}"
+                    ll.push(rr)
+                    var g2=$("#id_type_g2").val()
+                    var rr="{'Name':'type_g','Type':'2','Value':'"+g2+"','Sequence':''}"
+                    ll.push(rr)
+                    var g3=$("#id_type_g3").val()
+                    var rr="{'Name':'type_g','Type':'3','Value':'"+g3+"','Sequence':''}"
+                    ll.push(rr)
+                    var g4=$("#id_type_g4").val()
+                    var rr="{'Name':'type_g','Type':'4','Value':'"+g4+"','Sequence':''}"
+                    ll.push(rr)
+                    var mg1=$("#id_month_g1").val()
+                    if(!checkint(mg1)){
+                        alert("{%trans '月份'%}"+"{%trans '必须为数字'%}");
+                        return false;
+                    }
+                    var rr="{'Name':'month_g','Type':'1','Value':'"+mg1+"','Sequence':''}"
+                    ll.push(rr)
+                    var dg1=$("#id_day_g1").val()
+                    if(!checkint(dg1)){
+                        alert("{%trans '休假天数'%}"+"{%trans '必须为数字'%}");
+                        return false;
+                    }
+                    var rr="{'Name':'day_g','Type':'1','Value':'"+dg1+"','Sequence':''}"
+                    ll.push(rr)
+                    var xg1=$("#id_xi_g1").val()
+                    if(!checkint(xg1)){
+                        alert("{%trans '系数'%}"+"{%trans '必须为数字'%}");
+                        return false;
+                    }
+                    var rr="{'Name':'xi_g','Type':'2','Value':'"+xg1+"','Sequence':''}"
+                    ll.push(rr)
+                    var xg2=$("#id_xi_g2").val()
+                    if(!checkint(xg2)){
+                        alert("{%trans '系数'%}"+"{%trans '必须为数字'%}");
+                        return false;
+                    }
+                    var rr="{'Name':'xi_g','Type':'3','Value':'"+xg2+"','Sequence':''}"
+                    ll.push(rr)
+                    var xg3=$("#id_xi_g3").val()
+                    if(!checkint(xg3)){
+                        alert("{%trans '系数'%}"+"{%trans '必须为数字'%}");
+                        return false;
+                    }
+                    var rr="{'Name':'xi_g','Type':'4','Value':'"+xg3+"','Sequence':''}"
+                    ll.push(rr)
+                    var man1=$("#id_man1_g").val()
+                    if(!checkint(man1)){
+                        alert("{%trans '天数'%}"+"{%trans '必须为数字'%}");
+                        return false;
+                    }
+                    var rr="{'Name':'man_g','Type':'2','Value':'"+man1+"','Sequence':''}"
+                    ll.push(rr)
+                    var ze=$("#id_zeng_g").val()
+                    if(!checkint(ze)){
+                        alert("{%trans '天数'%}"+"{%trans '必须为数字'%}");
+                        return false;
+                    }
+                    var rr="{'Name':'zeng_g','Type':'2','Value':'"+ze+"','Sequence':''}"
+                    ll.push(rr)
+                    var ma=$("#id_max_g").val()
+                    if(!checkint(ma)){
+                        alert("{%trans '天数'%}"+"{%trans '必须为数字'%}");
+                        return false;
+                    }
+                    var rr="{'Name':'max_g','Type':'2','Value':'"+ma+"','Sequence':''}"
+                    ll.push(rr)
+                    var da1=$("#id_day_1_10").val()
+                    if(!checkint(da1)){
+                        alert("{%trans '天数'%}"+"{%trans '必须为数字'%}");
+                        return false;
+                    }
+                    var rr="{'Name':'day_1_10','Type':'3','Value':'"+da1+"','Sequence':''}"
+                    ll.push(rr)
+                    var da2=$("#id_day_10_20").val()
+                    if(!checkint(da2)){
+                        alert("{%trans '天数'%}"+"{%trans '必须为数字'%}");
+                        return false;
+                    }
+                    
+                    var rr="{'Name':'day_10_20','Type':'3','Value':'"+da2+"','Sequence':''}"
+                    ll.push(rr)
+                    var da3=$("#id_day_20").val()
+                    if(!checkint(da3)){
+                        alert("{%trans '天数'%}"+"{%trans '必须为数字'%}");
+                        return false;
+                    }
+                    
+                    var rr="{'Name':'day_20','Type':'3','Value':'"+da3+"','Sequence':''}"
+                    ll.push(rr)
+                    for(var i=1;i<=count;i++){
+                        var da3=$("#id_nian_"+i+"_s").val()
+                        if(!checkint(da3)){
+                            alert("{%trans '年数'%}"+"{%trans '必须为数字'%}");
+                            return false;
+                        }
+                        var rr="{'Name':'nian_s','Type':'4','Value':'"+da3+"','Sequence':'"+i+"'}"
+                        ll.push(rr)
+                        var da3=$("#id_nian_"+i+"_e").val()
+                        if(!checkint(da3)){
+                            alert("{%trans '年数'%}"+"{%trans '必须为数字'%}");
+                            return false;
+                        }
+                        
+                        var rr="{'Name':'nian_e','Type':'4','Value':'"+da3+"','Sequence':'"+i+"'}"
+                        ll.push(rr)
+                        var da3=$("#id_nian_day_"+i+"").val()
+                        if(!checkint(da3)){
+                            alert("{%trans '天数'%}"+"{%trans '必须为数字'%}");
+                            return false;
+                        }
+                        
+                        var rr="{'Name':'nian_day','Type':'4','Value':'"+da3+"','Sequence':'"+i+"'}"
+                        ll.push(rr)
+                    }
+                    var da3=$("#id_nian_end").val()
+                    if(!checkint(da3)){
+                        alert("{%trans '天数'%}"+"{%trans '必须为数字'%}");
+                        return false;
+                    }
+                    
+                    var rr="{'Name':'nian_end','Type':'4','Value':'"+da3+"','Sequence':''}"
+                    ll.push(rr)
+                    var da3=$("#id_nian_day_end").val()
+                    if(!checkint(da3)){
+                        alert("{%trans '天数'%}"+"{%trans '必须为数字'%}");
+                        return false;
+                    }
+                    
+                    var rr="{'Name':'nian_day_end','Type':'4','Value':'"+da3+"','Sequence':''}"
+                    ll.push(rr)
+                    
+                    
+        			var queryStr="K="+eval(ll)+"&counts="+count
+        			$.ajax({ 
+        				type: "POST",
+        				url:"/iclock/att/submitAnnSet/",
+        				data:queryStr,
+        				dataType:"json",
+        				success:function(retdata){
+        					if(retdata.ret==0){
+        						$("#"+g_activeTabID+" #id_error").css("display","block");
+        						$("#"+g_activeTabID+" #id_error").html("<ul class='errorlist'><li>{%trans '保存成功'%}</li></ul>");
+        					}
+        					}
+        				});
+        		});
+        
+}
+});
+});
+function checkint(val){
+    var tt=/^\d{1,9}$|^\d{1,9}[.]\d{1,3}$/.test(val)
+    if(val!=''){
+        return tt
+    }else{
+        return true
+    }
+}
+function setdays(){
+    var m=$("#id_month_s").val()
+    var html="<option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option><option>15</option><option>16</option><option>17</option><option>18</option><option>19</option><option>20</option><option>21</option><option>22</option><option>23</option><option>24</option><option>25</option><option>26</option><option>27</option><option>28</option>"
+    if(m==1||m==3||m==5||m==7||m==8||m==10||m==12){
+        html+="<option>29</option><option>30</option><option>31</option>"
+    }else if(m==2){
+        html+=""
+    }else{
+        html+="<option>29</option><option>30</option>"
+    }
+    $("#id_day_s").html(html)
+}
+
+function addtiaojian(){
+    var ll=count
+    count=count+1
+    htmls="<label id='id_nian_"+count+"_span'>{%trans '已满'%}<input id='id_nian_"+count+"_s' style='width:20px !important'/>{%trans '年不满'%}<input id='id_nian_"+count+"_e' style='width:20px !important'/>{%trans '年的，年休假'%}<input id='id_nian_day_"+count+"' style='width:20px !important'/>{%trans '天'%};</label>"
+    $("#id_nian_"+ll+"_span").after(htmls)
+    
+}
+function deltiaojian(){
+    if(count==1){
+        return false;
+    }
+    $("#id_nian_"+count+"_span").remove(); 
+    count=count-1
+}
+
+function addguize(){
+    var block_html="<div id='annual'>"
+                    +"<div class='dcontent'><form>"
+                    +"<table>"
+                                +"<tr><td>{%trans '请选择规则模板：'%}<select id='id_select_ann' style='width:130px !important'><option value='1'>公司年休规则1</option><option value='2'>公司年休规则2</option><option value='3'>公司年休规则3</option><option value='4'>公司年休规则4</option></select></td></tr>"
+                                +"</table></form>"
+                    +"</div>"
+                    +"</div>"
+    		$(block_html).dialog({modal:true,resizable:false,
+    							  width: 324,
+    							  height:260,
+    							  title:gettext("年休假规则模板"),
+                                  buttons:[{text:"{% trans '提交' %}",click:function(){dorw()}},
+                                			{text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}],
+    							  close:function(){$(this).dialog("destroy"); }	
+    							});
+}
+function dorw(){
+    var ann=$("#id_select_ann").val()
+    var htmls=""
+    if(ann==1){
+        htmls+="111111111"
+    }else if(ann==2){
+        htmls+="222222222"
+    }else if(ann==3){
+        htmls+="333333333"
+    }else if(ann==4){
+        htmls+="444444444"
+    }
+    $("#id_guiz_new").before("<tr><td>"+htmls+"</td></tr>")
+    $("#annual").remove();
+}
+function canEdit()
+{
+ 	
+}
+
+</script>
+
+
+<div id="content_annual_set" >
+</div>

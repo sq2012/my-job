@@ -1,0 +1,28 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+<script>
+
+$(function(){
+initwindow_tabs();
+
+{% autoescape off %}
+	
+var html={{sub_menu}}
+
+{% endautoescape %}
+$("#west_content_tab_base_options").html(html)
+//submenuClick('/base/isys/option_basic/',)
+if ($("#"+g_activeTabID+" #menu_div ul").find('li').get(0))
+{
+    $("#"+g_activeTabID+" #menu_div ul").find('li').get(0).click()
+}
+	
+		
+});
+
+
+
+</script>
+
+

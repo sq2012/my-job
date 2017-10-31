@@ -1,0 +1,320 @@
+{% load iclock_tags %}
+{% load i18n %}
+{% block content_title %}{% endblock %}
+<script>
+function ActionHint(action, aName){return ""}
+pageQueryString=location.search;
+var groupHeaders=[]
+jqOptions[g_activeTabID]=copyObj(jq_Options);
+jqOptions[g_activeTabID].rowNum={{limit}}
+canDefine={% if user|HasPerm:"iclock.preferences_user" %}true{% else %}false{% endif %}
+{% block additionDataOptions %}
+{% endblock %}
+isSelectAll=false;
+extraBatchOp=[];
+tblName[g_activeTabID]='{{reportName}}';
+var Custom_Jqgrid_Height=""
+var page_tab=""
+jqOptions[g_activeTabID].rowList=[]
+jqOptions[g_activeTabID].multiselect=false
+//jqOptions.footerrow=false
+//jqOptions.userDataOnFooter=true
+jqOptions[g_activeTabID].pager='id_pager_report'
+{% block RenderReportGrid %}
+
+function RenderReportGrid(urlStr){
+    $("#id_grid_report").jqGrid("GridUnload")
+    //$.jgrid.gridUnload("#id_grid_report")
+	if(urlStr.indexOf("?")!=-1){
+		url=urlStr+"&title=1&stamp="+moment().unix();
+	}
+	else{
+		url=urlStr+"?title=1&stamp="+moment().unix();
+	}
+    $.ajax({
+	    type:"GET",
+	    url:url,
+	    dataType:"json",
+	    success:function(json){
+//		    jqOptions=copyObj(jq_Options)
+		    grid_disabledfields[g_activeTabID]=json['disabledcols']
+		    jqOptions[g_activeTabID].colModel=json['colModel']
+		    var groupHeaders=[]
+
+		    if (json['groupHeaders'])
+			var groupHeaders=json['groupHeaders']
+		    
+		    get_grid_fields(jqOptions[g_activeTabID])
+		    hiddenfields(jqOptions[g_activeTabID])
+		    
+		    jqOptions[g_activeTabID].url=urlStr
+		    jqOptions[g_activeTabID].footerrow=true
+		    jqOptions[g_activeTabID].userDataOnFooter=true
+		    var hcontent=$("#"+g_activeTabID+" #id_content").height();
+		    var hbar=$("#"+g_activeTabID+" #id_top").height();
+		    var height=hcontent-hbar-100;
+		    if (groupHeaders.length>0)
+		     height=height-30;
+		    
+		    if(typeof(Custom_Jqgrid_Height)!='undefined'&&Custom_Jqgrid_Height!=""){
+			    jqOptions[g_activeTabID].height=Custom_Jqgrid_Height;
+		    }else{jqOptions[g_activeTabID].height=height;}
+		    
+		    //jqOptions.sortname=''//getSidx('original_records')
+			jqOptions[g_activeTabID].url=urlStr 
+			
+		    $("#id_grid_report").jqGrid(jqOptions[g_activeTabID]);
+		    $("#id_grid_report").jqGrid('setFrozenColumns');
+		    $("#id_grid_report").jqGrid('setGroupHeaders', {useColSpanStyle: true,groupHeaders:groupHeaders})
+	 }
+    });        
+}
+{% endblock %} 
+{% block getDateUrl %}
+
+function getDateUrl()
+{
+
+	$("#id_con_error").css("display","none");
+
+	var urlStr=g_urls[g_activeTabID]
+	
+
+	return urlStr
+
+}
+{% endblock %} 
+
+
+$(function(){
+	$("#id_export_report").iMenu();
+	
+	
+	{% block date_set_range %}
+		if (pos_start_date)
+		    $('#'+g_activeTabID+' #id_StartDate').val(pos_start_date)
+		 else
+		    $('#'+g_activeTabID+' #id_StartDate').val(moment().startOf('month').format('YYYY-MM-DD'))
+		 
+		 if(pos_end_date)    
+		     $('#'+g_activeTabID+' #id_EndDate').val(pos_end_date)
+		 else
+		     $('#'+g_activeTabID+' #id_EndDate').val(moment().endOf('month').format('YYYY-MM-DD'))
+		 
+		
+		
+		$("#"+g_activeTabID+" #id_StartDate").datepicker(datepickerOptions);
+		$("#"+g_activeTabID+" #id_EndDate").datepicker(datepickerOptions);
+		
+	
+	    function validate_form_ipos(){   //验证表单的合法性(、开始时间、结束时间)
+		var st=$("#"+g_activeTabID+"  #id_StartDate").val();
+		var et=$("#"+g_activeTabID+"  #id_EndDate").val();
+		return (moment(st,'YYYY-MM-DD').isValid()&&moment(et,'YYYY-MM-DD').isValid()&&(moment(et,'YYYY-MM-DD').diff(moment(st,'YYYY-MM-DD'), 'days')<=100))
+	    }
+	{% endblock %}
+
+	
+	
+	var hcontent=$("#"+g_activeTabID+" #id_content").height();
+	var hbar=$("#"+g_activeTabID+" #id_top").length>0?$("#id_top").height():0;
+	var h=hcontent-hbar
+	$('#report_module').css('height',h)
+	
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+			searchShowReport();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+		if(event.keyCode==13)
+			searchShowReport();
+	});
+	$("#"+g_activeTabID+" #id_custom").click(function(){
+		ShowCustomField(jqOptions[g_activeTabID]);
+	});
+	
+	$("#"+g_activeTabID+" #id_search").click(function(){
+			//var search_user_pin=$("#search_id_user__PIN").val();
+			var isError=validate_form_ipos();
+			var urlstr="";
+			if(isError){
+		 
+				var st=$("#"+g_activeTabID+"  #id_StartDate").val();
+				var et=$("#"+g_activeTabID+"  #id_EndDate").val();
+				if (st>et) {
+					alert('开始日期不能大于结束日期！')
+					return
+				}
+				urlstr=getDateUrl(st,et)
+				}
+			else
+			{
+			    alert('请检查时间格式是否正确，且最多查询100天！')
+			    return;
+			}
+			pos_start_date=st
+			pos_end_date=et
+			
+			savecookie("search_urlstr",urlstr);
+			$("#id_grid_report").jqGrid('setGridParam',{url:urlstr,datatype:"json"}).trigger("reloadGrid");
+		});
+	
+	$("#id_reload_report").click(function(){
+		reloadData("report");
+	});
+	urlStr=getDateUrl(pos_start_date,pos_end_date)
+	if (urlStr=='') return
+
+
+	savecookie("search_urlstr",urlStr);
+	
+	RenderReportGrid(urlStr)
+
+	var inputEl = $('#'+g_activeTabID+' .search-input')
+         defVal[g_activeTabID] = inputEl.val();
+    	 inputEl.bind("focus",function(){
+		             var _this = $(this);
+				if (_this.val() == defVal[g_activeTabID]) {
+				    _this.val('');
+				    _this.css('color','#000000');
+				    //_this.attr('role','disabled')
+				}
+		})
+	inputEl.bind("blur",function(){
+		        var _this = $(this);
+			if (_this.val() == '') {
+			    _this.val(defVal[g_activeTabID]);
+			    _this.css('color','#CCCCCC');
+			    _this.attr('role','defvalue')
+			}
+			else
+			    _this.attr('role','cansearch')
+		})
+	inputEl.bind("keydown",function(event) {
+			if (event.which == 13) {
+			      var _this = $(this);
+			       _this.attr('role','cansearch')
+			 }
+		})
+	{% block queryButton %}	
+	
+	$("#"+g_activeTabID+" #queryButton").hide()
+	{% endblock %}
+
+
+});
+
+function resetError()
+{
+	$("#id_error").hide();
+	$("#id_error").html('')
+
+}
+function searchShowReport(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	   var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	   var v=""
+	urlStr=getDateUrl()
+	if (urlStr=='') return
+	if(v!='')
+	{
+		if(urlStr.indexOf("?")==-1){
+			urlStr+="?q="+escape(v)
+		}
+		else{
+			urlStr+="&q="+escape(v)
+		}
+	}
+	savecookie("search_urlstr",urlStr);
+	$("#id_grid_report").jqGrid('setGridParam',{url:urlStr,datatype:"json"}).trigger("reloadGrid");	
+	
+}
+
+</script>
+<div id="id_top">
+	{% block top %}
+	<div class="sear-box quick-sear-box" >
+		
+		{% block date_range %}
+		
+		<div id="search_Time" class='left' style="width:630px;">
+			<span>
+				    <label  >{%trans '起始日期'%}</label>
+					<input type='text' name='StartDate'  id='id_StartDate' style='width:110px;'>
+				    <label  >{%trans '结束日期'%}</label>
+					<input type='text' name='EndDate'  id='id_EndDate' style='width:110px;'>
+			</span>
+			<span id='id_search' ><a class='m-btn  zkgreen rnd mini'>{%trans 'Query'%}</a></span>
+				</div>
+		
+		{% endblock %}
+		
+		
+		{% block search %}
+		<div class="s-info right" id="sear_area">			
+			<div class="nui-ipt nui-ipt-hasIconBtn " >
+				<input id="searchbar" class="search-input" type="text"  value="身份证号,姓名" role='defvalue' autocomplete="off" />
+				<span id ="queryButton" class="nui-ipt-iconBtn">
+					<b id="_icon_2_28" class="nui-ico nui-ico-dArr "></b>
+				</span>
+				
+			</div>
+			
+			<div class="main-search-btn">
+			
+				<span id="searchButton" class="chaxun icon iconfont icon-chaxun"></span>
+			</div>
+		</div>
+		{% endblock %}	
+	</div>
+	{% endblock %} 
+
+	{% block toolbar %}
+
+	<div id="id_toolbar">
+			<UL class="toolbar" id="navi">
+				<LI id="id_reload_report" ><SPAN class="icon iconfont icon-shuaxin"></SPAN>{%trans "Reload"%}</LI>
+				<LI id="id_export_report"  ><SPAN class="icon iconfont icon-daochu"></SPAN>{%trans "Export"%}
+				        <ul id="op_menu_export" class="op_menu">
+						<li><span>{%trans "文件格式"%}</span>
+							<ul>
+							<li onclick="javascript:clickexport(tblName[g_activeTabID],0);"><a href="#">EXCEL</a></li>
+							<li onclick="javascript:clickexport(tblName[g_activeTabID],1);"><a href="#">TXT</a></li>
+							<li onclick="javascript:clickexport(tblName[g_activeTabID],2);"><a href="#">PDF</a></li>
+							</ul>
+						</li>
+					</ul>
+				</LI>
+				<LI id="id_custom" ><SPAN class="icon iconfont icon-select"></SPAN>{%trans "Preferences"%}</LI>
+
+			</ul>
+        </div>
+
+	{% endblock %} 
+	
+</div>
+
+<!-- 
+	<div id="show_field_selected">
+		<div class="title"><span class='close' onclick='hideFields_define();'></span></div>
+		<div id="id_fields_selected"></div>
+	</div> -->
+
+
+<div id="report_module" style="position:relative; width: 99%;margin-top: 2px;">
+	{% block Data %}
+
+		<div class="ui-layout-center" >
+			<table id="id_grid_report" >	</table>
+			<div id="id_pager_report"></div>
+		</div>
+	{% endblock %} 
+	 
+{% block extraSection %}{% endblock %}
+</div>
+<div id="id_tip" class="tip" style="visibility:hidden"></div>
+
+
+

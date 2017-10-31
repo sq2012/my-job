@@ -1,0 +1,504 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+//options.disableCols=["0","12","13"];
+
+hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+hasImport={% if user|HasPerm:"iclock.import_UserACPrivilege" %}true{% else %}false{% endif %}
+TimeZones=[];
+SN=[];
+Group=[]
+jqOptions[g_activeTabID]=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='UserACPrivilege';
+//jqOptions.sortname='UserID__PIN';
+options[g_activeTabID].dlg_width=350;
+options[g_activeTabID].dlg_height=300;
+/*function beforePost(obj,actionName)
+{
+	var flag=true
+	if ($("#txtSN").val()=="")
+	{
+		flag=false;
+		$("#id_errors").html("<b>{%trans "Please choice device"%}</b>")
+	}
+	return flag
+}
+function afterPost_UserACPrivilege(flag,obj)
+{
+	$("#id_edit_form",obj).find(":input[type=text]").each(function(i,elem){
+		$(this).val("");})
+}*/
+$(function(){
+	//$("#"+g_activeTabID+" #id_newrec").html("<span class='addlink'></span><a href='#'>{%trans 'Edit permissions'%}</a>");
+	$("#"+g_activeTabID+" #id_newrec").click(function(){
+		createUserACDlg();
+		//processNewModel();
+	});
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowUserACP();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowUserACP();
+	});
+	$("#"+g_activeTabID+" #searchbar").val(gettext("工号,姓名"))
+	$("#"+g_activeTabID+" #id_export").css('display','none');
+	$("#"+g_activeTabID+" #id_third").html("");
+	
+	$.ajax({ 
+			type: "POST",
+			url:"/iclock/att/getData/?func=ACTimeZones",
+			dataType:"json",
+			success:function(json){
+				TimeZones=json;
+			}
+		});
+
+	
+	$.ajax({ 
+			type: "POST",
+			url:"/iclock/att/getData/?func=ACGroup",
+			dataType:"json",
+			success:function(json){
+				Group=json;
+			}
+		});
+	
+	
+});
+//模糊查询
+function searchShowUserACP(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+	var url="/iclock/data/UserACPrivilege/?q="+escape(v)
+	savecookie("search_urlstr",url);
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+function createQueryDlg_UserACPrivilege(){
+	createQueryDlgbypage('UserACPrivilege_search')
+	$('#dlg_for_query_UserACPrivilege_search').dialog({position: { my: "right top", at: "right bottom",of:"#id_searchbar"},
+	buttons:[{id:"btnShowOK",text:gettext('搜索'),
+	  click:function(){searchbydept_UserACPrivilege('UserACPrivilege_search');}},
+	 {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+	}] })
+}
+
+function searchbydept_UserACPrivilege(page){
+    var dept_ids=getSelected_dept("showTree_"+page)
+    if (dept_ids!=null){
+    	if(dept_ids==undefined||dept_ids==''){
+    		alert("{% trans "请选择部门" %}")
+    		return false;
+    	}
+    }else{
+    	alert("{% trans "请选择部门" %}")
+    	return false;
+    }
+    var ischecked=0;
+    if($("#id_cascadecheck_"+page).prop("checked"))
+    	ischecked=1;
+    urlStr="deptIDs="+dept_ids+"&isContainChild="+ischecked    
+    var url="/iclock/data/UserACPrivilege/?"+urlStr
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function empToDevs(){
+	$.blockUI({title:'',theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}<br /></h1>'});
+    $.ajax({type: "POST",
+                    url: '/iclock/iacc/empToDevice/',
+                    dataType:"json",
+                    success: function(retdata){
+                                if(retdata.ret==0){	
+                                    $.unblockUI()
+                                    $("#id_error").css("display","block");
+                                    $("#id_error").html(retdata.message)
+                                    
+                                }else{
+                                    alert(retdata.message);
+                                }},
+                        error: function(){ $.unblockUI();alert($.validator.format(gettext('Operating failed for {0} !'),options.title));}
+                        });
+
+
+}
+
+function getDevHtml(devs){
+	var retHtml="<tr><th><input type='checkbox' id='is_select_all_device' onclick='check_all_for_row_device(this.checked);' /></th><th>设备序列号</th><th>设备名称</th></tr>"
+
+	for(var i=0;i<devs.length;i++){
+		retHtml+="<tr><td><input type='checkbox' class='class_select_device' onclick='showSelected_device();'  name='"+devs[i].SN+"' id='"+devs[i].SN+"' alt='' /></td><td>"+devs[i].SN+"</td><td>"+devs[i].Alias+"</td></tr>"
+	}
+	return retHtml;
+}
+
+function showSelected_device(){
+    var c = 0;
+	$("#id_addsch_tmpShift").attr("disabled","disabled");
+    $.each($(".class_select_device"),function(){
+			//if(this.checked) c+=1;
+            })
+   // $("#selected_count").html("" + c);
+}
+
+function check_all_for_row_device(checked) {
+
+    if (checked) {
+        $(".class_select_device").attr("checked", "true");
+    } else {
+        $(".class_select_device").removeAttr("checked");
+    }
+    showSelected_device();
+}
+
+
+function getSelected_device() {
+	var emp=[];
+	$.each($(".class_select_device"),function(){
+			if(this.checked)
+				emp.push(this.id)
+	});
+	return emp;
+}
+
+function getDevs(){
+	var jqOptions3=copyObj(jq_Options);
+	$.ajax({
+		type:"GET",
+		url:"/iclock/att/getColModel/?dataModel=devices",
+		dataType:"json",
+		data:'',
+		success:function(json){
+			jqOptions3.colModel=json['colModel']
+			jqOptions3.height=$('#dlg_dept_body_UserACPrivilege_Device').height()-52
+			jqOptions3.url='/iclock/data/iclock/'
+			jqOptions3.pager="#id_pager_iclock_UserACPrivilege_Device";
+			renderGridData("iclock_UserACPrivilege_Device",jqOptions3)
+		}
+	});
+}
+
+function showgridbyiclock(){
+    var v=$("#search_iclock_UserACPrivilege_Device").val();
+	var urlstr="/iclock/data/iclock/?q="+escape(v);
+	$("#id_grid_iclock_UserACPrivilege_Device").jqGrid('setGridParam',{url:urlstr}).trigger("reloadGrid");
+}
+
+
+function add_empDevice(){
+	 var title="{%trans 'Distribution Device' %}";
+	  createDlgdeptfor('UserACPrivilege_Device')
+	  $('#dlg_for_query_UserACPrivilege_Device').dialog({title:title,
+	  buttons:[{id:"btnShowOK",text:gettext('保存'),click:function(){subdata1('UserACPrivilege_edit');}},
+	   {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+	  }] })
+	createDlgother1('UserACPrivilege_Device')
+	getDevs()
+}
+function createDlgother1(page){//添加附件条件
+	var html="<div id='alldev' style='margin:3px'><table id='id_grid_iclock_"+page+"' ></table><div id='id_pager_iclock_"+page+"'></div><span id='id_error' style='display:none;float:right'></span></div>"
+	$("#dlg_other_body_"+page).html(html)
+	var iclockhtml="<span style='padding-right:30px'><input id='search_iclock_"+page+"' style='height:18px;top:-8px'/><img id='id_iclockimg' src='/media/img/filter.gif' style='height:24px;' title='"+gettext("根据设备序列号、设备别名进行查询")+"' onclick='showgridbyiclock()'></span>"
+	$("#dlg_other_title_"+page).html(iclockhtml)
+	$("#dlg_other_title_"+page).addClass('cascadecheck')
+	$("#dlg_other_"+page).css("width",'320')
+	$("#dlg_emp_"+page).css("width",'470')
+	$("#dlg_other_"+page).css("height",$("#dlg_emp_"+page).height())
+	$("#dlg_other_"+page).addClass('dlgempdiv')
+	$("#dlg_for_query_"+page).dialog({dialogClass: "",width:'1082',height:'488'})
+	$("#dlg_other_"+page).position({
+		  my: "left top",
+		  at: "right top",
+		  of: "#dlg_emp_"+page
+		});
+	$("#search_iclock_"+page).position({
+		  my: "right top",
+		  at: "left top",
+		  of: "#id_iclockimg"
+		});
+	$("#"+g_activeTabID+" #id_error").position({
+		  my: "left-950 top-120",
+		  at: "left bottom",
+		  of: "#alldev"
+		});
+}
+
+function subdata1(){
+    $("#"+g_activeTabID+" #id_error").html('')
+    var sns=getSelected_emp_ex("iclock_UserACPrivilege_Device")
+    var emp=getSelected_emp_ex("UserACPrivilege_Device");
+    var deptIDs=getSelected_dept("showTree_UserACPrivilege_Device")
+	var ischecked=0;
+	if($("#id_cascadecheck_UserACPrivilege_Device").prop("checked"))
+		ischecked=1;
+    var queryStr="&SNS="+sns+"&UserIDs="+emp+"&DeptIDs="+deptIDs+"&isContainChild="+ischecked;
+    if(emp==""&&deptIDs==""){
+		$("#id_error").html(gettext('Please select department or user')).css("color","red");
+		return false		
+	}else{
+		urlAddr="/iclock/iacc/UserACCDevice/";
+		$.ajax({
+			type:"POST",
+			url:urlAddr,
+			data:queryStr,
+			dataType:"json",
+			async:false,
+			success:function(msg){
+				$("#id_error").html(msg.message).css("display","block").css("color","red");
+			}
+		});
+	
+	}
+}
+function getGroup_html(){
+	var html=""
+	for(i=0;i<Group.length;i++){
+		if(i==0){
+			html+="<option value='"+Group[i].GroupID+"' name='"+Group[i].Name+"' selected>"+Group[i].GroupID+'  '+Group[i].Name+"</option>"
+		}else{
+			html+="<option value='"+Group[i].GroupID+"' name='"+Group[i].Name+"'>"+Group[i].GroupID+'  '+Group[i].Name+"</option>"
+	   }
+	}
+	return html
+}
+//得到ACTimeZones列表
+function getTimeZones_html()
+{
+	var options_html="<option value='0' selected>---------</option>"
+	for(i=0;i<TimeZones.length;i++)
+	{
+		options_html+="<option value='"+TimeZones[i].TimeZoneID+"' name='"+TimeZones[i].Name+"'>"+TimeZones[i].TimeZoneID+'  '+TimeZones[i].Name+"</option>"
+	}
+	return options_html
+}
+
+
+
+function strOfData_UserACPrivilege(data)
+{
+	return data.PIN+' '+data.EName;
+}
+
+<!-- function canEdit()
+{
+	if(!options.canEdit) return;
+		var rows=$("#id_grid").jqGrid("getCol",options.edit_col+1,true)
+		for(var i=0;i<rows.length;i++)
+		{
+			var id=rows[i].id;
+			var colData=rows[i].value;
+			var r=$("#id_grid").jqGrid("getRowData",id)
+			var grpid=r.id
+			var apage="<a class='can_edit' href='#' onclick='editclick("+grpid+")'>"+colData+"</a>"
+			var apages ="<div style='width:80px;text-align:center;'><a href='#' onclick='javascript:createDlgDevice("+id+");'>"
+					+"<img title='"+gettext("Show Devices List")+"' src='../media/img/more.png' />"
+					+"</a></div>"
+            $("#id_grid").jqGrid("setRowData",id,{PIN:apage});
+            $("#id_grid").jqGrid("setRowData",id,{SN:apages});
+		}
+ 	
+} -->
+
+
+function getDevHtml_ACC(devs){
+	var retHtml=''
+	for(var i=0;i<devs.length;i++){
+        retHtml+="<option value='"+devs[i].SN+"'>"+devs[i].Alias+"("+devs[i].SN+")</option>"
+	}
+	return retHtml;
+}
+
+function createDlgDevice(id)
+{	
+
+    if(typeof id=='undefined')
+	{
+		var result=getSelected(options.edit_col,"true");
+	}
+	else
+	{
+		var result={ss:id}
+    }
+    $.ajax({ 
+	        type: "POST",
+	        url:"/iclock/att/getData/?func=accdevs&q="+id,
+	        dataType:"json",
+	        success:function(json){
+			devs=json;
+			var block_html="<div id='idcreateDlgDev'><form id='id_edit_form'>"
+					+"<table align='center'>"
+					+"<tr>"
+					+"<td><fieldset><legend>{%trans 'Devices List:'%}</legend>"
+					+"<div style='padding-left:2px;'><select id='id_sTimeTbl_sel' multiple='multiple' size='10' style='width:230px !important; align:center'>"+getDevHtml_ACC(devs)+"</select></div></fieldset>"
+					+"</td>"
+					+"</tr>"
+					+"<tr><td><span id='id_error_sec'></span></td></tr>"
+					+"</table></form>"
+					+"</div>"
+			$(block_html).dialog({modal:true,resizable:false,
+						width: 300,
+						height:260,
+						title:$("#id_grid").jqGrid("getRowData",result.ss).Name+gettext("Show Devices List"),
+						close:function(){$("#idcreateDlgDev").remove();}	
+					});
+		}})
+}
+
+
+function process_dialog_UserACPrivilege(obj)
+{
+    options.dlg_width='350px';
+	options.dlg_height='auto';
+    if($("#id_IsUseGroup",obj).val()==0){
+        $("label[for='id_TimeZone1']",obj).parent().css("display","block");
+        $("#id_TimeZone1",obj).css("display","block");
+        $("label[for='id_TimeZone2']",obj).parent().css("display","block");
+        $("#id_TimeZone2",obj).css("display","block");
+        $("label[for='id_TimeZone3']",obj).parent().css("display","block");
+        $("#id_TimeZone3",obj).css("display","block");
+    }else{
+        $("label[for='id_TimeZone1']",obj).parent().css("display","none");
+        $("#id_TimeZone1",obj).css("display","none");
+        $("label[for='id_TimeZone2']",obj).parent().css("display","none");
+        $("#id_TimeZone2",obj).css("display","none");
+        $("label[for='id_TimeZone3']",obj).parent().css("display","none");
+        $("#id_TimeZone3",obj).css("display","none");
+        
+    }
+    $("#id_IsUseGroup",obj).change(function(){
+        if($("#id_IsUseGroup",obj).val()==0){
+            $("label[for='id_TimeZone1']",obj).parent().css("display","block");
+            $("#id_TimeZone1",obj).css("display","block");
+            $("label[for='id_TimeZone2']",obj).parent().css("display","block");
+            $("#id_TimeZone2",obj).css("display","block");
+            $("label[for='id_TimeZone3']",obj).parent().css("display","block");
+            $("#id_TimeZone3",obj).css("display","block");
+        }else{
+            $("label[for='id_TimeZone1']",obj).parent().css("display","none");
+            $("#id_TimeZone1",obj).css("display","none");
+            $("label[for='id_TimeZone2']",obj).parent().css("display","none");
+            $("#id_TimeZone2",obj).css("display","none");
+            $("label[for='id_TimeZone3']",obj).parent().css("display","none");
+            $("#id_TimeZone3",obj).css("display","none");
+            
+        }
+			
+		})
+
+}
+function createUserACDlg(){
+  var title="{%trans 'Edit permissions' %}";
+   createDlgdeptfor('UserACPrivilege_edit',1)
+   $('#dlg_for_query_UserACPrivilege_edit').dialog({title:title,
+   buttons:[{id:"btnShowOK",text:gettext('保存'),click:function(){subdata('UserACPrivilege_edit');}},
+    {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+   }] })
+	createDlgother_UserACPrivilege('UserACPrivilege_edit')
+	$("#id_TimeZone1").html(getTimeZones_html())
+	$("#id_TimeZone2").html(getTimeZones_html())
+	$("#id_TimeZone3").html(getTimeZones_html())
+	$("#id_accgroup").html(getGroup_html())
+	
+}
+function createDlgother_UserACPrivilege(page){//添加附件条件
+	var html="<div id='alldev' style='margin:3px'><form id='id_edit_form' method='POST'><table id='id_setField'>"
+	+"<tr><th><label for='id_TimeZone'>{%trans 'TimeZone' %}:</label></th><td><select id='id_TimeZone1' name='TimeZone1' style='width: 97px !important;'></select></td></tr>"
+	+"<tr><td></td><td><select id='id_TimeZone2' name='TimeZone2' style='width: 97px !important;'></select></td></tr>"
+	+"<tr><td></td><td><select id='id_TimeZone3' name='TimeZone3' style='width: 97px !important;'></select></td></tr>"
+	+"<tr><th><label for='accessgroup' >{% trans 'Access Group' %}:</label></th><td><select id='id_accgroup' name='ACGroupID' style='width: 97px  !important;'></select></td></tr>"
+
+	+"<tr><td></td></tr>"
+	+"<tr><td colspan='2'>"
+	+"<input type='hidden' id='id_userid' value='' name='UserID' />"
+	+"<input type='hidden' id='id_isContainChild' value='' name='isContainChild' />"
+	+"<input type='hidden' id='id_deptid' value='' name='DeptID' />"
+	+"</td></tr>"
+	+"<tr><td colspan='2'><span id='id_error'></span></td>"
+	+"</table></form></div>"
+	$("#dlg_other_body_"+page).html(html)
+	$("#dlg_other_title_"+page).addClass('cascadecheck')
+	$("#dlg_other_"+page).css("width",'220')
+	$("#dlg_emp_"+page).css("width",'470')
+	$("#dlg_other_"+page).css("height",$("#dlg_emp_"+page).height())
+	$("#dlg_other_"+page).addClass('dlgempdiv')
+	$("#dlg_for_query_"+page).dialog({dialogClass: "",width:'982',height:'458'})
+	$("#dlg_other_"+page).position({
+		  my: "left top",
+		  at: "right top",
+		  of: "#dlg_emp_"+page
+		});
+	
+}
+
+function subdata(pagename){
+	$("#id_createerror").html('')
+	var ids=getSelected_emp_ex(pagename);
+	var deptId=getSelected_dept("showTree_"+pagename)
+	var ischecked=0;
+	if($("#id_cascadecheck_"+pagename).prop("checked"))
+		ischecked=1;
+	var accgroup=$("#id_accgroup").val()
+	if(ischecked==true){
+		ischecked=1
+	}else{
+		ischecked=0
+	}
+/*	var sn=''
+	for(i=0;i<$("input[id='SN']:checked").length;i++){
+		if(i!=$("input[id='SN']:checked").length-1){
+			sn+=$("input[id='SN']:checked")[i].value+','
+		}else{
+			sn+=$("input[id='SN']:checked")[i].value
+		}
+	}
+*/
+	var queryStr=$("#id_edit_form").formSerialize()+"&UserIDs="+ids+"&DeptIDs="+deptId+"&isContainChild="+ischecked;
+	if(accgroup==null){
+		$("#id_createerror").html(gettext('No AccGroup Data')).css("color","red");
+		return false
+	}else if(ids==""&&deptId==""){
+		$("#id_createerror").html(gettext('Please select department or user')).css("color","red");
+		return false		
+	}else{
+		urlAddr=g_urls[g_activeTabID]+"_new_/";
+		$.ajax({
+			type:"POST",
+			url:urlAddr,
+			data:queryStr,
+			dataType:"json",
+			async:false,
+			success:function(msg){
+				$("#id_createerror").html(msg.message).css("color","red");
+			}
+		});
+	
+	}
+	dlgdestroy(pagename)
+	reloadData('')
+}
+
+{% endblock %}
+
+{% block extractButton %}
+      {% if user|HasPerm:"iclock.setdevice" %}
+  
+    <LI id="id_device" class="button-timezone"  onclick='add_empDevice();'><SPAN></SPAN>{%trans "分配设备"%}</LI>
+{%endif%}
+     {% if user|HasPerm:"iclock.Employee_to_device" %}
+  
+    <LI id="to_device" class="button-timezone"  onclick='empToDevs();'><SPAN></SPAN>{%trans "上传门禁人员到设备"%}</LI>
+{%endif%}
+
+{% endblock %}
+{% block newrec %}
+{% if request|reqHasPerm:"add" %}
+ <LI id="id_newrec" class="button-add"><SPAN></SPAN>{%trans 'Edit permissions'%}</LI>
+{% endif %}
+{% endblock %}
+

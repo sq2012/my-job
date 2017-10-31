@@ -1,0 +1,32 @@
+{% load iclock_tags %}
+{% load i18n %}
+<script type="text/javascript">
+totalRecCnt_attReAb={{ item_count }};
+item_from_attReAb={{ from }}
+page_index_attReAb={{ page }};
+page_limit_attReAb={{ limit }};
+page_number_attReAb={{ page_count }};
+$(function(){
+var page_style=2;
+$("#id_result_pages").html(getPagers("", item_from_attReAb-1, totalRecCnt_attReAb, page_limit_attReAb, page_index_attReAb, page_number_attReAb,page_style,1));
+});
+</script>
+<table style="width:900px !important;border-right:1px !important;">
+<tr><td align="left">
+    <span id="id_result_pages"></span>
+</td></tr>
+<tr><td style="border:0px;">
+    <table id="tbl">
+        {% autoescape off %}
+        <thead><tr><th>{% trans 'department name' %}</th><th>{%trans "PIN"%}</th><th>{%trans "EName"%}</th><th>{%trans "CheckTime"%}</th><th>{% trans 'Verification' %}</th><th>{%trans "CheckType"%}</th><th>{%trans "NewType"%}</th><th>{% trans 'Memo.' %}</th><th>{% trans 'Device name' %}</th></tr></thead> {% endautoescape %}
+        {% for item in latest_item_list %}
+        {%if forloop.counter|isOdd%}
+            <tr class='row1'><td>{{ item.employee.Dept.DeptName }}</td><td>{{ item.employee.PIN }}</td><td>{{ item.employee.EName }}</td><td>{{ item.checktime }}</td><td>{{ item.get_Verify_display|default:"" }}</td><td>{{ item.CheckType|StateName }}</td><td>{{ item.NewType|StateName }}</td><td>{{ item.AbNormiteID|AbnormiteName }}</td><td>{{ item.Device|default:"" }}</td></tr>
+        {%else%}
+            <tr class='row2'><td>{{ item.employee.Dept.DeptName }}</td><td>{{ item.employee.PIN }}</td><td>{{ item.employee.EName }}</td><td>{{ item.checktime }}</td><td>{{ item.get_Verify_display|default:"" }}</td><td>{{ item.CheckType|StateName }}</td><td>{{ item.NewType|StateName }}</td><td>{{ item.AbNormiteID|AbnormiteName }}</td><td>{{ item.Device|default:"" }}</td></tr>
+         {%endif%}
+        {% endfor %}
+        <tr></tr>
+    </table>
+</td></tr>
+</table>

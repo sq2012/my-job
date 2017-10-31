@@ -1,0 +1,444 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+
+hasImport={% if user|HasPerm:"iclock.import_NUM_RUN" %}true{% else %}false{% endif %}
+jqOptions[g_activeTabID].colModel={{colModel}}
+jqOptions[g_activeTabID].onSelectRow=function(ids){Check_shift(ids);}
+
+tblName[g_activeTabID]='NUM_RUN';
+jqOptions[g_activeTabID].pager='id_pager_'+tblName[g_activeTabID]
+jqOptions[g_activeTabID].sortname='Num_runID';
+//show_left=false
+weekStartDay=0;
+schClass=[];
+selected_data=[]
+options[g_activeTabID].dlg_width=330
+options[g_activeTabID].dlg_height=310;
+	{% block customHeight %}
+
+    Custom_Jqgrid_Height=220;
+    
+    {% endblock %}
+var flag={% if request.user.is_superuser %}true{% else %}false{% endif %}
+			
+function save_hide_Autued_Deptment (obj,page) {
+		var deptids=getSelected_dept("showTree_"+page);
+		if(deptids.length>0)
+		{
+			var deptID=deptids[0]
+			var deptNames=getSelected_deptNames("showTree_"+page);
+			$("#department",obj).val(formatArrayEx(deptNames));
+			$("#id_Num_RunOfDept",obj).val(deptID);
+		}
+		else
+		{
+			$("#department",obj).val('')
+			$("#id_Num_RunOfDept",obj).val('');
+		}
+		dlgdestroy(page)
+
+}
+
+function num_deptTree(obj){
+		var depName=$("#id_span_parent",obj).html();
+		depName=$.trim(depName)
+		sch_html='<div class="west_info">'
+		sch_html=sch_html+'<span style="float:left;border-top:1 solid #5B80B2;"><input alt="department_time" type="text" style="width:150px !important;" disabled="true"  id="department"  value="'+depName+'"></span>'
+                if(flag)
+                    sch_html=sch_html+'<span style="float:left;"><img  alt="{%trans 'open department tree'%}" src="/media/img/sug_down_on.gif" id="id_drop_dept_time"/></span>'
+		sch_html=sch_html+'</div>'
+		$('#id_Num_RunOfDept',obj).after(sch_html)
+		$('#id_Num_RunOfDept',obj).hide()
+		if(flag)
+                {
+		$("#id_drop_dept_time",obj).click(function(){
+			createQueryDlgbypage('numrun_auth')
+			var zTree = $.fn.zTree.getZTreeObj("showTree_numrun_auth");
+			zTree.setting.check.enable = false;
+			
+			$('#dlg_for_query_numrun_auth').dialog({ position: { my: "left top-150", at: "right top",of:"#id_drop_dept_time"},buttons:[{id:"btnShowOK",text:gettext('确定'),
+									  click:function(){save_hide_Autued_Deptment(obj,'numrun_auth');}},
+									 {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+									}] })
+
+		
+                     });
+                }
+	}
+function num_showDeptment (obj) {
+	var top =  $("#department",obj).position().top-135;
+	var left =  $("#department",obj).position().left+165;
+	var d_height=$("#department",obj).height();
+	$("#show_deptment",obj).css("display","block").css({position: 'absolute',"top": top+d_height+6+'px',"left": left+'px'});
+}
+
+function process_dialog_NUM_RUN(obj,flag){
+	$(obj).dialog({resizable:false,modal:true});
+    $("#id_StartDate",obj).datepicker(datepickerOptions);
+	$("#id_EndDate",obj).datepicker(datepickerOptions);
+	num_deptTree(obj);
+	f=$(obj).find("#id_edit_form").get(0)
+		$(f).validate({
+				rules: {
+						StartDate: {required:true,dateISO:true},
+						EndDate: {required:true,dateISO:true},
+						Cycle: {required:true,digits:true,min:1,max:1000},
+						Units: {required:true,digits:true}
+					}
+				});
+	
+}
+
+function datas_NUM_RUN(id){
+	var r=$("#id_grid_"+tblName[g_activeTabID]).jqGrid("getRowData",id);
+	var Num_runID=r.Num_runID
+	var Name=r.Name
+	var StartDate=r.StartDate
+	var EndDate=r.EndDate
+	var Cycle=r.Cycle
+	var Units=r.Units
+	var UnitsNum=r.h_unit
+/*
+	if (Units=="月"){
+		UnitsNum=2;
+	}else if(Units=="天"){
+		UnitsNum=0;
+	}else if(Units=="周"){
+		UnitsNum=1;
+	}
+*/
+	var data=[Num_runID,$(Name).text(),StartDate,EndDate,Cycle,Units,UnitsNum];
+	return data
+}
+function Check_shift(id){
+	data=datas_NUM_RUN(id)
+	PageSelectRow(data);
+ }
+function afterPost_NUM_RUN(flag,obj)
+{
+	$("#id_edit_form",obj).find(":input[type=text]").each(function(i,elem){
+		$(this).val("");})
+}
+
+//模糊查询
+function searchShowNUM(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+    var url="/iclock/data/NUM_RUN/?q="+escape(v)
+    savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function strOfData_NUM_RUN(data)
+{
+	return stripHtml(data.Name);
+}
+
+function PageSelectRow(rowData)
+{
+	ii = 2;
+    show_shift_Detail(rowData,ii);  
+}
+
+function getTZDayLabel(index)
+{
+	return "第 "+(index+1)+" 天"
+}
+function getTZWeekLabel(index)
+{  
+    
+    index+=parseInt(weekStartDay); 
+	return ["{% trans 'Sunday' %}","{% trans 'Monday' %}","{% trans 'Tuesday' %}","{% trans 'Wednesday' %}","{% trans 'Thursday' %}","{% trans 'Friday' %}","{% trans 'Saturday' %}"][index % 7];
+}
+
+var week=[
+		"{% trans 'Sunday' %}",
+	     "{% trans 'Monday' %}",
+	     "{% trans 'Tuesday' %}",
+	     "{% trans 'Wednesday' %}",
+	     "{% trans 'Thursday' %}",
+	     "{% trans 'Friday' %}",
+	     "{% trans 'Saturday' %}"
+];
+/*
+function getSchClass_html()
+{
+	var options_html="";
+	for(i=0;i<schClass.length;i++)
+		options_html+="<option value='"+schClass[i].SchclassID+"'>"+schClass[i].SchName+"("+schClass[i].StartTime.substr(0,5)+"-"+schClass[i].EndTime.substr(0,5)+")</option>"
+	return options_html;
+}
+*/
+function getDates_html_num_run(d)
+{
+    var dates_html="<tr><td>"
+           +"<div id='select_div'>"
+           +"<input type='checkbox' id='is_select_all_dates_num_run' onclick='check_all_for_row_dates_num_run(this.checked);' />"
+           +"({%trans 'Selected:'%} <span id='selected_count_dates'>0</span>)"
+       +"</td></tr>";
+    var cycle=d[4];
+    var unit=d[6];
+    var days;
+    if(unit==0)
+      days=cycle;
+    else if(unit==1)
+       days=cycle*7;
+    else if(unit==2)
+       days=cycle*31;
+    for(var i=0;i<days;i++)
+		dates_html+="<tr><td><input type='checkbox' name='numrundates' class='class_select_dates_num_run' alt='"+i+"' onclick='showSelected_dates_num_run();' />"+((unit==1)?getTZWeekLabel(i):getTZDayLabel(i))+"</td></tr>";
+   return dates_html;
+}
+function showSelected_dates_num_run() {
+	if (!$(".class_select_dates_num_run").checked) {  
+        $("#is_select_all_dates_num_run").prop("checked", false);  
+    }
+	var chsub = $("input[type='checkbox'][name='numrundates']").length;  
+	var checkedsub = $("input[type='checkbox'][name='numrundates']:checked").length;  
+	if (checkedsub == chsub){ 
+		$("#is_select_all_dates_num_run").prop("checked", true); 
+	}
+    var c = 0;
+    $.each($(".class_select_dates_num_run"),function(){
+			if(this.checked) c+=1;})
+    $("#selected_count_dates").html("" + c);
+}
+
+function check_all_for_row_dates_num_run(checked) {
+
+	 if ($("#is_select_all_dates_num_run").prop("checked")){ 
+		$("input[type='checkbox'][name='numrundates']").prop("checked",true);
+	 }else { 
+		$("input[type='checkbox'][name='numrundates']").prop("checked",false); 
+	 } 
+    showSelected_dates_num_run();
+}
+
+function getSelected_Dates_nr()
+{
+    var sdates=[];
+    $.each($(".class_select_dates_num_run"),function(){
+            if(this.checked) 
+                sdates.push(this.alt)
+    });
+    return sdates;
+}
+function actionSucess_NoReload(retdata)
+{
+	if(retdata.ret==0){
+		dlgdestroy('');
+		ii = 2;
+		show_shift_Detail(selected_data,ii);
+	}
+	else
+		alert(retdata.message);
+
+}
+
+function doAction_NUM_RUN(url, action)
+{	
+	var result=getSelected(options[g_activeTabID].edit_col,"true");
+	selected_data=datas_NUM_RUN(result.ss);
+	var shift_id=selected_data[0]
+	if (action == 'addShiftTimeTable')
+		createDlgShift();
+    if (action == 'deleteAllShiftTimeTbl'){
+        $.ajax({ type: "POST",
+				url: "/iclock/att/deleteAllShiftTime/?shift_id="+shift_id,
+				dataType:"json",
+				success: actionSucess_NoReload,
+				error: function(request, errorMsg){
+				   alert($.validator.format(gettext('Operating failed for {0} : {1}'), options[g_activeTabID].title, errorMsg));// $.unblockUI();
+				   }
+               });
+       
+    }
+}
+function createDlgShift1(id){
+	
+
+	createDlgShift(id)
+}
+function createDlgShift(id)
+{	
+    if(typeof id=='undefined')
+	{
+		var result=getSelected(options[g_activeTabID].edit_col,"true");
+		if (result.ss.length>1){
+			alert(gettext("Most can only choose a departures"));
+			return;
+		}else
+			selected_data=datas_NUM_RUN(result.ss);
+	}
+	else
+        {
+		  var result={'ss':id}
+		  selected_data=datas_NUM_RUN(id);
+         }
+		var block_html="<div id='dlg_for_query_'><form id='id_edit_form'>"
+						+"<table align='top'>"
+						+"<tr>"
+						+"<td ><fieldset style='border:1px solid #77B7DE;'><legend>{%trans 'Time-table:'%}</legend>"
+						+"<div style='height: 280px;width: 500px;'><table id=id_grid_sches></table><div id=id_pager_sches></div></div></fieldset>"
+						+"</td>"
+						+"<td>"
+						+"<fieldset style='border:1px solid #77B7DE;'><legend>{%trans 'Date:'%}</legend>"
+						+"<div style='height:280px;width:200px;overflow-y:scroll'><table >"+getDates_html_num_run(selected_data)+"</table></div></fieldset>"
+						+"</td>"                
+						+"</tr>"
+						+"<tr><td>"
+						+"<fieldset style='border:1px solid #77B7DE;'><legend>加班时段设置</legend><input type='checkbox' id='is_overtime' name='is_OT' />{% trans 'Is designed overtime?' %}"
+						+"{% trans 'Overtime:' %}<input type='text' id='id_overTime_Num_RUN' size='5' name='OverTime' />{% trans 'minute(s)' %}"
+						+"</fieldset>"
+									
+						+"</td></tr>"
+						+"<tr><td><span id='id_error_sec'></span></td></tr>"
+						+"<input type='hidden' value='' name='sTimeTbl' id='id_sTimeTbl' />"
+						+"<input type='hidden' value='' name='sDates' id='id_sDates' />"
+						+"</td></tr>"         
+						+"</table></form>"
+						
+						+"</div>"
+
+			$(block_html).dialog({  modal:true,
+						resizable:false,
+						width: 800,
+						height:500,
+						title:$($("#id_grid_"+tblName[g_activeTabID]).jqGrid("getRowData",result.ss).Name).text()+gettext("Add Time-table"),
+						buttons:[{id:'btnShowOK',text:'{%trans "Submit" %}',click:function(){btn_addTimeZone(); }},{text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}],
+                                                close:function(){$(this).dialog("destroy"); } 
+                                                
+					      });
+			
+			var jqOptions2=copyObj(jq_Options);
+			jqOptions2.colModel=[
+						{name: 'SchclassID', hidden:true},
+						{name: 'SchName', index: 'SchName', width: 120,label:'时段名称'},
+						{name: 'StartTime', index: 'StartTime', width: 90,label:'开始时间'},
+						{name: 'EndTime',  width: 90,label:'结束时间'},
+						{name: 'TimeZoneOfDept',  width: 100,label:'归属单位'}
+			]
+ 
+			jqOptions2.sortname="SchclassID";
+			jqOptions2.sortorder="";
+			jqOptions2.url="/iclock/data/SchClass/?t=SchClass_mini_list.js"
+			jqOptions2.height=220
+			jqOptions2.gridComplete=''
+			jqOptions2.pager="#id_pager_sches";
+			renderGridData('sches',jqOptions2)
+	   
+}
+
+
+function btn_addTimeZone()
+{
+	var overTime=$("#id_overTime_Num_RUN").val();
+	//var sTimeTbl=$("#id_sTimeTbl_sel").val();
+	var sTimeTbl=getSelected_emp_ex('sches')
+	var sDates=getSelected_Dates_nr();
+	if(sTimeTbl.length==0 || sDates.length==0)
+		$("#id_error_sec").html("<ul class='errorlist'><li>{%trans 'The shift time-table and the dates should be select at least one'%}</li></ul>").show();
+	else{ 
+		$("#id_error_sec").css("display","none");
+		$("#id_sTimeTbl").val(sTimeTbl);
+		$("#id_sDates").val(sDates);
+		var queryStr=$("#id_edit_form").formSerialize()+"&shift_id="+selected_data[0]+"&cycle="+selected_data[4]+"&unit="+selected_data[6]+"&weekStartDay="+weekStartDay;
+		$.ajax({ type: "POST",
+			url: "/iclock/att/addShiftTimeTable/",
+			data:queryStr,
+			dataType:"json",
+			success: function(retdata){
+				actionSucess_NoReload,
+				alert(retdata.message)
+				},
+			error: function(request, errorMsg){
+				alert($.validator.format(gettext('Operating failed for {0} : {1}'), options[g_activeTabID].title, errorMsg)); //$.unblockUI();
+				}
+		});
+		
+	}
+}
+
+
+
+extraBatchOp=[
+    {caption:'{%trans "班次数据相关操作"%}',
+        submenu:[
+        {action:{% if user|HasPerm:"iclock.addShiftTimeTable_num_run" %} function(url){doAction_NUM_RUN(url, "addShiftTimeTable")}{% else %}''{% endif %}, title: '{%trans "Add time-table"%}'},
+        {action:{% if user|HasPerm:"iclock.deleteAllShiftTimeTbl_num_run" %} function(url){doAction_NUM_RUN(url, "deleteAllShiftTimeTbl")}{% else %}''{% endif %}, title: '{%trans "Delete time-table"%}'}
+        ]}
+];
+{% endblock %}
+
+{% block extraBatchOp %}
+
+{% endblock %}
+{% block extraSection %}
+<div id="id_Shift_Detail_dlg" style="overflow-x:hidden;overflow-y: hidden; height: 200px;margin-top:5px;">
+<fieldset style="border:1px solid #7ac143;"><legend></legend>
+<div id="tz_dlg_NUM_RUN" style="overflow-x:hidden;overflow-y: scroll; height:160px;width:960px;">
+</div></fieldset>
+</div>
+<div id="id_numrun_tip" class="numrun_tip"></div>
+{% endblock %}
+
+
+
+
+
+
+{% block $function %}
+
+	var info='<div class="west_info"><p>1.班次用于员工周期性排班使用，可设置周期为天、周、月</p><p>2.设置班次的归属单位，只有授权单位为此归属单位的管理人员才能看到这个班次</p></div>'
+        renderLeftInformation(info);
+        smenu="<ul><li  class='subnav_on' onclick=submenuClick('/iclock/data/NUM_RUN/',this);><a href='#'>班次管理</a></li></ul>"
+        //$('#menu_div').html(smenu)
+//$("#id_Shift_Detail_dlg").css("width",$("#id_content").width()-10);
+//$(".module").css("height","43%");
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+		processNewModel();
+	})
+	$("#"+g_activeTabID+" #queryButton").hide()
+	$("#"+g_activeTabID+" #allDelete").hide()
+	$("#"+g_activeTabID+" #id_export").css('display','none');
+	$("#"+g_activeTabID+" #id_third").html("");
+	$("#tz_dlg_NUM_RUN").html("<div align='center'><h4>{%trans "Click shift to show its shift details"%}</h4></div>");
+	 $.ajax({
+		type:"POST",
+		url: "/iclock/att/attrule/",
+		dataType:"json",
+		success:function(json){
+					weekStartDay=json[0].WorkWeekStartDay;
+        		}
+		});
+
+	$("#"+g_activeTabID+" #id_reload").click(function(){
+		$('#id_Shift_Detail_dlg').html("<fieldset style='border:1px solid #7ac143;'><legend></legend>"
+				+"<div id='tz_dlg_NUM_RUN' style='overflow-x:hidden;overflow-y: scroll; height:160px;width:960px;'>"
+				+"</div></fieldset>")
+		$("#tz_dlg_NUM_RUN").html("<div align='center'><h4>{%trans "Click shift to show its shift details"%}</h4></div>");
+		reloadData(tblName[g_activeTabID]);
+	});
+
+
+	
+//	var h=$('#id_content').height()-Custom_Jqgrid_Height-150;
+//	$("#id_Shift_Detail_dlg").css('height',h)
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	   searchShowNUM();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	   if(event.keyCode==13)
+	  searchShowNUM();
+	});
+	
+{% endblock %}
+	
+
+

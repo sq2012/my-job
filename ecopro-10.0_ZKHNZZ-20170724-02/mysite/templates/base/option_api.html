@@ -1,0 +1,71 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+
+<div id='id_option' style='padding: 20px;'>
+	<form id='id_edit_form_api' method='post'>
+        <div class='ui-widget-header' style='width: 700px; height: 28px;margin-left: 100px;margin-top: 10px;'><h3 style="padding-top: 8px;padding-left: 10px"><a>{%trans '数据对接设置'%}</a></h3></div>
+        <table style="margin-left: 100px;margin-top: 20px;">
+		<tr><th></th><td><input  type='checkbox' maxlength='30'  id='id_auto_' name='auto_'/>{%trans '支持数据对接功能'%}</td></tr>
+			<tr>
+			    <th><label for='id_lock_date' >{%trans '允许同步的时间范围'%}</label></th>
+			    <td><input type='text' maxlength='30' name='start_date' id='id_start_date' value=''/>时间格式如07:00-23:00</td>
+			</tr>
+			<tr>
+			    <th><label for='id_lock_date' >{%trans '账户'%}</label></th>
+			    <td><input type='text' maxlength='30' name='user' id='id_user' value=''/>不支持中文</td>
+			</tr>
+			<tr>
+			    <th><label for='id_pass' >{%trans '密码'%}</label></th>
+			    <td><input type='password' maxlength='30' name='pass' id='id_pass' value=''/>默认密码:12345678，不支持中文</td>
+			</tr>
+	</table></form>
+	<div id='id_hints'style="margin-left: 170px;margin-top:20px; width: 500px">此处的账户密码和系统管理员账户密码没有任何关系，仅为对接服务，可根据需要随意设置</div>
+	<div><ul class='errorlist'><li id='option_api_id_error' style='display:none;'></li></ul></div>
+	{% if user|HasPerm:"iclock.sys_api_setting" %}
+	<div style="margin-left: 100px;margin-top: 20px;"><input id='id_submit' type='button' class='m-btn  zkgreen rnd' value='{%trans "Save" %}'/></div>
+	{% endif %}
+</div>
+
+
+
+<script>
+{% autoescape off %}
+var _data={{ params }}
+{% endautoescape %}
+
+
+
+
+
+
+
+$(function(){
+        if(_data.is_=='1'){ $("#id_auto_").prop("checked","checked");}  
+	$("#"+g_activeTabID+" #id_start_date").val(_data.st)
+	$("#"+g_activeTabID+" #id_user").val(_data.user)
+	$("#"+g_activeTabID+" #id_pass").val(_data.pass)
+	
+
+            $("#"+g_activeTabID+" #id_submit").click(function(){
+         			var queryStr=$("#"+g_activeTabID+" #id_edit_form_api").formSerialize();
+        			$.ajax({ 
+        				type: "POST",
+        				url:"/base/isys/option_api/",
+        				data:queryStr,
+        				dataType:"json",
+        				success:function(retdata){
+                                var message=retdata.message
+								$("#option_api_id_error").css("display","block");
+								$("#option_api_id_error").html(message);
+        						
+        					}
+        				});
+        		});
+
+	
+	
+});
+
+</script>
+

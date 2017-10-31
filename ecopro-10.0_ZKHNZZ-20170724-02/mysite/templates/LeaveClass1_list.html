@@ -1,0 +1,9 @@
+{% extends "data_list.html" %}
+{% block tblHeader %}
+fieldHeaders=["{{ cl.FieldName.LeaveName }}","{{ cl.FieldName.MinUnit }}","{{ cl.FieldName.Unit }}","{{ cl.FieldName.RemaindProc }}","{{ cl.FieldName.RemaindCount }}","{{ cl.FieldName.ReportSymbol }}","{{ cl.FieldName.Deduct }}","{{ cl.FieldName.LeaveType }}"];
+//options.disableCols=["0","8","9","11"];
+{% endblock %}
+{% block rowdata %}
+{% for item in latest_item_list %}
+["{{ item.LeaveID }}","{{ item.LeaveName }}","{{ item.MinUnit }}","{{ item.get_Unit_display }}","{{ item.get_RemaindProc_display }}","{{ item.get_RemaindCount_display }}","{{ item.ReportSymbol }}","{{ item.Deduct }}","{{ item.Color }}","{{ item.Classify }}","{{ item.LeaveType }}","{{ item.Calc }}"],{% endfor %}
+{% endblock %}

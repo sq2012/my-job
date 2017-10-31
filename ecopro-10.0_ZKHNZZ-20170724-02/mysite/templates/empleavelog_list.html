@@ -1,0 +1,367 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+
+{% block tblHeader %}
+        dtFields = "{{ dtFields }}"
+        tblName[g_activeTabID]='empleavelog';
+        
+        jqOptions[g_activeTabID].colModel={{colModel}}
+        jqOptions[g_activeTabID].sortname='leavedate';
+        jqOptions[g_activeTabID].sortorder="desc";
+        jqOptions[g_activeTabID].pager="id_pager_"+tblName[g_activeTabID]
+        
+        options.edit_col=1;
+        currentState=-1;
+        function createNewDlg_empleavelog(){
+                var title="{%trans '新增离职' %}";
+                createDlgdeptfor('empleavelog_off_add',1)
+                $('#dlg_for_query_empleavelog_off_add').dialog({title:title,
+                        height:551,
+                        buttons:[
+                                {id:"btnShowOK",text:"{% trans 'save and return' %}",
+									click:function(){ 
+										if(typeof beforePost_empleavelog=="function")
+											{if(beforePost_empleavelog(this,"_new_")==false) return ;}  
+										SaveFormData(this,g_urls[g_activeTabID]+"_new_/",'add',"empleavelog");  
+											}},
+                                {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}
+                        ]
+                });
+                createDlgother_empleavelog('empleavelog_off_add');
+                var currDate=new Date();
+                var tm=currDate.getFullYear()
+                        +"-"
+                        +(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+                        +"-"
+						+(currDate.getDate()<10?"0"+currDate.getDate():currDate.getDate())
+                $("#id_leavedate").val(tm+" 00:00");
+                $("#id_leavedate").datetimepicker(datetimepickerOptions);
+        }
+        
+        function getOptions()
+        {
+        	options_html=""
+        	for(var i=0;i<states.length;i++){
+        		options_html+="<option value='"+states[i].symbol+"'>"+states[i].pName+"</option>"
+        	}
+        	return options_html;
+        }
+        
+        function createDlgother_empleavelog(page){
+            var html="<div id='id_form'><div class='module' style='position:relative;'>"
+                +"<table id='id_empleavelog'><tr>"
+                +"<td style='vertical-align:top;color:black;'><div id='show_dept_emp_tree'></div></td></tr><tr><td style='vertical-align:top;'><div id='id_conditions'>"
+                +"<form id='id_edit_form' method='POST'>"
+                +"<table id='id_setField' style='margin-top: -20px;'>"
+                       //离职时间
+                               +"<tr><td><label for='id_leavedate' class='required3'><font color='red'>*</font>{% trans '离职时间:'%}</label></td>"
+                                       +"<td><input id='id_leavedate'  type='text'  value='' maxlength='19' name='leavedate'  style='width:120px !important;'/></td></tr>"
+                       if ((navigator.userAgent.indexOf('MSIE') >= 0) && (navigator.userAgent.indexOf('Opera') < 0)||navigator.userAgent.indexOf('Firefox') >= 0){
+							//离职类型
+                               html += "<tr><td><label for='id_leavetype' class='required3'><font color='red'>*</font>{% trans '离职类型:'%}</label></td>"
+                               +"<td><select style='width:123px !important;' id='id_leavetype' name='leavetype'>"+getOptions()+"</select></td><br /></tr>"
+						} else{
+							html += "<tr><td><label for='id_leavetype' class='required3'><font color='red'>*</font>{% trans '离职类型:'%}</label></td>"
+                               +"<td><select style='width:121px !important;' id='id_leavetype' name='leavetype'>"+getOptions()+"</select></td><br /></tr>"
+						}
+
+                       //原因
+                            html+="<tr><td>"
+                                   +"<label for='id_reason' class='required3'><font color='white'>*</font>{% trans '离职原因:'%}</label></td>"
+                                   +"<td><input id='id_reson' type='text' name='reason' style='width:120px'/>"
+                               +"</td></tr>"
+                       
+
+                        +"<tr><td></td></tr>"
+                        +"<tr><td colspan='2'>"
+                        +"<input type='hidden' id='id_userid' value='' name='UserID' />"
+                        +"</td></tr>"
+                        +"<tr><td colspan='2'><span id='id_error'></span></td>"
+                +"</table></form></td>"
+                +"</tr></table></div></div>";
+        
+            $("#dlg_other_body_"+page).html(html)
+			/*
+            //$("#dlg_other_title_"+page).addClass('cascadecheck')
+            $("#dlg_other_"+page).css("width",'750')
+            $("#dlg_other_"+page).css("height",'200')
+            $("#dlg_emp_"+page).css("width",'470')
+            $("#dlg_emp_"+page).css("height",'300')
+            $("#dlg_dept_"+page).css("height",'300')
+            $("#dlg_dept_body_"+page).css("height",'265')
+            $("#dlg_emp_body_"+page).css("height",'290')
+
+            $("#showTree_USERSpeady_off_add").css("height",'245')
+            $("#dlg_other_"+page).css("height",$("#dlg_emp_"+page).height())
+            //$("#dlg_other_"+page).addClass('dlgempdiv')
+            $("#dlg_for_query_"+page).dialog({dialogClass: "",width:'750'})
+            $("#dlg_emp_"+page).position({
+                    my: "left top",
+                    at: "right top",
+                    of: "#dlg_dept_"+page
+            });*/
+            $("#dlg_other_"+page).position({
+                    my: "left top",
+                    at: "left bottom",
+                    of: "#dlg_dept_"+page
+            });
+			
+        }
+        function validate_form_empleavelog(){   
+                var t_ComeTime=$("#id_qstart_empleavelog").val();
+                var cTime=t_ComeTime.split("-");
+                var t_EndDate=$("#id_qend_empleavelog").val();
+                var eTime=t_EndDate.split("-");
+                cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+                edate=new Date(parseInt(eTime[0],10),parseInt(eTime[1],10)-1,parseInt(eTime[2],10));
+                var days=(edate.valueOf()-cdate.valueOf())/(1000*3600*24)+1;
+                if(cdate>edate || t_ComeTime=="" || t_EndDate==""||!valiDate(t_ComeTime)||!valiDate(t_EndDate)){
+                        return 1;
+                }else{
+                        return 0
+                }
+        }
+		
+		function createQueryDlg_empleavelog(){
+			createDlgdeptfor10('empleavelog_search',1)
+			$('#dlg_for_query_empleavelog_search').dialog({
+			buttons:[{id:"btnShowOK",text:gettext('搜索'),
+			  click:function(){searchbydept_empleavelog('empleavelog_search');$(this).dialog("destroy"); }},
+			 {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+			}] })
+		}
+		
+		function searchbydept_empleavelog(page){
+			var dept_ids=getSelected_dept("showTree_"+page)
+			if (dept_ids!=null){
+				if(dept_ids==undefined||dept_ids==''){
+					alert("{% trans "请选择单位" %}")
+					return false;
+				}
+			}else{
+				alert("{% trans "请选择单位" %}")
+				return false;
+			}
+			var ischecked=0;
+			if($("#id_cascadecheck_"+page).prop("checked"))
+				ischecked=1;
+			urlStr="deptIDs="+dept_ids+"&isContainChild="+ischecked
+			var emp=getSelected_emp_ex("sel_empleavelog_search");
+			if(emp.length>0){
+				urlStr +="&UserID__id__in="+emp
+			}
+			var url="/iclock/data/empleavelog/?"+urlStr
+			savecookie("search_urlstr",url);
+			$("#id_grid_empleavelog").jqGrid('setGridParam',{url:url,datatype:'json'}).trigger("reloadGrid");
+		}
+		
+		//模糊查询
+        function searchShow_empleavelog(){
+            var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+            if (flag!='cansearch'&&flag!='defvalue') return;
+            if (flag!='defvalue')
+                var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+            else
+                var v=""
+            //var timetype=$("#id_date").val();
+            var leaveID=$("#"+g_activeTabID+" #id_leavetype").val();
+            var ComeTime=$("#id_qstart_empleavelog").val();
+            var EndDate=$("#id_qend_empleavelog").val();
+            $.cookie("ComeTime",ComeTime, { expires: 7 });
+            $.cookie("EndDate",EndDate, { expires: 7 });
+            var isError=validate_form_empleavelog();
+            var urlTime1='';
+            if(!isError){
+				if(leaveID=='all'){
+					urlTime1="&leavedate__gte="+ComeTime+"&leavedate__lte="+EndDate
+				}
+				else{
+					urlTime1="&leavedate__gte="+ComeTime+"&leavedate__lte="+EndDate+"&leavetype="+leaveID
+				}
+			}
+            var url="/iclock/data/empleavelog/?q="+escape(v)+urlTime1+"&deltag__exact=0"
+            savecookie("search_urlstr",url);
+            $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+        }
+
+
+        function beforePost_empleavelog(obj,actionName){
+
+            f=$('#id_form').find("#id_edit_form")
+            if(!f.valid()) return false;
+
+            $("#id_DateID",obj).val($("#id_leave",obj).val())
+            $("#id_clearance",obj).val($("#clearance",obj).val())
+            if(actionName=="_new_"){
+                    var emp=getSelected_emp_ex("empleavelog_off_add");
+                    $("#id_userid",obj).val(emp);
+                    if(emp.length==0){
+                            $("#id_error",obj).css("display","block");
+                            $("#id_error",obj).html("<ul class='errorlist'><li>{%trans 'Please select one or more employee!'%}</li></ul>");
+                            return false;
+                    }
+                    else{
+                            $("#id_error",obj).css("display","none");
+                            $("#id_userid",obj).val(emp);
+                    }
+                    
+            }else {
+            
+            }
+                
+        }
+        
+         function showState_empleavelog(newState){
+                 //if(currentState==newState) return;
+                 currentState=newState;
+                 createFilter_empleavelog();
+                 if (newState==-1)
+                         var url=g_urls[g_activeTabID];
+                 else if(newState==0)
+                         var url=g_urls[g_activeTabID]+"?deltag=0"
+                 else if(newState==1)
+                         var url=g_urls[g_activeTabID]+"?deltag=1"
+                         
+                 var deptID=getSelected_dept("showTree_"+g_activeTabID);
+                 if(deptID!=''){
+                         var ischecked=0;
+                         if($("#id_cascadecheck_"+g_activeTabID).prop("checked"))
+                                 ischecked=1;
+                         if (newState==-1)
+                                 url=url+"?deptIDs="+deptID+"&isContainChild="+ischecked
+                         else
+                                 url=url+"&deptIDs="+deptID+"&isContainChild="+ischecked
+                 }
+                var leaveID=$("#"+g_activeTabID+" #id_leavetype").val();
+                var ComeTime=$("#id_qstart_empleavelog").val();
+                var EndDate=$("#id_qend_empleavelog").val();
+                var isError=validate_form_empleavelog();
+                 if(!isError){
+                        if(leaveID=='all'){
+                            urlTime1="&leavedate__gte="+ComeTime+"&leavedate__lte="+EndDate
+                            }
+                        else{
+                            urlTime1="&leavedate__gte="+ComeTime+"&leavedate__lte="+EndDate+"&leavetype="+leaveID
+                            }
+                         if (url.indexOf("?")==-1)
+                                 urlTime="?"+urlTime1
+                         else
+                                 urlTime="&"+urlTime1
+                }
+            urlStr=url+urlTime;
+            savecookie("search_urlstr",urlStr);
+            $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+         }
+        
+        function createFilter_empleavelog(){
+            var vhtml="<li style=' border: 0px solid white;'><a href='#' style='color: #000;background:white;padding-left:0;'>{% trans '离职状态' %}</a>"
+                +"<ul><li "+(currentState==-1?"class='selected'":"")+"><a href='#' onclick='showState_empleavelog(-1)'>{%trans "All"%}</a></li>"
+                +"<li "+(currentState==0?"class='selected'":"")+"><a href='#' onclick='showState_empleavelog(0)'>{%trans "已离职"%}</a></li>"
+                +"<li "+(currentState==1?"class='selected'":"")+"><a href='#' onclick='showState_empleavelog(1)'>{%trans "离职恢复"%}</a></li>"
+            $("#"+g_activeTabID+" #id_filterbar").html(vhtml+'</ul></li>');
+        }
+        function strOfData_empleavelog(data)
+        {
+	        return stripHtml(data.PIN)+" "+data.EName;
+        }
+		$(function(){
+            EmpAndDept={% autoescape off %} {{ ForgetAtt_list }}{% endautoescape %}
+            states= EmpAndDept.states;
+            
+            var currDate=new Date();
+            var dateTime=currDate.getFullYear()
+                    +"-"
+                    +(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+                    +"-01"
+            $("#id_qstart_empleavelog").val(dateTime)
+            var dateTime=currDate.getFullYear()
+                    +"-"
+                    +(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+                    +"-"
+                    +(currDate.getDate()<10?"0"+currDate.getDate():currDate.getDate())
+            $("#id_qend_empleavelog").val(dateTime)
+            
+            $("#"+g_activeTabID+" #searchButton").click(function(){
+               searchShow_empleavelog();
+            });
+            $("#"+g_activeTabID+" #searchbar").keypress(function(event){
+               if(event.keyCode==13)
+              searchShow_empleavelog();
+            });
+			
+            $("#"+g_activeTabID+" #searchbar").val(gettext("考勤编号,身份证号,姓名"))
+            $("#"+g_activeTabID+" #id_newrec").click(function(){
+                    createNewDlg_empleavelog();
+            });
+            $("#"+g_activeTabID+" #id_export").css('display','none');
+            var width=$("#"+g_activeTabID+" #id_content").width();
+            
+            $("#"+g_activeTabID+" #id_filtername").css("display","block");
+            currentState=0;
+            createFilter_empleavelog();
+        });
+
+{% endblock %}
+
+
+
+{% block loadData %}
+	html="<span id=id_opt_tree><input type='checkbox' id='id_cascadecheck_"+g_activeTabID+"'/>{%trans '级联下级单位' %}</span>"
+	$("#"+g_activeTabID+" #id_west").html(html)
+	html="<div id='show_dept_tree_'>"
+		+"<ul id='showTree_"+g_activeTabID+"' class='ztree' style='margin-left: 0px;height:100%;'></ul>"
+		+"</div>"   
+	$("#west_content_tab_iclock_empleavelog").html(html)
+
+	//var h=$("#"+g_activeTabID+" #west_content").height()-20
+	//$('#showTree_'+g_activeTabID).css('height',h)
+
+    ShowDeptData(g_activeTabID,true)
+    loadNULLPage('#id_grid_'+tblName[g_activeTabID]);
+    
+    $("#id_leavetype").empty(); 
+    $("#id_leavetype").append("<option value='all'>全部</option>"+getOptions());
+    
+    $("#id_qstart_empleavelog").datepicker(datepickerOptions);
+    $("#id_qend_empleavelog").datepicker(datepickerOptions);
+
+	var zTree = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+	zTree.setting.check.enable = false;
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		var deptID=treeNode.id;
+		var deptName=treeNode.name;
+		$.cookie("dept_ids",deptID, { expires: 7 });
+		var ischecked=0;
+		if($("#id_cascadecheck_"+g_activeTabID).prop("checked"))
+			ischecked=1;
+
+		var urlStr="/iclock/data/empleavelog/?deptIDs="+deptID+"&isContainChild="+ischecked+"&deltag__exact=0"
+                
+		savecookie("search_urlstr",urlStr);
+		//currentState=-2;
+		//createFilter();
+		//$.blockUI({title:'',theme: true ,message: '<h1><img src="/iclock/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}<br /></h1>'});
+		 $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+		//$.unblockUI()
+	}
+{% endblock %}
+
+{% block otherQuery %}
+    <div class="s-info left" id="time_area">			
+        <span>
+            <label  >{%trans '开始时间'%}</label>
+            <input type='text' name='leavedate' maxlength='10' id='id_qstart_empleavelog' style='width:80px !important;'>
+            <label  >{%trans '结束时间'%}</label>
+            <input type='text' name='leavedate' maxlength='10' id='id_qend_empleavelog' style='width:80px !important;'>
+            <label  >{%trans '离职类型'%}</label>
+            <select name='leavetype' id='id_leavetype'></select>
+        </span>
+    </div> 
+{% endblock %}
+{% block newrec %}
+ <LI id="id_newrec" ><SPAN class="icon iconfont icon-xinzeng"></SPAN>{%trans "Append"%}</LI>
+{% endblock %}
+{% block aDelete %}
+<LI id="empleaverestore"  onclick="batchOp('?action=EmpLeaverestore',itemCanBeDelete,'{%trans '离职恢复'%}');"><SPAN class="icon iconfont icon-huifushiyong"></SPAN>{%trans "离职恢复"%}</LI>
+{% endblock %}

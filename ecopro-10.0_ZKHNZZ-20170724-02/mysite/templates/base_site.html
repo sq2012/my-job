@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% load i18n static%}
+{% load iclock_tags %}
+{% block extrahead %}
+<link rel="stylesheet" type="text/css" media="screen" href="{{ MEDIA_URL }}css/jqgrid/ui.jqgrid.css?cssVersion=10.002" />
+<!--<link rel="stylesheet" type="text/css" media="screen" href="{{ MEDIA_URL }}css/jquery.easywidgets.css?cssVersion=10.001" />
+--><link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/sf.css?cssVersion=11.005" />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/changelists9.css?cssVersion=11.001"  />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/layout/layout.css?cssVersion=11.005"  />
+
+
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/colorpicker.css?cssVersion=10.001" />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/fullcalendar.min.css?cssVersion=2.2.3" />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/zTreeStyle/zTreeStyle.css?cssVersion=10.001" />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/jquery-te-1.4.0.css?cssVersion=10.001" />
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/highcharts.css?cssVersion=11.001" />
+
+
+<script src="{{ MEDIA_URL }}jslib/jquery-ui/jquery-ui-timepicker-addon.js?scriptVersion=10.001"></script>
+<script src="{{ MEDIA_URL }}jslib/jquery.layout-latest.js?scriptVersion=1.4.4"></script>
+<script src="{{ MEDIA_URL }}jslib/jquery.blockUI.js?scriptVersion=2.7.0"></script>
+<script src="{{ MEDIA_URL }}jslib/jquery.perciformes.js?scriptVersion=10.001"></script>
+<script src="{{ MEDIA_URL }}jslib/colorpicker.js?scriptVersion=10.001"></script>
+<!--
+<script src="{{ MEDIA_URL }}jslib/smarttab.js"></script>
+-->
+<script src="{{ MEDIA_URL }}jslib/dept-emp.tree.js?scriptVersion=11.002"></script>
+<script src="{{ MEDIA_URL }}jslib/highcharts.js?scriptVersion=5.0.11"></script>
+<script src="{{ MEDIA_URL }}jslib/highcharts-3d.js?scriptVersion=5.0.11"></script>
+
+<!--<script src="{{ MEDIA_URL }}jslib/jquery.easywidgets.js?scriptVersion=10.001"></script>
+-->
+<script src="{{ MEDIA_URL }}jslib/jqgrid/i18n/grid.locale-{{ LANGUAGE_CODE }}.js?scriptVersion=10.002" type="text/javascript"></script>
+
+<script src="{{ MEDIA_URL }}jslib/jqgrid/jquery.jqGrid.min.js?scriptVersion=5.1.3" type="text/javascript"></script>
+<script src="{{ MEDIA_URL }}jslib/jquery-ui/i18n/jquery.ui.datepicker-{{ LANGUAGE_CODE }}.js?scriptVersion=10.001" type="text/javascript"></script>
+
+<script src="{{ MEDIA_URL }}jslib/jquery-ui/i18n/jquery-ui-timepicker-{{ LANGUAGE_CODE }}.js?scriptVersion=10.001" type="text/javascript"></script>
+
+<script src="{{ MEDIA_URL }}jslib/pg.js?scriptVersion=11.008"></script>
+<script src="{{ MEDIA_URL }}jslib/core.min.js?scriptVersion=11.005"></script>
+<script src="{{ MEDIA_URL }}jslib/picture.js?scriptVersion=10.002"></script>
+
+<script src="{{ MEDIA_URL }}jslib/fullcalendar.min.js?scriptVersion=2.2.3"></script>
+<script src="{{ MEDIA_URL }}jslib/jquery.ztree.all-3.5.min.js?scriptVersion=3.5.17"></script>
+<!--
+<script src="{% static 'jslib/jquery.webcam.min.js?scriptVersion=10.001' %}"></script>
+-->
+<script src="{{ MEDIA_URL }}jslib/jquery.charming.min.js?scriptVersion=11.001"></script>
+
+
+
+{% endblock %}
+{% block title %}{{ title|escape }} {% endblock %}
+
+{% block extrastyle %}
+
+{% endblock %}
+
+
+
+{% block content %}
+{% autoescape off %}
+
+<!--<DIV id="id_content" class="ui-layout-center" >
+</DIV>
+-->
+<div  class="ui-layout-tabs ui-layout-center">
+	<div id='g_tabs'>
+		<ul>
+			<li><a href="#tab_id_menu_home">{%trans 'Home'%}</a></li>
+		</ul>
+		<div id="tab_id_menu_home">
+			
+			<div class="ui-layout-west ui-widget-content">
+				
+				<div class="ui-widget-header" style="height: 24px;"></div>
+				<div id='west_content' class='west-content'>	</div>
+				
+				
+				
+				
+			</div>
+			
+			
+			<DIV id='id_content' class='ui-layout-center' >
+			</DIV>
+			
+		</div>
+	</div>
+</div>
+
+<div id="mainmenu_con">
+	<div class="ui-icon ui-icon-close menuCloseBtn" title="Close"></div>
+	{{ submenu_title }}
+ 
+</div>
+
+
+
+
+<DIV id="id_north" class="ui-layout-north">
+
+	<div id="banner">
+		<div id="banner_logo">
+   
+			 <h1><a href=""></a></h1>
+		</div>
+	 </div>  	
+
+
+  
+	<div id='mainmenu_out'>
+	       <div id='mainmenu_in'>
+		       <div id='mainmenu'>
+			       <ul class='nav_main'>
+					       {{ menu_title }}
+			       </ul>
+		       </div>
+	       </div>
+	</div> 
+			       
+			       
+	{% if user.is_authenticated and user.is_staff %}
+		<div id="user-tools" >
+			{% block userlinks %}
+				<a href="/iclock/accounts/logout/" style="text-decoration:none;color: #FFFFFF">{% trans 'Log out' %}</a>
+			{% endblock %}
+		</div>
+	{% endif %}
+	
+	<div class="ui-layout-north-bottom">  </div>
+	
+</div>
+
+
+<div id="show_field_selected">
+		<div class="title"><span class='right ui-icon ui-icon-close' onclick='hideFields_define(this);'></span></div>
+		<div id="id_fields_selected"></div>
+	</div>
+	
+
+<!--<div id="id_west" class="ui-layout-west ui-widget-content">
+	<div class="ui-widget-header" style="height: 24px;"></div>
+	<div id="west_content" > </div>
+</div>
+-->
+<script>
+	
+	
+$(function(){
+	mod_name='{{mod_name}}'
+	home_url={{ home_url }}
+	tabs_style={{tabs_style}}
+	initwindow();
+	initMenus();
+	   // $("#modules_tabs li:first a").addClass("current");
+    
+	//$(".modules_btn").on("click",function(e) {
+	//	e.preventDefault();
+	//	if($(this).attr('class').indexOf('current')!=-1) return;
+	//	$("#modules_tabs a").removeClass('current')
+	//	$(this).addClass("current"); // Activate this
+	//	var mod_id=$(this).attr('id')
+	//	mod_name=mod_id
+	//	$.ajax({
+	//	    type: "GET",
+	//	    url:"/iclock/getMenus/?mod_name="+mod_id,
+	//	    data:'',
+	//	    dataType:"json",
+	//	    success:function(data){
+	//		$('#mainmenu ul.nav_main').empty()
+	//		$('#mainmenu ul.nav_main').html(data.menu_t)
+	//		$('#mainmenu_con').empty()
+	//		$('#mainmenu_con').html(data.submenu_t)
+	//		initMenus();
+	//		menuClick('{{ home_url }}'+'?mod_name='+mod_name);
+	//	   },
+	//	    error:function(){
+	//	    }
+	//	});
+	//
+	//})
+	//
+	initwindow_tabs('tab_id_menu_home');
+
+	menuClick("/iclock/homepage/showHomepage/"+'?mod_name='+mod_name,null);
+	//$("#west_content").css('height',$("#id_west").height()-26).css('overflow','auto')
+});
+</script>
+
+{% endautoescape %}
+
+{% endblock %}
+

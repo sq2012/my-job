@@ -1,0 +1,207 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+<script>
+{% block tblHeader %}
+jqOptions[g_activeTabID].colModel={{colModel}}
+groupHeaders={{groupHeaders}}
+tblName[g_activeTabID]='SchClass';
+jqOptions[g_activeTabID].sortname='SchclassID';
+jqOptions[g_activeTabID].pager='id_pager_'+tblName[g_activeTabID];
+options[g_activeTabID].dlg_width=1080;
+
+{% block customHeight %}
+	
+
+	var hcontent=$("#"+g_activeTabID+" #id_content").height();
+	var hbar=$("#"+g_activeTabID+" #id_toolbar").height();
+	var height=hcontent-hbar-100;
+	if (groupHeaders.length>0)
+	     height=height-30;
+	Custom_Jqgrid_Height=height
+{% endblock %}
+
+var flag={% if request.user.is_superuser %}true{% else %}false{% endif %}
+
+function getNumrun(SchclassID){
+    createDataDialog('NUM_RUN', "{%trans '正在使用此时段的班次' %}",  1024,'/iclock/simple_data/NUM_RUN/?SchclassID='+SchclassID)
+}
+
+function afterPost_SchClass(flag,obj)
+{
+	$("#id_edit_form",obj).find(":input[type=text]").each(function(i,elem){
+		$(this).val("");})
+}
+
+function beforePost_SchClass(obj,actionName){
+	var subflag=true;
+        var isover=$("#id_OutOverTime",obj).prop("checked")
+     if(isover)
+	$("#id_IsCalcOverTime",obj).val(1);	
+    else
+	$("#id_IsCalcOverTime",obj).val(0);
+	
+    var iscomeover=$("#id_ComeOverTime",obj).prop("checked")
+    if(iscomeover){
+	$("#id_IsCalcComeOverTime",obj).val(1);	}
+    else
+	$("#id_IsCalcComeOverTime",obj).val(0);	
+	StartTime = $("#id_StartTime",obj).val()
+	EndTime = $("#id_EndTime",obj).val()
+	if(StartTime>EndTime){
+		$("#id_NextDay",obj).val('2')
+	}
+    return subflag
+
+}
+
+$(function(){
+        var info='<div class="west_info"><p>1.时段被使用后允许进行删除(对时段增加了删除标记，实际仍存在)</p><p>2.当新增跨天的时段时，在结束时间后选择第二天</p><p>3.时间段时长小于5分钟时无效</p><p>4.归属单位的作用是对大型单位时段过多时进行区域划分，与用户的授权时段组合使用。</p></div>'
+        renderLeftInformation(info);
+        smenu="<ul><li  class='subnav_on' onclick=submenuClick('/iclock/data/SchClass/',this);><a href='#'>时段管理</a></li></ul>"
+        //$('#menu_div').html(smenu)
+	$("#"+g_activeTabID+" #queryButton").hide()	
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+		processNewModel();
+	});
+	$("#"+g_activeTabID+" #allDelete").hide()
+	$("#"+g_activeTabID+" #id_export").css('display','none');
+	$("#"+g_activeTabID+" #id_third").html("");
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	   searchShowSchClass();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	   if(event.keyCode==13)
+	  searchShowSchClass();
+	});
+});
+//模糊查询
+function searchShowSchClass(){
+    var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+    if (flag!='cansearch'&&flag!='defvalue') return;
+    if (flag!='defvalue')
+        var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+    else
+        var v=""
+    var url="/iclock/data/SchClass/?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function strOfData_SchClass(data)
+{
+	return stripHtml(data.SchName);
+}
+
+function save_hide_Autued_Deptment_SchClass (obj,page) {
+		var deptids=getSelected_dept("showTree_"+page);
+		if(deptids.length>0)
+		{
+			var deptID=deptids[0]
+			var deptNames=getSelected_deptNames("showTree_"+page);
+			$("#department",obj).val(formatArrayEx(deptNames));
+			$("#id_TimeZoneOfDept",obj).val(deptID);
+		}
+		else
+		{
+			$("#department",obj).val('')
+			$("#id_TimeZoneOfDept",obj).val('');
+		}
+		dlgdestroy(page)
+}
+
+function sch_deptTree(obj){
+		var depName=$("#id_span_parent",obj).html();
+		depName=$.trim(depName)
+                
+                sch_html='<div>'
+		sch_html=sch_html+'<span style="float:left;border-top:1 solid #5B80B2;"><input alt="department_time" type="text" style="width:150px !important;" disabled="true"  id="department"  value="'+depName+'"></span>'
+                if(flag)
+                    sch_html=sch_html+'<span style="float:left;"><img  alt="{%trans 'open department tree'%}" src="/media/img/sug_down_on.gif" id="id_drop_dept_time"/></span>'
+		sch_html=sch_html+'</div>'
+		$('#id_TimeZoneOfDept',obj).after(sch_html)
+		
+		if(flag)
+                {
+		$("#id_drop_dept_time",obj).click(function(){
+
+			createQueryDlgbypage('schclass_auth')
+			var zTree = $.fn.zTree.getZTreeObj("showTree_schclass_auth");
+			zTree.setting.check.enable = false;
+			
+			$('#dlg_for_query_schclass_auth').dialog({ position: { my: "left top-150", at: "right top",of:"#id_drop_dept_time"},buttons:[{id:"btnShowOK",text:gettext('确定'),
+									  click:function(){save_hide_Autued_Deptment_SchClass(obj,'schclass_auth');}},
+									 {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+									}] })
+                     });
+                }
+	}
+
+function process_dialog_SchClass(obj)
+{
+	$("#id_EndTime",obj).timepicker(timepickerOptions);
+    $("#id_EndTime",obj).attr("readonly","readonly")
+	$("#id_CheckInTime1",obj).timepicker(timepickerOptions);
+	$("#id_CheckInTime2",obj).timepicker(timepickerOptions);
+	$("#id_CheckOutTime1",obj).timepicker(timepickerOptions);
+	$("#id_CheckOutTime2",obj).timepicker(timepickerOptions);
+	$("#id_StartRestTime",obj).timepicker(timepickerOptions);
+	$("#id_EndRestTime",obj).timepicker(timepickerOptions);
+	$("#id_StartRestTime1",obj).timepicker(timepickerOptions);
+	$("#id_EndRestTime1",obj).timepicker(timepickerOptions);
+	$("#id_StartTime",obj).timepicker(timepickerOptions);
+    $("#id_StartTime",obj).attr("readonly","readonly")
+        if ($("#id_IsCalcOverTime",obj).val()=='1')
+            $("#id_OutOverTime",obj).prop("checked","checked");
+        if ($("#id_IsCalcComeOverTime",obj).val()=='1')
+            $("#id_ComeOverTime",obj).prop("checked","checked"); 
+            sch_deptTree(obj)   
+/*
+	IsCalcRest=$("#id_IsCalcRest",obj).val();
+	$("#id_IsCalcRest",obj).parent().html(""
+	                    +"<td><select id='IsCalcRest'>"+getIsCalcRest(IsCalcRest)+"</select></td>"
+	                     +"<input type='hidden' id='id_IsCalcRest' value="+IsCalcRest+" name='IsCalcRest' />"
+	                    );
+
+	$("#IsCalcRest",obj).click(function(){
+	$("#id_IsCalcRest",obj).val($(this).val());
+	});
+	*/
+	//$("#id_IsCalcRest",obj).val($("#IsCalcRest").val());
+
+	if($("#id_Color",obj).val()==""){
+		var hex="000000"
+	}else{
+		var hex="000000"+parseInt($("#id_Color",obj).val(),10).toString(16)	
+		hex=hex.substring(hex.length-6,hex.length)		
+	}
+	$('#id_Color',obj).css('background', '#'+hex)	
+	$("#id_Color",obj).ColorPicker({color:'#'+hex,
+		onChange: function (hsb, hex, rgb) {	$('#id_Color',obj).css('backgroundColor', '#' + hex).val(parseInt('0x'+hex));}
+	});
+	f=$(obj).find("#id_edit_form").get(0)
+	$(f).validate({
+			rules: {
+					"SchName": {"required":true,string:true,maxlength:20},
+					"StartTime": {"required":true},
+					"EndTime": {"required":true},
+                                        "LateMinutes":{"digits":true,"min":0,"max":240},
+										"EarlyMinutes":{"digits":true,"min":0,"max":240}
+				}
+			});
+
+}
+function getIsCalcRest(IsCalcRest){
+    html="";
+    if(IsCalcRest=="" || IsCalcRest==0)
+        html+="<option value='0' selected>{%trans 'No'%}</option>"
+    else
+        html+="<option value='0'>{%trans 'No'%}</option>"
+    if(IsCalcRest==1)
+        html+="<option value='1' selected>{%trans 'Yes'%}</option>"
+    else
+        html+="<option value='1'>{%trans 'Yes'%}</option>"
+    return html;
+}
+{% endblock %}
+</script>

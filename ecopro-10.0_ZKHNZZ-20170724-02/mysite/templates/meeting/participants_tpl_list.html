@@ -1,0 +1,219 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+
+//jqOptions=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='participants_tpl';
+jqOptions[g_activeTabID].sortname='id';
+jqOptions[g_activeTabID].pager='#id_pager_'+tblName[g_activeTabID];
+options[g_activeTabID].dlg_width=400
+selected_data=[]
+
+function datas(id){
+	var r=$("#id_grid_"+tblName[g_activeTabID]).jqGrid("getRowData",id);
+	var id=id
+	var Name=r.Name
+	var data=[id,Name];
+	return data
+}
+
+
+
+function Showparticipants_tplData(page,tag,isDiy)
+{
+	var setting = {
+            check: {enable: !tag,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},          
+	    async: {
+			    enable: true,
+			    url: "/meeting/getData/?func=participants_tpl",
+			    autoParam: ["id"]
+		    }
+	};
+	$.fn.zTree.init($("#showTree_"+page), setting,null);	
+}
+
+function strOfData_participants_tpl(data)
+{
+	return stripHtml(data.Name);
+}
+
+
+function doAction_participants_tpl(url, action)
+{	
+	var result=getSelected(0,"true");
+	selected_data=datas(result.ss);
+	var shift_id=selected_data[0]
+	if (action == 'add_participants')
+		createDlgparticipants();
+}
+
+
+function createDlgparticipants1(id)
+{
+
+    createDlgparticipants(id)
+}
+
+
+function createDlgparticipants(id)
+{
+        if(typeof id=='undefined')
+	{
+		var result=getSelected(0,"true");
+		if (result.ss.length>1){
+			alert(gettext("仅允许选择一个模板"));
+			return;
+		}else
+			selected_data=datas(result.ss);
+	}
+	else
+        {
+		  var result={ss:id}
+		  selected_data=datas(id);
+         }
+
+    createDlgdeptfor10('employee_search',1)
+    $('#dlg_for_query_employee_search').dialog({
+    buttons:[{id:"btnShowOK",text:gettext('提交'),
+      click:function(){searchempbydept('employee_search',selected_data);$(this).dialog("destroy"); }},
+     {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+    }] })
+
+
+}
+
+function searchempbydept(page,selected_data){
+    var dept_ids=getSelected_dept("showTree_"+page)
+    if (dept_ids!=null){
+    	if(dept_ids==undefined||dept_ids==''){
+    		alert("{% trans "请选择部门" %}")
+    		return false;
+    	}
+    }else{
+    	alert("{% trans "请选择部门" %}")
+    	return false;
+    }
+    var ischecked=0;
+    if($("#id_cascadecheck_"+page).prop("checked"))
+    	ischecked=1;
+    urlStr="deptIDs="+dept_ids+"&isContainChild="+ischecked
+    var emp=getSelected_emp_ex("sel_employee_search");
+    if(emp.length>0){
+	urlStr="UserIDs="+emp
+    }
+    $.ajax({type: "POST",
+                url: "/meeting/employeeforparticipants/?meetid="+selected_data[0],
+                data: urlStr,
+                dataType:"json",
+                success: actionSuccess,
+                error: function(request){alert("保存失败")}
+                });
+}
+
+function process_dialog_participants_tpl(htmlObj){
+	$(htmlObj).dialog({resizable:false,modal:true})
+	f=$(htmlObj).find("#id_edit_form").get(0)
+	$(f).validate({
+				rules: {
+					Name: {required:true,string:true}
+				}
+	});
+}
+
+
+
+
+function Check_participants(id)
+{
+    createDataDialog('participants_details', "{%trans '参会人员名单' %}",  1024,'/meeting/data/participants_details/?participants_tplID='+id)
+}
+function del_participants(id)
+{
+        $.ajax({type: "POST",
+                        url: "/meeting/data/participants_details/?action=del",
+                        data: 'K='+id,
+                        dataType:"json",
+                        success: function(){$("#id_grid_mini").jqGrid("delRowData",id);
+},
+                        error: function(request){
+                                alert($.validator.format(gettext('{0} failed!\n\n{1}'), opName, request.statusText)); $.unblockUI(); 
+                                }
+                        });
+}
+
+//参会人员模板模糊查询
+function searchShowParticipants_tpl(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+    var url="/meeting/data/participants_tpl/?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+
+$(function(){
+        $("#"+g_activeTabID+" #queryButton").hide()
+        $("#"+g_activeTabID+" #id_customOrder").css("display","none")
+        $("#"+g_activeTabID+" #id_custom").css("display","none")
+        $("#"+g_activeTabID+" #titleId").html("<h1><img src='/media/img/blogmarks.png'></img>{%trans '人员模板信息维护' %}</h1>")
+        $("#"+g_activeTabID+" #id_newrec").click(function(event){
+                processNewModel();
+               // $('ui-dialog-title').val('sss')
+        })
+        $("#"+g_activeTabID+" #property_manage").click(function(event){
+                savecookie("manual_PropertyEdit_UserIDs","");
+                menuClick("/iclock/att/manualProperty/?stamp="+new Date().toUTCString())
+        })
+
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	   searchShowParticipants_tpl();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	   if(event.keyCode==13)
+	  searchShowParticipants_tpl();
+	});        
+        
+        
+})
+{% endblock %}
+
+{% block loadData %}
+	html="<div id='show_dept_tree_'>"
+		+"<ul id='showTree_"+g_activeTabID+"' class='ztree' style='margin-left: 0px;height: 100%;'></ul>"
+		+"</div>"   
+	$("#west_content_tab_meeting_participants_tpl").html(html)
+    //var h=$("#"+g_activeTabID+" #west_content").height()-20
+	//$('#showTree_'+g_activeTabID).css('height',h)
+
+        Showparticipants_tplData(g_activeTabID,true)
+        loadNULLPage('#id_grid_'+tblName[g_activeTabID]);
+	var zTree = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+	zTree.setting.check.enable = false;
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		var deptID=treeNode.id;
+		var deptName=treeNode.name;
+                if (deptID==0)
+                    var urlStr="/meeting/data/participants_tpl/"
+                else
+                    var urlStr="/meeting/data/participants_tpl/?id="+deptID
+                
+		savecookie("search_urlstr",urlStr);
+		 $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+	}
+
+
+{% endblock %}
+
+{% block extractButton %}
+    <LI id="id_add_participants"  onclick='batchOp(function(url){doAction_participants_tpl(url, "add_participants")},undefined,"{%trans '添加参会人员' %}");'><SPAN class="icon iconfont icon-tianjiarenyuan"></SPAN>{%trans "添加参会人员"%}</LI>
+    <LI id="id_delete_participants"  onclick="batchOp('?action=participants_del',null,'{%trans "清除参会人员"%}');"><SPAN class="icon iconfont icon-qingchurenyuan"></SPAN>{%trans "清除参会人员"%}</LI>
+	
+	
+{% endblock %}
+

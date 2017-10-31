@@ -1,0 +1,578 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+
+<script>
+totalRecCnt_emp={{ item_count }};
+var isHasDept=1
+var tabpanel;  
+var jcTabs = [];
+ 
+  dataExportsFormats=1;
+  datas=[];
+  fieldnames=[];
+  t_items=[]
+/*
+function getTitems()
+{ 
+    {% if user|HasPerm:"iclock.iaccMonitor_iaccdevitemdefine"%}t_items.push({id:'iacc_Monitor',title:'{% trans "监控记录表"%}',html:getHtml('iacc_Monitor'),closable: false}){% endif %}
+    {% if user|HasPerm:"iclock.iaccAlarm_iaccdevitemdefine"%}t_items.push({id:'iacc_Alarm',title:'{% trans "报警记录表"%}',html:getHtml('iacc_Alarm'),closable: false}){% endif %}
+    {% if user|HasPerm:"iclock.iaccUserRights_iaccdevitemdefine"%}t_items.push({id:'iacc_UserRights',title:'{% trans "用户权限表"%}',html:getHtml('iacc_UserRights'),closable: false}){% endif %}
+	return 1;
+}*/
+function getSidx(index){
+    var sidx=""
+    if (index=='iacc_Monitor'||index=='iacc_Alarm'){
+        if($("#o_Asc").prop("checked")=="checked"){
+             if($("#o_TTime").prop("checked")=="checked"){
+                sidx=sidx+"OPTime,"
+            }
+         }
+         else{
+             if($("#o_TTime").prop("checked")=="checked"){
+                sidx=sidx+"-OPTime,"
+            }
+         }
+         if(sidx.length>0)
+         {
+            sidx=sidx.substring(0,sidx.length-1);
+         }
+         else{
+             sidx="OPTime"
+         }
+        
+    }else{
+        sidx=""
+    }
+    return sidx
+}
+function getHtml(tabid)
+{
+	return "<div id="+"id_"+tabid+">  <table id="+"id_"+tabid+"_grid"+"></table> "+"<div id="+"id_"+tabid+"_pager"+"></div>  </div>"
+} 
+$(function(){
+    /*getTitems();
+    tabpanel = new TabPanel({  
+        renderTo:'report_tabs',  
+        width:'100%',  
+        height:'100%',  
+        active : 0,
+        items : t_items
+    });  */
+$('#report_tabs').css('height',$('#id_content').height()-$('#id_top').height()-5)
+var tabs1=$( "#report_tabs" ).tabs({
+		    // selected: -1 ,
+		    //collapsible: true
+		    
+		})
+$("#id_export").click(function(){
+
+    //var tabitem=tabpanel.getActiveTab();
+    //var index=tabitem.id;
+    //if (index=='undefined' || index=='null') return;
+    var ComeTime=$("#"+g_activeTabID+" #id_ComeTime").val();
+    var EndDate=$("#"+g_activeTabID+" #id_EndTime").val();
+    var dev=getSelected_dev();
+    var Object=$("#id_Object").val();
+//    var totalEmp=parseInt($("#Employee").attr("alt"));
+    if(ComeTime==null ||ComeTime==""){
+        $("#id_con_error").css("display","block");
+        $("#id_con_error").html("<span class='Report_errorlist'>{%trans 'Please set conditions!'%}</span>");
+    }
+//    else if(totalEmp<=0){
+//        $("#id_con_error").css("display","block");
+//        $("#id_con_error").html("<span class='Report_errorlist'>"+$("#department").val()+"&nbsp;&nbsp;{%trans 'no employee'%}</span>");
+//    }
+    clickexport(grid_disabledfields);
+})
+
+
+//delCookie("dept_ids");//删除cookie
+$('#report_tabs a').click(function(){
+		var tabitem=$( "#report_tabs" ).tabs('option', 'active');
+		//var tabitem=tabpanel.getActiveTab();
+	    if (tabitem==0) {
+		//flag=true
+                 index="iacc_Monitor";
+            }else if (tabitem==1){
+		index="iacc_Alarm";
+	    }else if (tabitem==2){
+		index="iacc_UserRights";
+	    }
+		//var index=tabitem;
+		if (index=='undefined' || index=='null') return;
+		var page_style=index;
+        var dev=getSelected_dev();
+        var Object=$("#id_Object").val();
+		var ComeTime=$("#"+g_activeTabID+" #id_ComeTime").val();
+		var EndDate=$("#"+g_activeTabID+" #id_EndTime").val();
+		var isError=validate_form_iacc_Monitor();
+		var jqOptions=copyObj(jq_Options)
+		var height=$("#report_tabs").height()-200;
+		//var height=$(".tabpanel_content").height()-150;
+		jqOptions.height=height;
+		jqOptions.pager='#id_'+page_style+'_pager';
+        jqOptions.rowNum={{limit}}
+        jqOptions.rowList=[jqOptions.rowNum,jqOptions.rowNum*2]
+		var idx=''
+        if(isError){
+            $("#id_con_error").css("display","block");
+            $("#id_con_error").html("<span class='Report_errorlist'>{%trans '请选择设备或正确时间！'%}</span>");
+            return false;
+        }
+        else
+        {	
+            $.cookie("dev",dev, { expires: 7 });
+            $.cookie("ComeTime",ComeTime, { expires: 7 });
+            $.cookie("EndDate",EndDate, { expires: 7 });
+            $("#id_con_error").css("display","none");
+        }
+    
+        if(ComeTime==null ||ComeTime=="")
+        {
+            $("#id_con_error").css("display","block");
+            $("#id_con_error").html("<span class='Report_errorlist'>{%trans '请选择时间!'%}</span>");
+        }else{
+	    $("#id_con_error").css("display","none");
+            if(index=='iacc_Monitor'){//监控记录表
+                idx=getSidx(index)
+                $("#id_export_con").val("iacc_Monitor");
+                $("#id_show_units").html(unit['unit']);
+                var queryStr="startDate="+ComeTime+"&endDate="+EndDate+"&SNs="+dev+"&sidx="+idx+"&Object="+Object;
+                var urlStr="/acc/iacc/getIacc_MonitorReport/?page=1&"+queryStr
+                savecookie("search_urlstr",urlStr);
+                $.cookie("queryStr",queryStr, { expires: 7 });
+               $("#id_"+page_style+'_grid').jqGrid('GridUnload')
+	       //$.jgrid.gridUnload("#id_"+page_style+'_grid')
+                $.ajax({
+                    type:"GET",
+                    url:"/acc/iacc/getIacc_MonitorReport/?page=1&stamp="+new Date().toUTCString(),
+                    dataType:"json",
+                    //data:queryStr,
+                    success:function(json){
+			tblName="iacc_Monitor";
+                        grid_disabledfields=json['disabledcols']
+                        jqOptions.colModel=json['colModel']
+                        get_grid_fields(jqOptions)
+                        hiddenfields(jqOptions)
+        //                    jqOptions.sortname="";
+        //                    jqOptions.sortorder="desc";
+                        jqOptions.url=urlStr
+                        $("#id_"+page_style+'_grid').jqGrid(jqOptions);
+                    }
+                }); 
+            
+            }else if(index=='iacc_Alarm'){//报警记录表
+                idx=getSidx(index)
+                $("#id_export_con").val("iacc_Alarm");
+                $("#id_show_units").html(unit['unit']);
+                var queryStr="startDate="+ComeTime+"&endDate="+EndDate+"&SNs="+dev+"&sidx="+idx+"&Object="+Object;
+                var urlStr="/acc/iacc/getIacc_AlarmReport/?page=1&"+queryStr
+                savecookie("search_urlstr",urlStr);                
+                $.cookie("queryStr",queryStr, { expires: 7 });
+                $("#id_"+page_style+'_grid').jqGrid('GridUnload')
+	        //$.jgrid.gridUnload("#id_"+page_style+'_grid')
+                $.ajax({
+                    type:"GET",
+                    url:"/acc/iacc/getIacc_AlarmReport/?page=1&stamp="+new Date().toUTCString(),
+                    dataType:"json",
+                    //data:queryStr,
+                    success:function(json){
+                        tblName="iacc_Alarm";
+                        grid_disabledfields=json['disabledcols']
+                        jqOptions.colModel=json['colModel']
+                        get_grid_fields(jqOptions)
+                        hiddenfields(jqOptions)
+        //                    jqOptions.sortname="";
+        //                    jqOptions.sortorder="desc";
+                        jqOptions.url=urlStr
+                        $("#id_"+page_style+'_grid').jqGrid(jqOptions);
+                    }
+                }); 
+            
+            }else if(index=='iacc_UserRights'){//用户权限表
+                idx=getSidx(index)
+                $("#id_export_con").val("iacc_UserRights");
+                $("#id_show_units").html(unit['unit']);
+                var queryStr="startDate="+ComeTime+"&endDate="+EndDate+"&SNs="+dev+"&sidx="+idx;
+                var urlStr="/acc/iacc/getIacc_UserRightsReport/?page=1&"+queryStr
+                savecookie("search_urlstr",urlStr);                
+                $.cookie("queryStr",queryStr, { expires: 7 });
+                $("#id_"+page_style+'_grid').jqGrid('GridUnload')
+		//$.jgrid.gridUnload("#id_"+page_style+'_grid')
+                $.ajax({
+                    type:"GET",
+                    url:"/acc/iacc/getIacc_UserRightsReport/?page=1&stamp="+new Date().toUTCString(),
+                    dataType:"json",
+                    //data:queryStr,
+                    success:function(json){
+                        tblName="iacc_UserRights";
+                        grid_disabledfields=json['disabledcols']
+                        jqOptions.colModel=json['colModel']
+                        get_grid_fields(jqOptions)
+                        hiddenfields(jqOptions)
+        //                    jqOptions.sortname="";
+        //                    jqOptions.sortorder="desc";
+                        jqOptions.url=urlStr
+                        $("#id_"+page_style+'_grid').jqGrid(jqOptions);
+                    }
+                }); 
+            
+            }
+
+
+        }
+
+	});
+
+  	$("#Iclock").val(($.cookie("Iclock")==null?"":$.cookie("Iclock")));
+  	$("#"+g_activeTabID+" #id_ComeTime").val(($.cookie("ComeTime")==null?"":$.cookie("ComeTime")));
+  	$("#"+g_activeTabID+" #id_EndTime").val(($.cookie("EndDate")==null?"":$.cookie("EndDate")));
+  	$("#o_TTime").val(($.cookie("TTime")==null?"":$.cookie("TTime")));
+  	$("#"+g_activeTabID+" #id_ComeTime").datepicker(datepickerOptions);
+  	$("#"+g_activeTabID+" #id_EndTime").datepicker(datepickerOptions);
+    var currDate=new Date();
+    td=currDate.getFullYear()
+    	+"-"
+    	+(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+    	+"-"
+    	+currDate.getDate()
+    if($.cookie("ComeTime")){
+    	$("#"+g_activeTabID+" #id_ComeTime").val($.cookie("ComeTime"))
+    	$("#"+g_activeTabID+" #id_EndTime").val($.cookie("EndDate"))
+    }
+    else{
+    	$("#"+g_activeTabID+" #id_ComeTime").val(td)
+    	$("#"+g_activeTabID+" #id_EndTime").val(td)
+    }
+	
+	//自定义字段
+	$("#id_custom").click(function(){
+		ShowCustomField();
+	});
+	//重定义自定义字段提交
+	$("#btn_DefineField_rp").click(function(){
+		var sFields=getunSelected_Fields();
+		var queryStr="tblName="+tblName+"&Fields="+sFields
+		$.post("/iclock/att/saveFields/", 
+			queryStr,
+			function (ret, textStatus) {
+				if(ret.ret==0)
+				{
+					hideFields_define();
+					$("#tabs ul").find(".ui-tabs-selected a").trigger("click")
+				}
+			},
+			"json");
+	
+	});
+	
+    unit={unit:100}
+	$("#id_form_export").submit(function(){
+		var dev=getSelected_dev();
+        var Object=$("#id_Object").val();
+		var ComeTime=$("#"+g_activeTabID+" #id_ComeTime").val();
+		var EndDate=$("#"+g_activeTabID+" #id_EndTime").val();
+		var tblName=$("#id_export_con").val();
+		var isError=validate_form_iacc_Monitor();
+		hideIclock ();
+		if(!isError&& tblName!=""){
+			$("#id_SNs").val(dev);
+		}
+		else
+		{
+			
+			$("#id_con_error").css("display","block");
+			$("#id_con_error").html("<span class='Report_errorlist'>{%trans '请选择设备或正确时间!'%}</span>");
+			return false;
+		}
+	});
+	$("#id_print").click(function(){
+		var dev=getSelected_dev();
+        var Object=$("#id_Object").val();
+		var ComeTime=$("#"+g_activeTabID+" #id_ComeTime").val();
+		var EndDate=$("#"+g_activeTabID+" #id_EndTime").val();
+		var tblName=$("#id_export_con").val(); 
+		var isError=validate_form_iacc_Monitor();
+		hideIclock ();
+		if(!isError&& tblName!=""){
+			var queryStr="ComeTime="+ComeTime+"&EndTime="+EndDate+"&SNs="+dev+"&Object="+Object;
+			window.open("/iclock/att/print/"+tblName+"/?"+queryStr);
+			$("#id_con_error").css("display","none");
+		}
+		else
+		{
+			$("#id_con_error").css("display","block");
+			$("#id_con_error").html("<span class='Report_errorlist'>{%trans '请选择设备或正确时间!'%}</span>");
+		}
+	});
+        
+    $("#o_TTime").click(function(){
+    $("#o_none").attr("checked",false);
+    if($(this).prop("checked")){
+        $.cookie("ot","&o=TTime", { expires: 7 });
+    }
+    else{
+        $.cookie("ot","&o=-TTime", { expires: 7 });
+    }
+    });
+    $("#o_none").click(function(){
+    $.cookie("ot","", { expires: 0 });
+    $("#o_TTime").attr("checked",false);
+    });
+        
+        $.cookie("url","", { expires: 0 });
+        $.cookie("ot","", { expires: 0 });
+        $("#"+g_activeTabID+" #id_ComeTime").focus(
+        function() { this.select(); }
+        );
+        $("#Employee").focus(
+        function() { this.select(); }
+        );
+        $("#"+g_activeTabID+" #id_EndTime").focus(
+        function() { this.select(); }
+        );
+       
+});
+
+function validate_form_iacc_Monitor(){   //验证表单的合法性(人员(可不选，在计算项目中计算选中部门的人员，其他的就默认值0)、开始时间、结束时间)
+	var t_dev=getSelected_dev();
+    var Object=$("#id_Object").val();
+	var t_ComeTime=$("#"+g_activeTabID+" #id_ComeTime").val();
+	var cTime=t_ComeTime.split("-");
+	var t_EndDate=$("#"+g_activeTabID+" #id_EndTime").val();
+	var eTime=t_EndDate.split("-");
+	cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+	edate=new Date(parseInt(eTime[0],10),parseInt(eTime[1],10)-1,parseInt(eTime[2],10));
+	var days=(edate.valueOf()-cdate.valueOf())/(1000*3600*24)+1;
+	if(t_ComeTime=="" || t_EndDate==""|| cdate>edate||!valiDate(t_ComeTime)||!valiDate(t_EndDate)||t_dev==""||t_dev==null)// ||days>31 
+		return 1;
+	else
+		return 0
+}
+function getDevs(){
+	$.ajax({ 
+	        type: "POST",
+	        url:"/iclock/att/getData/?func=devs",
+	        dataType:"json",
+	        success:function(json){
+	                devs=json;
+					var block_html="<table width=100%>"
+									+'<tr id="id_toolbar_emp"><td id="divPage_emp" colspan="3">'
+									+'<div id="line">'<!-- DIV needed for valid HTML -->
+									+'<label for="id_searchbar_emp"></label>'
+									+'<input type="text" title="根据设备序列号、设备别名进行查询" size="10" style="width:150px !important;" name="q_dev" value="" id="id_searchbar_dev"/>'
+									+'<input type="button"id="id_search_dev" onclick="getQueryDev()" value="{%trans 'Query'%}"/>'
+									+'</div>'
+									+'</td></tr><tr><td><table id="id_ret">'
+									+getDevHtml(devs)
+									+"</table></td></tr></table>"
+                    $("#id_dev").html(block_html);
+
+			}
+		})
+	
+}
+
+function getQueryDev(){
+    var v=$("#id_searchbar_dev")[0].value;
+    $.cookie("q",v,{expires:10})
+    $.ajax({
+        type:"POST",
+        dataType:"json",
+        url: "/iclock/att/getData/?func=devs&q="+escape(v),
+        success:function(data){
+            $("#id_ret").html(getDevHtml(data))
+        }
+    })		
+    return false;
+}
+function getDevHtml(devs){
+	var retHtml="<tr><th><input type='checkbox' id='is_select_all_emp' onclick='check_all_for_row_dev(this.checked);' /></th><th>设备序列号</th><th>设备名称</th></tr>"
+
+	for(var i=0;i<devs.length;i++){
+		retHtml+="<tr><td><input type='checkbox' class='class_select_dev' onclick='showSelected_dev();'  name='"+devs[i].SN+"' id='"+devs[i].SN+"' alt='' /></td><td>"+devs[i].SN+"</td><td>"+devs[i].Alias+"</td></tr>"
+	}
+	return retHtml;
+}
+$("#id_drop_dev").click(function(){
+    getDevs();
+    showIclock();
+});
+function showSelected_dev(){
+    var c = 0;
+	$("#id_addsch_tmpShift").attr("disabled","disabled");
+    $.each($(".class_select_dev"),function(){
+			if(this.checked) c+=1;})
+    $("#selected_count").html("" + c);
+}
+function showIclock () {
+	var top =  $("#Iclock").position().top;
+	var left =  $("#Iclock").position().left;
+	var e_height=$("#Iclock").height();
+	$("#show_dev").css("display","block").css("top", top+e_height+6).css("left", left);
+	$.cookie("dev","", { expires: 0 });
+}
+
+function check_all_for_row_dev(checked) {
+
+    if (checked) {
+        $(".class_select_dev").attr("checked", "true");
+    } else {
+        $(".class_select_dev").removeAttr("checked");
+    }
+    showSelected_dev();
+}
+
+function hideIclock () {
+	$("#show_dev").css("display","none").css("top", -1500).css("left",  -1500);
+}
+function save_hideIclock(){//保存选中人员
+	$("#show_dev").css("display","none").css("top", -1500).css("left",  -1500);
+    names=getSelected_devNames();
+    $("#Iclock").val(names);
+	
+}
+function getSelected_dev() {
+	var dev=[];
+	$.each($(".class_select_dev"),function(){
+			if(this.checked)
+				dev.push(this.id)
+	});
+	return dev;
+}
+function getSelected_devNames(){
+	var devNames=[];
+	$.each($(".class_select_dev"),function(){
+			if(this.checked)
+				devNames.push(this.name)
+	});
+	return devNames;
+}
+
+</script>
+<div class="module1" style="position:relative;height:100%;">
+
+<form id="id_form_export" action="/iclock/att/exportReport/" method="POST">
+
+<table id="changelist" style="margin-bottom: 2px;">
+<tr>
+<td width="70px" colspan="1"><span style="font-size: 15px; padding-right: 20px;"><b><img src="/media/img/blogmarks.png" /></b></span></td>
+<td width="660px"><span style="display: none; " id="id_con_error" ></span></td>
+<td align="right"width="70px"><div id="id_line"><img src="../media/img/home.png" title="{% trans 'Add to home page' %}" onclick="javascript:saveHome();" /></div></td>
+ 
+</tr>
+
+<tr>
+    <td colspan="3" width="750px">
+       <span style="width:295px">
+            <span>
+                <div><span style="float:left;"><label style="line-height:21px;padding:1px;" class="required">{%trans '设备'%}</label></span><span style="float:left;"><input type="text" readOnly="readOnly" name="Iclock" id="Iclock"/>
+                </span>
+                <span style="float:left;"><img  title="{%trans '打开设备列表'%}" src="/media/img/sug_down_on.gif" id="id_drop_dev"/></span>
+                </div>
+                <div id="show_dev">
+                <div class="title"><span onclick="hideIclock ();" class="close" title="{%trans "return"%}"/><span onclick="save_hideIclock ();" class="save_Iclock"  title="{%trans "Submit"%}"/></div>
+                <div id="id_dev"></div>
+                </div>
+            </span>
+            <span>
+                <div><span style="float:left;"><label style="line-height:21px;padding:1px;" >{%trans '事件'%}</label></span>
+                <span style="float:left;">
+                <select name="Object" id="id_Object">
+                <option value="0">{%trans '---------'%}</option>
+                <!-- <option value="50">{%trans 'Door Close Detected'%}</option> -->
+                <!-- <option value="51">{%trans 'Door Open Detected'%}</option> -->
+                <!-- <option value="53">{%trans 'Out Door Button'%}</option> -->
+                <option value="54">{%trans 'Door Broken Accidentally'%}</option>
+                <option value="55">{%trans 'Machine Been Broken'%}</option>
+                <option value="58">{%trans 'Try Invalid Verification'%}</option>
+                <!-- <option value="59">{%trans 'Force'%}</option> -->
+                <option value="4">{%trans '门打开'%}</option>
+                <option value="5">{%trans '门关闭'%}</option>
+                <!-- <option value="65535">{%trans 'Alarm Cancelled'%}</option> -->
+                </select>
+                </span>
+                </div>
+            </span>
+        </span>
+    
+        <span style="width:410px">
+            <span>
+                <label style="line-height:21px;padding:1px;" class="required">{%trans "Begin Date"%}</label>
+                <input type="text" size="11" class="vDateOnlyField" id="id_ComeTime" maxlength="10" name="ComeTime"/>
+                <label style="line-height:21px;padding:1px;" class="required">{%trans "End Date"%}</label>
+                <input type="text" size="11" class="vDateOnlyField" id="id_EndTime" maxlength="10" name="EndTime"/>
+                
+                <span style="padding: 3px; display: none; float: left;"><input type="hidden" id="id_export_con" value="" name="tblName"/>
+                <input type="hidden" id="id_SNs" value="" name="SNs"/>
+                <input type="hidden" id="id_l" value="1000000" name="l"/>
+                </span>
+            </span>
+            
+        </span>
+       
+    </td>
+
+</tr>
+<tr id="toolbar">
+    <td id="divPage" width="800px" colspan="3">
+        <div id="id_order" style='display:inline;float:left;width:355px'><label class="required">{%trans "Order"%}</label>
+        <input type="checkbox" name="TTime" id="o_TTime" style="padding-left:1px;" checked/>{%trans "time"%}
+        <input type="radio" name="order_type" value="Asc" id="o_Asc" style="padding-left:1px;"/>{%trans "Ascending Order"%}
+        <input type="radio" name="order_type" value="Desc" id="o_Desc" style="padding-left:1px;" checked/>{%trans "Descending Order"%}
+        </div>
+
+        <div id="id_toolbar" style='display:inline;float:left;width:340px'>
+    		<ul id="nav" class="nav">
+    			<li id="id_calcReport" style="border:1px solid #77B7DE;display:none;"><span class="searchlink"></span><a href="#" title="查看所有报表前只需要统计一次即可">{% trans 'Calculate'%}</a></li>
+    			<li id="id_reload" style="border:1px solid #77B7DE;display:none;"><span class="reloadlink"></span><a href="#">{%trans "Reload"%}</a></li>
+    			<li id="id_export" style="border:1px solid #77B7DE;"><span class="exportlink"></span><a href="#">{%trans "Export"%}</a></li>
+    			<li id="id_print" style="border:1px solid #77B7DE;"><span class="printlink"></span><a href="#">{%trans "Print"%}</a></li>
+    			<li id="id_custom" style="border:1px solid #77B7DE;"><span class="customlink"></span><a href="#" title="{%trans 'User define fields'%}" >{%trans "Preferences"%}</a></li>
+    		</ul>
+    	</div>
+    </td>
+</tr>
+</table>
+</form>
+	<div id="RightPane"  valign="top" style="width: 100%;height:100%;"><!-- Tabs pane -->
+		<div id="report_tabs" style="width:100%;height:100%;">
+			<ul>
+			    {% if user|HasPerm:"iclock.iaccMonitor_iaccdevitemdefine"%}<li><a id="iacc_Monitor_a" href="#iacc_Monitor">{% trans "监控记录表"%}</a></li>{% endif %}
+			    {% if user|HasPerm:"iclock.iaccAlarm_iaccdevitemdefine"%}<li><a id="iacc_Alarm_a" href="#iacc_Alarm">{% trans "报警记录表"%}</a></li>{% endif %}
+			    {% if user|HasPerm:"iclock.iaccUserRights_iaccdevitemdefine"%}<li><a id="iacc_UserRights_a" href="#iacc_UserRights">{% trans "用户权限表"%}</a></li>{% endif %}
+			</ul>
+			<div id="iacc_Monitor" align="left" > 
+				<table id="id_iacc_Monitor_grid" ></table> 
+				<div id="id_iacc_Monitor_pager" ></div>
+			</div>
+				<div id="iacc_Alarm" align="left" > 
+				<table id="id_iacc_Alarm_grid" ></table> 
+				<div id="id_iacc_Alarm_pager" ></div>
+			</div>
+				<div id="iacc_UserRights" align="left" > 
+				<table id="id_iacc_UserRights_grid" ></table> 
+				<div id="id_iacc_UserRights_pager" ></div>
+			</div>
+		</div>
+	
+	</div>
+</div>
+
+<!--<div id="show_field_selected">
+	<div class="title"><span class='close' onclick='hideFields_define();'></span></div>
+	<div id="id_fields_selected"></div>
+	<!--
+	<div class="btn">
+	<input type="button" value='{%trans "Submit" %}' id="btn_DefineField_rp"  class="btnOKClass">
+	<input type="button" value='{%trans "Return" %}' id="btnShowCancel" onclick="hideFields_define();" class="btnCancelClass">
+	</div>
+	-->
+</div>
+  -->
+
+
+
+
+

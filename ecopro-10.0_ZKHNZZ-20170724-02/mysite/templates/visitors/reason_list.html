@@ -1,0 +1,69 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+//options.disableCols=["0","12","13"];
+
+hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+hasImport={% if user|HasPerm:"visitors.import_reservation" %}true{% else %}false{% endif %}
+jqOptions[g_activeTabID]=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='reason';
+jqOptions[g_activeTabID].pager = '#id_pager_'+tblName[g_activeTabID];
+jqOptions[g_activeTabID].sortname='';
+options[g_activeTabID].dlg_width=600;
+options[g_activeTabID].dlg_height=400;
+options[g_activeTabID].edit_col=1;
+//dtFields = "{{ dtFields }}";
+$(function(){
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+                processNewModel();
+	});
+	//$("#"+g_activeTabID+" #id_custom").remove()
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowLib_reason();
+	});
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowLib_reason();
+	});
+        $("#"+g_activeTabID+" #queryButton").hide()
+        var info='<div><p>来访事由用于访客来访相关缘由管理，在进行“访客预约”和“访客登记”前预先设置好，以方便在“访客预约”和“访客登记”的相关操作使用</p></div>'
+
+        renderLeftInformation(info);
+	smenu="<ul><li  class='subnav_on' onclick=submenuClick('/visitors/data/reason/',this);><a href='#'>来访事由维护</a></li></ul>"
+        //$('#menu_div').html(smenu)
+});
+
+//部门模糊查询
+function searchShowLib_reason(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+		var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+		var v=""
+    var url="/visitors/data/reason/?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+    
+}
+
+function process_dialog_reason(htmlObj){
+	     $(htmlObj).dialog({resizable:false,modal:true})
+	f=$(htmlObj).find("#id_edit_form").get(0)
+	$(f).validate({
+				rules: {
+					reasonNo: {required:true,alnum:true},
+					reasonName: {required:true,string:true}
+				}
+	});	
+}
+function strOfData_reason(data)
+{
+	return stripHtml(data.reasonNo)+" "+data.reasonName;
+}
+
+
+{% endblock %}
+

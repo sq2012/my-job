@@ -1,0 +1,68 @@
+{% load iclock_tags %}
+{% load i18n %}
+<script type="text/javascript">
+totalRecCnt_tran={{ item_count }};
+item_from_tran={{ from }}
+page_index_tran={{ page }};
+page_limit_tran={{ limit }};
+page_number_tran={{ page_count }};
+$(function(){
+var page_style=10;
+$("#id_result_pages").html("<b>{% trans "Transaction"%}&nbsp;&nbsp;</b>"+getPagers("", item_from_tran-1, totalRecCnt_tran, page_limit_tran, page_index_tran, page_number_tran,page_style,1));
+});
+
+
+function AuditedTrans(id){
+    var html=
+      "<div class='dialog'>"
+    +  "<div class='dheader'><span>{%trans 'Input Remarks'%}</span><span class='close' onclick='javascript:$.unblockUI();'></span></div>"
+   
+    + 	"<center><textarea id='id_remark' rows='10' cols='40'></textarea></center>"
+    
+       + createSubmitButton2()
+    +"</div>"
+    $.blockUI(html);
+    blockUI_center();
+    $("#btnShowOK").click(function(){
+        remarks=$("#id_remark").val();
+        queryStr="id="+id+"&remarks="+remarks
+        $.ajax({ 
+            type: "POST",
+            url:"/iclock/att/auditedTrans/",
+            dataType:"json",
+            data:queryStr,
+            success:function(retdata){
+                if(retdata.ret==0){
+                    renderTransTbl(1);  
+                    $.unblockUI();
+                   
+                }
+            }
+        });
+        
+    });
+    
+
+
+}
+
+</script>
+<table>
+<tr><td align="left" style="border:0px;">
+    <div id="id_result_pages" style="float:left;"></div>
+</td></tr>
+<tr id="id_second"><td style="border:0px;">
+    <table id="tbl">
+        {% autoescape off %}
+        <thead><tr><th>{% trans 'department name' %}</th><th>{% trans 'PIN' %}</th><th>{% trans 'EName' %}</th><th>{% trans 'Time' %}</th><th>{% trans 'State' %}</th><th>{% trans 'Verification' %}</th><th>{% trans 'Device name' %}</th></tr></thead> {% endautoescape %}
+        {% for item in latest_item_list %}
+            {%if forloop.counter|isOdd%}
+                <tr class='row1'><td>{{ item.employee.Dept.DeptName }}</td><td>{{ item.employee.PIN }}</td><td>{{ item.employee.EName }}</td><td>{{ item.TTime|stdTime }}</td><td>{{ item.get_State_display }}</td><td>{{ item.get_Verify_display|default:"" }}</td><td>{{ item.Device|default:"" }}</td></tr>
+            {%else%}
+                <tr class='row2'><td>{{ item.employee.Dept.DeptName }}</td><td>{{ item.employee.PIN }}</td><td>{{ item.employee.EName }}</td><td>{{ item.TTime|stdTime }}</td><td>{{ item.get_State_display }}</td><td>{{ item.get_Verify_display|default:"" }}</td><td>{{ item.Device|default:"" }}</td></tr>
+            {%endif%}
+        {% endfor %}
+        <tr></tr>
+    </table>
+</td></tr>
+</table>

@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% load i18n static %}
+{% block extrjs %}
+	
+	
+{% endblock %}
+
+{% block extrastyle %}
+	<link rel="stylesheet" type="text/css" href="{% static 'css/login.css' %}"/>
+	
+{% endblock %}
+{% block bodyclass %}login{% endblock %}
+{% block title %}{% trans 'Login' %}--{{ title|escape }} {% endblock %}
+{% block content %}
+	
+	
+<script type="text/javascript">
+	var setHome=function(obj,url){
+	try{
+		obj.style.behavior='url(#default#homepage)';obj.setHomePage(url);
+	}
+	catch(e){
+		if(window.netscape) {
+			try {
+				netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");
+			}
+			catch (e) {
+				alert("此操作被浏览器拒绝！\n请在浏览器地址栏输入“about:config”并回车\n然后将 [signed.applets.codebase_principal_support]的值设置为'true',双击即可。");
+			}
+			try {
+				var prefs = Components.classes['@mozilla.org/preferences-service;1'].getService(Components.interfaces.nsIPrefBranch);
+				prefs.setCharPref('browser.startup.homepage',url);
+			}catch (e) {}
+		 }
+	}
+};
+function addToBookMarks(sHref, sTitle)
+{
+    if(document.all)
+        window.external.AddFavorite(sHref, sTitle);
+    else if(window.sidebar&&"object"==typeof (window.sidebar)&&"function"==typeof (window.sidebar.addPanel))
+	window.sidebar.addPanel(sTitle,sHref,"");
+    else if(window.opera)
+       alert("Opera users.\nRight-Click this link/page and select \'Bookmark this link...\' from the drop-down menu.");
+}
+
+var checkform=function() {	//表单验证
+  var check = true;
+    $("input[class=required]").each(function(i){	//必输字段
+    if (this.value=="")
+      check=false;
+    });
+    return check;
+}
+var getFocus=function(){
+$("#id_username").focus(function() { this.select(); });
+$("#id_password").focus(function() { this.select(); });
+}
+var saveUser=function(){
+    var remFlag=$('#RmbUser').prop("checked")
+    if (remFlag)
+    {
+        var uname=$('#id_user_name').val()
+        var upass=$('#id_password').val()
+	$.cookie('rmbusername',uname, { expires:7 });
+	$.cookie('rmbpassword',upass, { expires:7 });
+	$.cookie('rmbchecked','1', { expires:7 });
+    }
+    else
+    {
+	$.cookie('rmbusername','', { expires:7 });
+	$.cookie('rmbpassword','', { expires:7 });
+	$.cookie('rmbchecked','0', { expires:7 });
+    }
+}
+var loadUser=function(){
+    $('#id_user_name').val($.cookie('rmbusername'))
+    $('#id_password').val($.cookie('rmbpassword'))
+    $('#RmbUser').attr("checked",$.cookie('rmbchecked')=='1'?true:false)
+}
+
+function doLogin(){
+    if (!checkform())	{
+	    alert("{%trans 'this field is must'%}")
+            return false;
+        }
+    else{
+        var queryStr='username='+encodeURIComponent($('#id_user_name').val())+'&'+'password='+encodeURIComponent($('#id_password').val())+'&logintype='+$('#hidden_sel').val();//$("#login-form").formSerialize();
+        $.ajax({
+            type: "POST",
+            url:"/iclock/accounts/login/",
+            data:queryStr,
+            dataType:"json",
+	    async:false,
+            success:function(retdata){
+               if(retdata.ret==0){
+		   saveUser();
+                   window.location.href="/iclock/imanager"
+                }
+                else if(retdata.ret==2){
+                     window.location.href="/iclock/staff/"
+                }
+                else {
+		    alert(retdata.message)
+                    getFocus();
+                }
+            },
+       error: function (XMLHttpRequest, textStatus, errorThrown) {
+                 		alert("{%trans '浏览器出现故障，故障原因'%}"+errorThrown)
+             }
+        });
+   }
+}
+
+//语言切换
+function changedata(){
+	var formdata=$("#changeform").formSerialize();
+	$.ajax({
+		type:"POST",
+		url:"/iclock/i18n/setlang/",
+		data:formdata,
+		success:function(){
+			window.location.href="/iclock/imanager/"+"?stamp="+new Date().toUTCString()
+		}
+	})
+}
+
+
+$(function(){
+
+ 	$('.tabs span').click(function(e){
+		e.preventDefault();
+		
+		$("#login-form").clearForm();
+		
+		$(this).parent().find('span').removeClass("default");
+		$(this).parent().parent().parent().find('.tab').removeClass("default");
+		$(this).addClass("default");
+		$('#hidden_sel').val($(this).attr("rel"))
+	
+		var html=$(this).html()+"<i style='margin-left:  10px;' class='m-icon-swapright m-icon-white'>"
+		$('#btn_login').html(html)
+		$('#id_user_name').focus()
+		
+		
+	});
+
+     var h=$('.login_wrapper').height();
+	 if (h>800) {
+		$("#content").css('top',(h-600)/2+'px')
+	 }
+ 
+     $("#id_user_name").focus();
+    $("#id_password").keypress(function(event){
+        if(event.keyCode==13)
+            doLogin();
+    });
+ 
+    loadUser();
+	$("#id_about").click(function(){
+		load_AboutDlg('{%trans "关于系统" %}');
+		});
+});
+
+</script>
+
+
+
+	<!--[if lt IE 7]>
+		<script type="text/javascript">
+		alert("您的浏览器版本过低,强烈建议使用IE9+/Opera/Safari/Chrome/Firefox新版浏览器！\r\n在登陆框的下部可以点击下载火狐浏览器!!!")
+		</script>
+	<![endif]-->
+
+
+
+	
+<div class="login_wrapper">
+	<div class="top">
+		<!-- <form action="" id="changeform" method="post">
+			<select name="language" style="padding: 0px; padding-left: 5px; width:150px !important;" onchange="changedata()">
+				<option value="0" selected>{% trans '--- Language ---' %}</option>
+				{% for lang in LANGUAGES %}
+				<option value="{{ lang.0 }}">{{ lang.1 }}</option>
+				{% endfor %}
+			</select>
+		</form> -->
+	</div>
+
+
+	<div style='margin: 0 auto;position: relative;min-height: 375px;'>
+	
+	
+		<div id="content" >
+			<div class='login_logo' style="padding: 0px 10px">
+			<img src="/media/img/login/logo.png" style="width:100%; height:100%; " />
+			</div>
+			
+			
+			
+			<!--<div class="login_top">
+                <h3 style="border-top-left-radius: 6px;border-top-right-radius: 6px;color: #7ac143;float: center;font-size: 14px;border-bottom: 2px solid #7ac143;line-height: 27px">
+				<h3 class="tabs"> 屏蔽掉个人自助登陆
+				    <span class="default" rel="user">{%trans '管理员登录'%}</span>
+				    <span rel="employee" style="display:none">{%trans '个人自助登录'%}</span>
+				</h3>
+			</div>-->		
+			<form method=POST action="" id="login-form"  name="login" onSubmit="" target="_top">
+				<p>
+					<input type="text" placeholder="Username" required=""  name="user_name" class="required" id="id_user_name" />
+				</p>
+				<p style="display: none;">
+					<input type="text" placeholder="Username1"  name="username1"  id="username1" />
+				</p>
+
+
+				<p>
+					<input type="password" placeholder="Password" required="" name="pass_word" class="required" id="id_password" />
+				</p>
+				<p >
+					<span > <input type="checkbox" name="auUser" id="RmbUser" class="check"> <label for="RmbUser">{% trans 'Remember your name and password' %}</label> </span>
+				</p>
+				
+				<div id='submit'>
+					<a id='btn_login' class="m-btn  zkgreen rnd" style='width: 200px;' onclick="doLogin();">{%trans '管理员登录'%}<i style='margin-left:  10px;' class='m-icon-swapright m-icon-white'></i> </a>
+				</div>
+				<input type='hidden' name='logintype' value='user' id='hidden_sel' />
+	
+			</form>
+<!--	
+			
+			<div style='width: 310px;color: #909090;background: #F3F3F3;margin:  4px;text-align: left;float: left;'>{%trans '建议您使用最新浏览器(如IE9+/Firefox/Chrome)'%}<br><a href='/iclock/file/tools/Firefox_Setup.exe'>{%trans '下载火狐浏览器'%}</a></div>
+-->
+
+		</div>
+
+	</div>
+<!--	
+    <div style='position: absolute;top:350px;left: 150px;'>
+	<img src="/media/img/login/times.png" />
+    </div>	
+-->	
+
+	<div id="globalfooter" style=" width:100%;">
+	{% autoescape off %}
+	    <div class="foot">
+	      <p >{{ copyright }}</p>
+	
+	    </div>
+	{% endautoescape %}
+	
+	</div>
+
+
+</div><!-- login_wrapper -->
+
+
+
+
+
+
+
+
+{% endblock %}
+

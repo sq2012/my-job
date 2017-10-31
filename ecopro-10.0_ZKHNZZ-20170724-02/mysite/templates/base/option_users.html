@@ -1,0 +1,99 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+<div class='alert' style='height: 20px;margin-left: 5px;margin-top: 5px;'>{%trans '个性化设置仅对当前登录用户有效，不影响其他用户使用，所有用户都可以自由配置该页面的参数，保存后请刷新页面生效'%}</div>
+
+<div id='id_option1' style='padding: 20px;'>
+        <form id='id_options_users' method='post'>
+            <div class='ui-widget-header' style='width:700px;height: 28px;margin-left: 100px;margin-top: 10px;'><h3 style="padding-top: 8px;padding-left: 10px;"><a>{%trans '个性化设置'%}</a></h3></div>
+            <table style="margin-left: 100px;margin-top: 20px;">
+
+
+
+
+			<tr>
+			    <td><label for='id_page_limit' >{%trans 'records per page'%}</label>
+			    <input type='text' maxlength='30' name='page_limit' id='id_page_limit' style='width:100px !important;' value="" />({%trans '设置范围:'%}1-200)</td>
+
+
+			</tr>
+			<tr>
+				<td style='padding-bottom: 5px'><label for='id_start_page' ></label><input  type='checkbox' maxlength='30'  id='id_start_page' name='start_page'/>{%trans '支持自定义起始页'%}</td>
+			</tr>			
+
+			<tr>
+				<td style='padding-bottom: 5px'><label for='id_mul_page' ></label><input  type='checkbox' maxlength='30'  id='id_mul_page' name='mul_page'/>{%trans '支持多标签页'%}</td>
+			</tr>			
+			
+			<tr>
+				<td style='padding-bottom: 5px'><label for='id_rec_pic' ></label><input  type='checkbox' maxlength='30'  id='id_photo_rec' name='rec_pic'/>{%trans 'Show picture of record'%}（对人员考勤，参会记录页面有效）</td>
+			</tr>
+			<tr>
+				<td style='padding-bottom: 5px'><label for='id_vis_pic' ></label><input  type='checkbox' maxlength='30'  id='id_photo_vis' name='vis_pic'/>{%trans '支持访客证件照片和抓拍照片显示'%}</td>
+            </tr>
+			
+			
+			
+			
+			
+        </table></form>
+	<div  ><ul class='errorlist'><li id="id_error_option_users" style="display:none;"></li></ul></div>
+	<div style="margin-left: 100px;margin-top: 30px;"><input id='id_users_save' type='button'  class='m-btn  zkgreen rnd' value='{%trans "Save" %}'/></div>
+	</div>
+	
+
+<script>
+{% autoescape off %}
+	var users={{ users }}
+{% endautoescape %}
+var SaveOptions=function(obj,keys){
+	$("#id_error_option_users").html('')
+	var formStr=formToRequestString(obj.get(0));
+	var url='/base/isys/options/'
+	$.post(url+'?action='+keys, 
+		formStr,
+		function (ret, textStatus) {		
+			$("#"+g_activeTabID+" #option").remove()
+				if (keys=='status')	
+				reloadData();
+				$("#id_error_option_users").css("display","block");
+				$("#id_error_option_users").html(ret.message);
+					
+		},
+		"json");
+	
+
+}
+	
+$(function(){
+	$("#"+g_activeTabID+" #id_page_limit").val(users.page_limit)
+        if(users.start_page=='1'){ $("#"+g_activeTabID+" #id_start_page").attr("checked","checked");}  
+        if(users.mul_page=='1'){ $("#"+g_activeTabID+" #id_mul_page").attr("checked","checked");} 
+        if(users.emp_pic=='1'){ $("#"+g_activeTabID+" #id_photo_emp").attr("checked","checked");}  
+        if(users.rec_pic=='1'){ $("#"+g_activeTabID+" #id_photo_rec").attr("checked","checked");}
+	if(users.vis_pic=='1'){ $("#"+g_activeTabID+" #id_photo_vis").attr("checked","checked");}
+
+	//$('#id_homeurl').html(getUrl())
+	
+	$("button").button({
+            icons: {primary: "ui-icon-check"}
+       });
+	$("#"+g_activeTabID+" #id_users_save").click(function(){
+		$("#id_error_option_users").hide()
+		if ($("#"+g_activeTabID+" #id_page_limit").val()=='')
+		{
+			$("#id_error_option_users").css("display","block");
+			$("#id_error_option_users").html("{%trans '每页默认显示的记录条数不能为空'%}" );
+
+		}
+		else
+			SaveOptions($("#"+g_activeTabID+" #id_options_users"),'users')
+	});
+
+	
+});	
+	
+	
+	
+</script>
+

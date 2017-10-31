@@ -1,0 +1,417 @@
+{% load i18n %}
+{% load iclock_tags %}
+<!--<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/jquery-ui-1.8.5.custom.css" />-->
+<style>
+/*table th{
+font-size:14px;
+background: url("../../media/img/nav-bg.gif") repeat-x scroll left top #E1E1E1;
+border-bottom: 1px solid #888888;
+border-left: 1px solid #DDDDDD;
+}
+
+#id_paiban td{
+font-size:14px;
+text-align:center;
+}
+#id_map div{
+	cursor:pointer
+}
+#id_tr{
+	background-color:#806D4D;
+}*/
+</style>
+<script>
+function getMapManage(){
+	$.ajax({
+		type: "GET",
+		url:"/iclock/iacc/MapManageIndex/?stamp="+new Date().toUTCString(),
+		data:'',
+		dataType:"text",
+		success:function(data){
+			$('#id_content').html(data);
+		},
+		error:function(){
+			alert("Server error")
+		}
+	});
+	
+}
+function getHtml(val){
+	alert(val)
+}
+$(function(){
+//	var info='<p>1.地图信息用于门禁设备</p>'
+//        renderLeftInformation(info);
+	$("#id_content").css("overflow","auto")
+	$("#id_iclock").css("height",$("#id_content").height()-$("#id_title").height()-30)
+	
+	$.ajax({
+		type:"GET",
+		url:"/iclock/iacc/getMapManage/?stamp="+new Date().toUTCString(),
+		dataType:"json",
+		async:false,
+		success:function(json){
+			$("#id_map").html(json);
+		}
+	});
+	var $tabs = $('#id_map').tabs();
+	var selected = $tabs.tabs('option', 'selected');
+	var mapid=$("#mapid_"+selected).val()//.attr("alt");
+	$("#id_title").css("width","auto");//.css("width",$("#id_mapmanage_"+mapid+" img").width()+30)
+	$("#id_map").css("width","auto");//.css("width",$("#id_mapmanage_"+mapid+" img").width()+30)
+	realload(mapid)
+	$("#id_map").tabs({
+		select: function(event, ui) {
+			$('#id_error').html('');
+		}
+	})
+	$('#id_map').bind('tabsselect', function(event, ui) {
+		var selected=$("#mapids").val();
+		var mapid=$("#mapid_"+selected).val()//.attr("alt");
+		$("#id_title").css("width","auto");
+		$("#id_map").css("width","auto");
+		realload(mapid);
+		
+	});
+
+	$("#save_mapStyle").click(function(){//保存样式
+		var $tabs = $('#id_map').tabs();
+		var selected = $tabs.tabs('option', 'selected');
+		var mapid=$("#mapid_"+selected).val();//地图ID
+		var iclocks=document.getElementsByTagName("div");
+		var iclockssave=[];
+//		alert("iclocks.length="+iclocks.length)
+		for(var i=0;i<iclocks.length;i++){
+			if(iclocks[i].id.indexOf('station_photo_')!=-1 && iclocks[i].style.top){
+//				alert("iclocks[i].style.top="+iclocks[i].style.top)
+				iclockss=iclocks[i].id+"@"+iclocks[i].style.left+"@"+iclocks[i].style.top
+				iclockssave.push(iclockss)
+			}
+		}
+		$.ajax({
+			type:"POST",
+			url:"/iclock/iacc/saveiclockstation/",
+			dataType:"json",
+			data:"K="+iclockssave+"&mapid="+mapid,
+			success:function(json){
+				if(json['ret']==0){
+					alert("{%trans '保存成功'%}")
+				}else{
+					alert("{%trans '保存失败'%}")
+				}
+			}
+		});
+
+	})
+	$("#id_alliclock").click(function(){
+		var sta=$("#id_alliclock").prop("checked")//显示所有设备
+		var station=0;
+		if(sta){
+			station=1;
+		}
+		var $tabs = $('#id_map').tabs();
+		var selected = $tabs.tabs('option', 'selected');
+		var mapid=$("#mapid_"+selected).val();//地图ID
+		url="/iclock/iacc/iaccessIclock/?station="+station+"&mapid="+mapid+"&stamp="+new Date().toUTCString();
+		$.ajax({
+			type:"GET",
+			url:url,
+			dataType:"json",
+			success:function(json){
+				$("#id_iclock").html(json);
+			}
+		});
+		
+	})
+})
+
+$("#id_station").click(function(){
+	realload(1)
+})
+function delMapIclock(mapStyid){//从地图移除设备
+	if(confirm("{%trans '确定从地图移除该设备吗？!'%}")){
+		$.ajax({type: "POST",
+			url: "/iclock/iacc/delMapIclock/",
+			dataType:"json",
+			data:"mapStyid="+mapStyid,
+			success: function(json){
+				if(json['ret']==0){
+					alert("{%trans '移除成功'%}")
+					var selected=$("#mapids").val()
+					var mapid=$("#mapid_"+selected).val()
+					realload(mapid);
+				}else{
+					alert("{%trans '移除失败'%}")
+				}
+		}})
+		
+	}
+}
+function process_dialog(obj){
+	f=$(obj).find("#id_edit_form").get(0)
+	$(f).validate({
+		rules: {
+			MapName: {required:true}
+		}
+	});
+}
+function showMapPhoto(ret, statusText, xhr, $form){
+	$("#id_message").html(ret.message).css('color','red').css("display","block");
+}
+$("#id_td").after('<td width="30px">'
+					+'<div id="id_line">'
+					+	'<img onclick="javascript:saveHome();" title="设为首页" src="../media/img/home.png">'
+					+'</div>'
+					+'</td>'
+)
+$("#new_map").click(function(){//增加地图
+	var html="<div id='id_form'><div class='module' style='position:relative;'>"
+		+"<div id='id_conditions'><form id='id_edit_form' method='POST'><table id='id_setField'>"
+				+"<tr><th><font color='red'>*&nbsp;</font><label for='id_MapName' class='required'>{% trans '地图名称'%}</label></th>"
+				+"<td><input id='id_MapName'  type='text'  value='' maxlength='19' name='MapName'  style='width:135px !important;'/></td></tr>"
+				+"<tr><th><label for='id_Remarks' >{% trans '备注'%}</label></th>"
+				+"<td><textarea name='Remarks' cols='20' rows='5' id='id_Remarks'></textarea></td></tr>"
+				+"<tr><td colspan='2'><span id='id_error'></span></td>"
+		+"</table></form>"
+		+"</div></div>";
+		options.dlg_width=350;
+		options.dlg_height=300;
+		g_url="/iclock/data/MapManage/"
+		$(html).dialog({modal:true,resizable:false,
+				  title:"{%trans '增加'%}{%trans '地图'%}",
+				  width:options.dlg_width,
+				  height:options.dlg_height,
+	 					  buttons:[{text:"{% trans "save and continue" %}",click:function(){ if(typeof beforePost=="function"){if(beforePost(this,"_new_")==false) return ;} SaveFormData(this,g_url+"_new_/",'add',"MapManage"); getMapManage(); }},
+						   {text:"{% trans "save and return" %}",click:function(){ if(typeof beforePost=="function"){if(beforePost(this,"_new_")==false) return ;}  SaveFormData(this,g_url+"_new_/",'edit',"MapManage");getMapManage();  }},
+						   {text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}],
+				  close: function() {$("#id_form").remove();}});
+	
+})
+$("#set_map").click(function(){//设置地图
+	var selected=$("#mapids").val()
+	var mapid=$("#mapid_"+selected).val()
+	var block_html="<div class='module' id='SetMapDb' style='position:relative; width: 100%;'>"
+			+"<table style='margin-bottom: 2px;'>"
+			+"<tr>"
+					+"<td style='vertical-align:top;width:40%;'>"
+					+"<div id='id_conditions'>"
+					+"<form id='frmSetMapDb' method='POST' action='/iclock/iacc/saveSetMap/' enctype='multipart/form-data'>"
+						+"<table id='id_setField'>"
+							+"<tr><td>"
+								+'{%trans "地图"%}<input type="file" id="id_fileUpload" name="fileToUpload" size="15"/>'
+							+"</td></tr>"
+							+"<tr><td>"
+								+"<input class='ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only' type='submit' value="+gettext('Submit')+" />"
+								+"&nbsp;<input id='btnCancel' class='ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only' type='button' value="+gettext('Cancel')+" />"
+							+"</td></tr>"
+							+"<tr><td colspan='2'><span id='id_message'></span>"
+							+"<input type='hidden' id='mapid' value='"+mapid+"' name='mapid' />"
+							+"</td></tr>"
+						+"</table>"
+					+"</form>"
+					+"</div>"
+				+"</td>"
+			+"</tr>"
+			+"</table>"
+			+"</div>"
+   
+	$(block_html).dialog({modal:true,resizable:false,
+						  width: 250,
+						  height:200,
+						  title:gettext("上传地图"),
+						  close:function(){$("#SetMapDb").remove();}	
+						});
+	$("#btnCancel").click(function(){$("#SetMapDb").remove();});
+	var opts = { 
+			url:'/iclock/iacc/saveSetMap/',
+			dataType:'json',
+			success: showMapPhoto
+		};
+	
+	$('#frmSetMapDb').submit(function() {
+		var f=$("#id_fileUpload").val();
+		var fs=[];
+		if(f!=undefined||f!=""){
+			fs=f.split("\\");
+		}
+		var fss=fs[fs.length-1];
+		if(f!=undefined||f!=""){
+			fs=f.split(".");
+			if(fss!=undefined||fss!=""){
+				fs=fss.split(".");
+			}
+		}
+		if(f=="")
+			{
+				$("#id_message").html("{%trans 'Please select picture'%}").css('color','red');
+				return false;
+			}
+		else
+			{
+				$(this).ajaxSubmit(opts); 
+				getMapManage();
+			}
+		return false;
+	});    
+})
+$("#edit_mapName").click(function(){//修改地图
+	var selected=$("#mapids").val()
+	var mapid=$("#mapid_"+selected).val()
+	var mapName=$("#mapname_"+selected).val()
+	var mapRem=$("#maprem_"+selected).val()
+	var html="<div id='id_form'><div class='module' style='position:relative;'>"
+		+"<div id='id_conditions'><form id='id_edit_form' method='POST'><table id='id_setField'>"
+				+"<tr><th><font color='red'>*&nbsp;</font><label for='id_MapName' class='required'>{% trans '地图名称'%}</label></th>"
+				+"<td><input id='id_MapName'  type='text'  value='"+mapName+"' maxlength='19' name='MapName'  style='width:135px !important;'/></td></tr>"
+				+"<tr><th><label for='id_Remarks' >{% trans '备注'%}</label></th>"
+				+"<td><textarea name='Remarks' cols='20' rows='5' id='id_Remarks'>"+mapRem+"</textarea></td></tr>"
+				+"<tr><td colspan='2'><span id='id_error'></span></td>"
+		+"</table></form>"
+		+"</div></div>";
+		options.dlg_width=350;
+		options.dlg_height=300;
+		g_url="/iclock/data/MapManage/"
+		$(html).dialog({modal:true,resizable:false,
+				  title:"{%trans '修改'%}{%trans '地图'%}("+mapName+")",
+				  width:options.dlg_width,
+				  height:options.dlg_height,
+	 					  buttons:[{text:"{% trans "save and return" %}",click:function(){ SaveFormData(this,g_url+mapid+"/",'edit','MapManage');getMapManage();  }},
+						   {text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}],
+				  close:function(){$(this).dialog("destroy"); }});
+	
+})
+$("#delete_map").click(function(){//删除地图
+	var selected=$("#mapids").val()
+	var mapid=$("#mapid_"+selected).val()
+	var mapName=$("#mapname_"+selected).val()
+	var mapRem=$("#maprem_"+selected).val()
+	if(confirm("{%trans '确定要删除\n'%}"+mapName+"{%trans '\n该地图吗？!'%}")){
+		$.ajax({type: "POST",
+			url: "/iclock/iacc/delMap/",
+			dataType:"json",
+			data:"mapid="+mapid,
+			success: function(json){
+				if(json['ret']==0){
+					alert("{%trans '删除成功'%}")
+					getMapManage();
+				}else{
+					alert("{%trans '删除失败'%}")
+				}
+		}})
+		
+	}
+	
+})
+$("#remove_map").click(function(){//清除地图
+	var selected=$("#mapids").val()
+	var mapid=$("#mapid_"+selected).val()
+	var mapName=$("#mapname_"+selected).val()
+	var mapRem=$("#maprem_"+selected).val()
+	if(confirm("{%trans '确定要清除\n'%}"+mapName+"{%trans '\n该地图吗？!'%}")){
+		$.ajax({type: "POST",
+			url: "/iclock/iacc/removeMap/",
+			dataType:"json",
+			data:"mapid="+mapid,
+			success: function(json){
+				if(json['ret']==0){
+					alert("{%trans '清除成功'%}")
+					getMapManage();
+				}else{
+					alert("{%trans '清除失败'%}")
+				}
+		}})
+		
+	}
+	
+})
+
+function realload(mapid){
+	var sta=$("#id_alliclock").prop("checked")//显示所有设备
+	var station=0;
+	if(sta){
+		station=1;
+	}
+//	var $tabs = $('#id_map').tabs();
+//	var selected = $tabs.tabs('option', 'selected');
+//	var mapid=$("#mapid_"+selected).val();//地图id
+	var url="/iclock/iacc/iaccessIclock/?station="+station+"&mapid="+mapid+"&stamp="+new Date().toUTCString();
+	$.ajax({
+		type:"GET",
+		url:url,
+		dataType:"json",
+		async:false,
+		success:function(json){
+			$("#id_iclock").html(json);
+			
+		}
+	});
+}
+
+function setmouse(val){
+	var d = document.getElementById(val);
+	var drag=false;
+	var _x=0;
+	var _y=0;
+	d.style.position = "absolute";
+	d.onmousedown = function(e){
+	drag = true;
+	d.style.position = "absolute";
+	var e = e||window.event;
+	_x = ( e.x || e.clientX) - this.offsetLeft;
+	_y = ( e.y || e.clientY ) - this.offsetTop;
+	}
+
+	document.onmousemove = function(e){
+	var e = e||window.event;
+	if(!drag) return;
+	d.style.left =( e.x || e.clientX)-_x+ "px";
+	d.style.top =( e.y || e.clientY )-_y+ "px";
+	}
+
+	document.onmouseup = function(e){
+	drag=false;
+	}
+
+}
+
+</script>
+<div style="padding-top: 5px; padding-left: 5px;width:1120px;" id="mapcon">
+<table border='1px' style='border:1px solid #808080;'>
+  <tr>
+	<td style="vertical-align:top;width:100px;">
+	<div style="width:100px;"><input type="checkbox" id="id_alliclock" /><label class="required">{%trans "显示所有设备"%}</label></div>
+	</td>
+    
+    <td><div id="id_title" style="height:25px;padding-top:4px;">
+	<span style="float:left;">&nbsp;&nbsp;</span>
+	{% if request|reqHasPerm:"add" %}<span style="float:left;"><ul><li style="width:55px;border:1px solid #77B7DE;" id="new_map"><span class=""></span><a title="{%trans '增加地图'%}" href="#">{%trans '增加地图'%}</a></li></ul></span>{% endif%}
+	<span style="float:left;">&nbsp;&nbsp;</span>
+	{% if user|HasPerm:"iclock.MapManage_SetMap" %}<span style="float:left;"><ul><li style="width:55px;border:1px solid #77B7DE;" id="set_map"><span class=""></span><a title="{%trans '设置地图'%}" href="#">{%trans '设置地图'%}</a></li></ul></span>{% endif%}
+	<span style="float:left;">&nbsp;&nbsp;</span>
+	{% if user|HasPerm:"iclock.MapManage_SaveStyle" %}<span style="float:left;"><ul><li style="width:55px;border:1px solid #77B7DE;" id="save_mapStyle"><span class=""></span><a title="{%trans '保存样式'%}" href="#">{%trans '保存样式'%}</a></li></ul></span>{% endif%}
+	<span style="float:left;">&nbsp;&nbsp;</span>
+	{% if request|reqHasPerm:"change" %}<span style="float:left;"><ul><li style="width:55px;border:1px solid #77B7DE;" id="edit_mapName"><span class=""></span><a title="{%trans '修改地图'%}" href="#">{%trans '修改地图'%}</a></li></ul></span>{% endif%}
+	<span style="float:left;">&nbsp;&nbsp;</span>
+	{% if request|reqHasPerm:"delete" %}<span style="float:left;"><ul><li style="width:55px;border:1px solid #77B7DE;" id="delete_map"><span class=""></span><a title="{%trans '删除地图'%}" href="#">{%trans '删除地图'%}</a></li></ul></span>{% endif%}
+	<span style="float:left;">&nbsp;&nbsp;</span>
+	{% if user|HasPerm:"iclock.MapManage_RemoveMap" %}<span style="float:left;"><ul><li style="width:55px;border:1px solid #77B7DE;" id="remove_map"><span class=""></span><a title="{%trans '清除地图'%}" href="#">{%trans '清除地图'%}</a></li></ul></span>{% endif%}
+	<span style="float:left;">&nbsp;&nbsp;</span>
+	<span style="float:left;color:#FF8411;font-size:14px;font-weight:bold;"><ul><li style="width:580px;" id="remove_map">操作步骤:增加地图→设置地图→单击设备→拖动设备到相应位置→单击设备→保存样式</li></ul></span>
+	
+	</div></td>
+  </tr>
+  <tr>
+    <td style="vertical-align:top;">
+			<div id="id_iclock" style="width:100px;"><!-- overflow:auto;z-index:100;position:absolute;overflow:auto;border:1px solid; -->
+			
+			</div>
+	</td>
+	<td style="vertical-align:top;">
+		<div id="id_map">
+		
+		</div><input type='hidden' id='mapids' value='0' />
+	</td>
+	
+  </tr>
+</table>
+</div>

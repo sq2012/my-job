@@ -1,0 +1,26 @@
+{% extends "report_att.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+
+{% block sidxblock %}
+	function getSidx_calcLeaveReport(){
+		return 'UserID__DeptID,UserID__PIN'
+	}
+{% endblock %}
+
+{% block search %}
+<div class="s-info right" id="sear_area">			
+	<div class="nui-ipt nui-ipt-hasIconBtn " >
+		<input id="searchbar" class="search-input" type="text"  value="身份证号,姓名,考勤编号" role='defvalue' autocomplete="off" />
+		<span id ="queryButton" class="nui-ipt-iconBtn">
+			<b id="_icon_2_28" class="nui-ico nui-ico-dArr "></b>
+		</span>
+		
+	</div>
+	
+	<div class="main-search-btn">
+	
+		<span><img id="searchButton" src="/media/img/s.gif" title="{%trans "Search"%}" style="cursor:hand;"></span>
+	</div>
+</div>
+{% endblock %}	

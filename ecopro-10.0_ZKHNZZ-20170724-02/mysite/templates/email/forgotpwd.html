@@ -1,0 +1,9 @@
+{% load i18n %}
+
+<h2>{%trans "You're receiving this e-mail because you requested a password reset"%}</h2>
+<br>
+<h3>点击下面的链接立即重置密码(或将链接地址复制到浏览器中打开)(重置后的密码为111111):</h3>
+
+<p><a href={{url}}>{{url}}</a></p>
+<br>
+<h3>{{sitetitle}}</h3>

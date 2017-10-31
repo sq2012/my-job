@@ -1,0 +1,609 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+hasImport={% if user|HasPerm:"ipos.import_dininghall" %}true{% else %}false{% endif %}
+//jqOptions=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='ICConsumerList';
+jqOptions[g_activeTabID].pager='#id_pager_'+tblName[g_activeTabID];
+jqOptions[g_activeTabID].sortname='pos_time';
+options[g_activeTabID].dlg_width=420;
+options[g_activeTabID].dlg_height=460;
+
+var select_id=0;
+{% autoescape off %}
+var _data={{params}}
+{% endautoescape %}
+var card_type=_data.itype
+var sys_pwd = _data.pwd
+var main_fan = _data.main
+var minor_fan = parseInt(main_fan)+1;
+var max_money=_data.max_money
+var zk_key=_data.pass_key
+
+var reN = 2;
+var reval = "";
+var private = "";
+var curi=0
+
+function loadICConsumerListPageData(query, value)
+{
+	var postData={};
+	var url=pageQueryString;
+	if(query!=undefined)
+		reloadData();
+	else
+	{
+		var postUrl=g_urls[g_activeTabID]+url;
+		if(postUrl.indexOf("?")==-1){
+			postUrl=postUrl+"?mod_name="+mod_name;//+"?stamp="+new Date().toUTCString();
+		}else{
+			postUrl=postUrl+"&mod_name="+mod_name;//+"&stamp="+new Date().toUTCString();
+		}
+		var hcontent=$("#"+g_activeTabID+" #id_content").height();
+		var hbar=$("#"+g_activeTabID+" #id_top").height();
+		var height=hcontent-hbar-100;
+		if (groupHeaders.length>0)
+		 height=height-30;
+		
+		if(typeof(Custom_Jqgrid_Height)!='undefined'&&Custom_Jqgrid_Height!=""){
+			jqOptions[g_activeTabID].height=Custom_Jqgrid_Height;
+		}else{jqOptions[g_activeTabID].height=height;}
+                if (!pos_start_date)
+                                pos_start_date=moment().startOf('month').format('YYYY-MM-DD')
+                 if(!pos_end_date)    
+                                pos_end_date=moment().endOf('month').format('YYYY-MM-DD')
+		
+		jqOptions[g_activeTabID].url=postUrl+"&pos_time__gte="+pos_start_date+"&pos_time__lte="+pos_end_date+" 23:59:59";
+                
+
+                jqOptions[g_activeTabID].footerrow=true
+                jqOptions[g_activeTabID].userDataOnFooter=true
+		
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid(jqOptions[g_activeTabID]);
+		
+		if (groupHeaders.length>0)
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGroupHeaders', {useColSpanStyle: true,groupHeaders:groupHeaders})
+	        $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setFrozenColumns');
+
+	}
+}
+function processNewModel_ICConsumerList()
+{
+	
+		urlAddr=g_urls[g_activeTabID].split("?")[0]+"_new_/?mod_name="+mod_name;
+		$.ajax({
+			type:"GET",
+			url:urlAddr,
+			dataType:"html",
+			async:false,
+			success:function(msg){
+				msg=$.trim(msg)
+				processNewModelLoop_ICConsumerList(msg,urlAddr,"_new_");			
+			}
+		});
+}
+
+
+
+$(function(){
+
+
+
+
+
+
+        $("#"+g_activeTabID+" #search_id_user__PIN").val("工号,姓名")
+        $("#"+g_activeTabID+" #searchbar").val("工号,姓名")
+        $("#"+g_activeTabID+" #search_id_user__PIN").css('color','#CCCCCC')
+        $("#"+g_activeTabID+" #search_id_user__PIN").attr('role','defvalue')
+        var inputEl = $("#"+g_activeTabID+" #search_id_user__PIN")
+         defVal[g_activeTabID] = inputEl.val();
+	 
+    	 inputEl.on("focus",function(){
+		             var _this = $(this);
+				if (_this.val() == defVal[g_activeTabID]) {
+				    _this.val('');
+				    _this.css('color','#000000');
+				    //_this.attr('role','disabled')
+				}
+		})
+	inputEl.on("blur",function(){
+		        var _this = $(this);
+			if (_this.val() == '') {
+			    _this.val(defVal[g_activeTabID]);
+			    _this.css('color','#CCCCCC');
+			    _this.attr('role','defvalue')
+			}
+			else
+			    _this.attr('role','cansearch')
+		})
+	inputEl.on("keydown",function(event) {
+			if (event.which == 13) {
+			      var _this = $(this);
+			       _this.attr('role','cansearch')
+			 }
+		})
+	$("#"+g_activeTabID+" #queryButton").hide()
+   // $("#id_newrec").hide()
+    $("#"+g_activeTabID+" #aDelete").hide()
+    $("#"+g_activeTabID+" #sear_area").hide()
+    if (pos_start_date)
+        $("#"+g_activeTabID+" #search_id_startpostime").val(pos_start_date+" 00:00")
+    else
+        $("#"+g_activeTabID+" #search_id_startpostime").val(moment().startOf('month').format('YYYY-MM-DD HH:mm'))
+     if(pos_end_date)    
+        $("#"+g_activeTabID+" #search_id_endpostime").val(pos_end_date+" 23:59")
+    else
+        $("#"+g_activeTabID+" #search_id_endpostime").val(moment().endOf('month').format('YYYY-MM-DD HH:mm'))
+    
+    
+     
+    
+    
+    
+//    $('#search_id_startpostime').val(moment().startOf('month').format('YYYY-MM-DD HH:mm'))
+//    $('#search_id_endpostime').val(moment().endOf('day').format('YYYY-MM-DD HH:mm'))    
+    $("#"+g_activeTabID+" #search_id_startpostime").datetimepicker(datetimepickerOptions);
+    $("#"+g_activeTabID+" #search_id_endpostime").datetimepicker(datetimepickerOptions);
+        var info=''
+
+        renderLeftInformation(info);
+        smenu="<ul><li  class='subnav_on' onclick=submenuClick('/iclock/data/ICConsumerList/',this);><a href='#'>消费明细</a></li></ul>"
+        //$('#menu_div').html(smenu)	        
+        $("#"+g_activeTabID+" #id_newrec").click(function(event){
+        	{% if "POS_IC"|filter_config_option %}
+                        addZKOnline()	
+	
+                {%endif%}
+
+        
+        
+        
+                ids=getSelectedIDs()
+                if (ids.length==1){
+                    select_id=ids[0]
+                    processNewModel_ICConsumerList();
+					}
+                else{
+                    alert('请选择一条需要纠错的数据')
+				}
+	});
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowDep_ICConsumerList();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowDep_ICConsumerList();
+	});
+	$("#"+g_activeTabID+" #id_third").html("");
+
+    $("#"+g_activeTabID+" #id_search").click(function(){
+                var flag=$("#"+g_activeTabID+" #search_id_user__PIN").attr('role');
+                if (flag!='cansearch'&&flag!='defvalue') return;
+                if (flag!='defvalue')
+                    var search_user_pin=$("#"+g_activeTabID+" #search_id_user__PIN")[0].value;
+                else
+                    var search_user_pin=""
+		var search_pos_model=$("#"+g_activeTabID+" #search_id_pos_model").val();
+		var search_sn=$("#"+g_activeTabID+" #search_id_sn").val();
+		var search_starttime=$("#"+g_activeTabID+" #search_id_startpostime").val();
+		var search_endtime=$("#"+g_activeTabID+" #search_id_endpostime").val();
+        var isError=validate_form_ICConsumerList();
+        var urlnew="";
+        if(!isError){
+            if (search_user_pin||search_pos_model||search_sn||search_starttime||search_endtime){
+                urlnew="q="+escape(search_user_pin)+"&"+"pos_model="+search_pos_model+"&"+"dev_sn="+search_sn+"&"+"pos_time__gte="+search_starttime+"&"+"pos_time__lte="+search_endtime
+            }
+		}
+        else{alert('起始时间大于结束时间')}
+		var url="/ipos/data/ICConsumerList/?"
+		if (urlnew!="" &&  urlnew!=null)
+			url+=urlnew;
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+		savecookie("search_urlstr",url);
+	});
+    $("#"+g_activeTabID+" #id_search_clean").click(function(){
+        $("#"+g_activeTabID+" #search_id_user__PIN").val('');
+        $("#"+g_activeTabID+" #search_id_pos_model").val('');
+        $("#"+g_activeTabID+" #search_id_sn").val('');
+        $("#"+g_activeTabID+" #search_id_startpostime").val('');
+        $("#"+g_activeTabID+" #search_id_endpostime").val('');
+
+        var url="/ipos/data/ICConsumerList/"
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+		savecookie("search_urlstr",url);
+    });
+});
+function validate_form_ICConsumerList(){   //验证表单的合法性(、开始时间、结束时间)
+	var t_ComeTime=$("#"+g_activeTabID+" #search_id_startpostime").val();
+	var cTime=t_ComeTime.split("-");
+	var t_EndDate=$("#"+g_activeTabID+" #search_id_endpostime").val();
+	var eTime=t_EndDate.split("-");
+	cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+	edate=new Date(parseInt(eTime[0],10),parseInt(eTime[1],10)-1,parseInt(eTime[2],10));
+	if(cdate>edate){
+		return 1;
+	}else{
+		return 0
+	}
+}
+function searchShowDep_ICConsumerList(){
+    var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+    var url="/ipos/data/ICConsumerList/?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function editDefineclick(key)
+{
+	var Href=g_urls[g_activeTabID].split("?")[0]+key+'/'+"?stamp="+new Date().toUTCString();
+	$.ajax({
+		type:"GET",
+		url:Href,
+		dataType:"html",
+		async:false,
+		success:function(msg){
+                        msg=$.trim(msg)
+			processDefineEdit(msg, Href,key);
+		}
+	});
+}
+
+function strOfData_ICConsumerList(data)
+{
+	return data[1];
+}
+
+
+
+
+function process_dialog_again_ICConsumerList(temp_data,flag,urlAddr)
+{
+        $("#id_apply_datetime",temp_data).val(moment().format('YYYY-MM-DD HH:mm'))
+        $("#id_apply_datetime",temp_data).datetimepicker(datetimepickerOptions);
+
+    {% if "POS_IC"|filter_config_option %}
+
+        $("#read_card_IC").prop('disabled','disabled')
+        $("#btn_correct",temp_data).prop('disabled','disabled')
+ 	if(sys_pwd!=''&&isOnline())
+	{
+		$("#read_card_IC").removeProp('disabled')
+		
+	}
+	else if(sys_pwd=='')
+		$("#id_error",temp_data).html('<ul class="errorlist"><li>请首先进行消费参数设置</li></ul>');
+
+ 
+ 
+ 
+    
+    
+ 
+ {%endif%}
+ 
+
+        $("#"+g_activeTabID+" #id_edit_form_consume").validate({
+          	                        rules: {
+          	                            "money": {required:true,min:0.0,max:9999,"maxlength":8,isMoney:true}
+                                        }
+                                        })
+
+}
+
+
+/*充值，退款，时把数据存入备份表*/
+function funSaveVerifyData(obj)
+{
+    var result=false
+    $("#pos_id",obj).val(select_id)
+    var queryStr=$("#id_edit_form",obj).formSerialize();    
+    $.ajax({ 
+        type: "POST",
+        url:"/ipos/save_operate_bak_data/",
+        data:queryStr,
+        dataType:"json",
+        cache: false,  
+        async:false,
+        success:function(retdata){
+            if(retdata.ret==0)
+            {
+                result=retdata;
+            }
+            else
+            $("#id_error",obj).html('<ul class="errorlist"><li>'+retdata.message+'</li></ul>').show();      
+         
+            
+           },
+            error:function(){
+            result=false;
+            }
+            });
+    return result;
+    }
+
+
+function card_correct(obj)
+{
+
+    var card_no = $("#id_card",obj).val();
+    if(isOnline()){
+     if ($("#id_edit_form",obj).valid())
+        {
+                 var f=$("#id_edit_form",obj)
+            var reval = readCard();
+            if (reval.length>4)
+              {
+                if(card_no == reval )
+                {
+                 // var m = parseFloat($("#id_money").val());
+                  //var reimburse_blance =  parseFloat($("#id_blance").val()) - m ;//补单后金额
+                  //reimburse_blance=Math.round(reimburse_blance * 100) / 100; 
+                //  if (reimburse_blance > 0)
+               //  {
+                        re=funSaveVerifyData(obj)
+                      if(re) //第一次写卡时先往备份表插入一条记录
+                        {
+                            var m=parseFloat(re.data.c);
+                            var rval = writeICMoney(0,sys_pwd,m,0,main_fan,minor_fan); //写卡数据
+                            if (rval.toString() == '0')
+                              {
+                                //验证写卡数据是否通过 没有通过则自动纠错 
+                                //if(isvild_write_card($('#id_card_serial_no').val(),-m,reimburse_blance*100,Number($("#id_blance").val())*100))
+                                  //  {
+                                        if(funSaveData(f))
+                                        {
+                                            $("#id_card_blances",obj).val(re.data.b); 
+                                            $("#id_error",obj).html('<ul class="errorlist"><li>纠错成功</li></ul>').show();      
+                                          //  $("#btn_correct").prop("disabled","disabled");
+                                           // $("#read_card").removeProp("disabled");
+                                        }
+                                        else
+                                        {
+                                            $("#btn_correct",obj).prop("disabled","disabled");
+                                            var rval = writeICMoney(0,sys_pwd,-m,0,main_fan,minor_fan); //写卡数据
+                                        }    
+                                  //  }      
+                                //else
+                                 //   {
+                                 //       $("#btn_correct").prop("disabled","disabled");
+                                  //      $("#id_error").html('<ul class="errorlist"><li>补单失败</li></ul>');                             
+                                   // }
+                              }
+                          else
+                             {
+                                check_card(reval);
+                             }
+                        }
+                 //   }
+                 //   else
+                 //   {
+                  //      $("#id_money").val(0);
+                   //     $("#id_error").html('<ul class="errorlist"><li>余额不足！补单失败！</li></ul>');                
+                 //   }
+                }
+                else
+                {
+                    $("#id_error",obj).html('<ul class="errorlist"><li>卡号不一致，补单失败！</li></ul>');                
+                }
+              }
+           else
+              {
+                  check_card(reval);
+              }
+            }
+    }
+}
+
+
+
+
+function get_card_number_ICConsumerList(sys_card_no,cardInfo,obj){
+	urlStr="/ipos/getData/?func=IssueCard&sys_card_no="+sys_card_no
+
+	$.ajax({
+		url:urlStr,
+		dataType:"json",
+		type:"POST",
+		success:function(data){
+			if(data.length>0)
+			{
+		                {% if "POS_IC"|filter_config_option %}
+				if (cardInfo[4].split('=')[1] != '255')//管理卡
+				{
+					$("#id_sys_card_no",obj).val(cardInfo[1].split('=')[1]);
+					$("#id_card_serial_num",obj).val(cardInfo[7].split('=')[1]);
+					$("#id_card_blances",obj).val(Number(cardInfo[6].split('=')[1]) / 100);
+					
+					$("#id_Dept",obj).val(data[0].Dept);
+					$("#id_pin",obj).val(data[0].PIN);
+					$("#id_name",obj).val(data[0].name);
+					//$("#id_blances").val(Number(cardInfo[6].split('=')[1]) / 100);
+					
+					//$('#id_reimburse_blance').val(0);
+					$("#card_type",obj).val(cardInfo[4].split('=')[1]);
+					var card_status = data[0].cardstate;
+					sys_blance = Number(data[0].blance)
+                                        $("#id_blances",obj).val(sys_blance)
+
+                                        if (Number(max_money) > Number($("#id_blances",obj).val()))
+                                        {
+                                          //  $("#btn_correct").prop("disabled","disabled");
+                                            $("#btn_correct",obj).removeProp("disabled");                                   
+                                        }
+                                        else
+                                        {
+                                               $("#id_eror",obj).html('<ul class="errorlist"><li>卡上金额超出卡最大金额该卡为异常卡！操作失败！</li></ul>');
+                                        } 
+
+
+
+
+
+
+				}
+				else
+				   {
+				       $("#id_error",obj).html('<ul class="errorlist"><li>当前卡片为管理卡或者操作卡，操作失败！</li></ul>');
+				   } 
+                {%endif%}
+                {% if "POS_ID"|filter_config_option %}
+                    $("#id_pin",obj).val(data[0].PIN);
+                    $("#id_name",obj).val(data[0].name);
+                    $("#id_blance",obj).val(data[0].blance);
+		     $("#id_error",obj).html('')
+                {%endif%}
+
+                
+			}
+			else
+			{
+			    //$("input[type=text]").val("");
+                            $("#id_blances",obj).val("");
+			    $("#btn_Reim",obj).prop("disabled","disabled");
+			    
+			    $("#id_error",obj).html('<ul class="errorlist"><li>卡账号'+sys_card_no+'不存在</li></ul>');
+			}
+
+		}
+	});
+}
+
+
+
+function read_card_ICConsumerList(obj)
+{
+
+            var reval = readCard();
+            if (reval.length>4)
+               {
+                   $("#id_card",obj).val(reval);
+                   var cardInfo = ZK_PosReadICCard(0,sys_pwd,main_fan,minor_fan).split(',');
+                    
+		    if (cardInfo.length >1)
+                        {
+                          var sys_card_no = cardInfo[1].split('=')[1];
+                         get_card_number_ICConsumerList(sys_card_no,cardInfo,obj);
+                        }
+                    else
+                        {
+				check_card(cardInfo);
+				}
+                   
+               }
+            else
+               {
+                   check_card(reval);
+               }
+    
+
+
+
+
+}
+
+ function processNewModel_ICConsumerList()
+{
+	
+		urlAddr=g_urls[g_activeTabID].split("?")[0]+"_new_/?mod_name="+mod_name;
+		$.ajax({
+			type:"GET",
+			url:urlAddr,
+			dataType:"html",
+			async:false,
+			success:function(msg){
+				msg=$.trim(msg)
+				processNewModelLoop_ICConsumerList(msg,urlAddr,"_new_");			
+			}
+		});
+}
+
+
+
+{% endblock %}
+{% block otherQuery %}
+    
+    
+	<span style='float:left;'>
+        <span>
+			<label  >{%trans '人员'%}</label>
+			<input type='text' name=''  id='search_id_user__PIN' style='width:80px;'>
+            <label  >{%trans '类型名称'%}</label>
+			<select name='' id='search_id_pos_model'><option value=''>--------</option><option value='1'>定值模式</option><option value='2'>金额模式</option><option value='3'>键值模式</option>
+            <option value='4'>计次模式</option><option value='5'>商品模式</option><option value='6'>计时模式</option><option value='7'>记账模式</option><option value='8'>手工补消费</option><option value='9'>设备纠错</option></select>
+			<label  >{%trans '设备序列号'%}</label>
+			<input type='text' name=''  id='search_id_sn' style='width:100px;'>
+            <label  >{%trans '起始时间'%}</label>
+			<input type='text' name='pos_time__gte'  id='search_id_startpostime' style='width:110px;'>
+            <label  >{%trans '结束时间'%}</label>
+			<input type='text' name='pos_time__lte'  id='search_id_endpostime' style='width:110px;'>
+		 </span>
+         <span id='id_search' ><a class='m-btn  zkgreen rnd mini'>{%trans 'Query'%}</a></span>
+         <span id='id_search_clean' ><a class='m-btn  zkgreen rnd mini'>{%trans '清除'%}</a></span>
+	</span>
+
+
+{% endblock %}
+{% block loadData %}
+	loadICConsumerListPageData();
+    
+function processNewModel_ICConsumerList()
+{
+	
+		urlAddr=g_urls[g_activeTabID].split("?")[0]+"_new_/?mod_name="+mod_name;
+		$.ajax({
+			type:"GET",
+			url:urlAddr,
+			dataType:"html",
+			async:false,
+			success:function(msg){
+				msg=$.trim(msg)
+				processNewModelLoop_ICConsumerList(msg,urlAddr,"_new_");			
+			}
+		});
+}
+    
+{% endblock %}
+
+
+{% block processNewModelLoop %}
+{% if "POS_IC"|filter_config_option %}
+function processNewModelLoop_ICConsumerList(blockHtml,urlAddr,actionName){
+	temp_data=$(blockHtml)
+	init_dialog(temp_data)
+        if(typeof process_dialog_ICConsumerList=="function")
+		process_dialog_ICConsumerList(temp_data,"add",urlAddr)
+			setting={modal:true,autoOpen:true,width:options[g_activeTabID].dlg_width,height:options[g_activeTabID].dlg_height,
+   					 
+			close: function() {$(this).dialog("destroy");}
+			}
+			if (options[g_activeTabID].canAdd)
+			setting["buttons"]=[{id:'read_card_IC',text:"{% trans "读卡" %}",click:function(){ read_card_ICConsumerList(temp_data);}},
+							   {id:'btn_correct',text:"{% trans "纠错" %}",click:function(){card_correct();}},
+							   {text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}]
+			temp_data.dialog(setting);
+			temp_data.dialog("option","title",temp_data.find("#id_span_title").html());
+			process_dialog_again_ICConsumerList(temp_data,"add",actionName)		
+}
+{%endif%}
+{% endblock %}
+{% block newrec %}
+{% if request|reqHasPerm:"add" %}
+ <LI id="id_newrec"><SPAN class="icon iconfont icon-xiugai"></SPAN>{%trans "纠错"%}</LI>
+{% endif %}
+{% endblock %}
+
+{% block initwindow %}
+
+        //initwindow_tabs('',true);
+	//layout=$('#'+g_activeTabID).layout()
+	//layout.hide('west')
+{% endblock %}

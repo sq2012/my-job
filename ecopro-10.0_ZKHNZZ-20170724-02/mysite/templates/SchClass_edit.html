@@ -1,0 +1,110 @@
+{% extends "data_edit.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block form %}
+{% autoescape off %}
+<tr>
+    {{ form.SchName|field_as_td_h:1}} 
+<td></td>
+</tr>
+<tr>
+    <th> <font color='red'>*</font>{{ form.StartTime.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.StartTime.as_widget }} </td>
+    <th> <font color='red'>*</font>{{ form.EndTime.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.EndTime.as_widget }} {{ form.NextDay.as_widget }}{{ form.NextDay.help_text }}</td>
+</tr>
+<tr>
+    <th> {{ form.LateMinutes.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.LateMinutes.as_widget }}{{ form.LateMinutes.help_text }} </td>
+    <th> {{ form.EarlyMinutes.label_tag }} </th> <td style='vertical-align:top;'> {{ form.EarlyMinutes.as_widget }} {{ form.EarlyMinutes.help_text }}</td>
+</tr>
+<tr>
+    <th> {{ form.CheckIn.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.CheckIn.as_widget }} </td>
+    <th> {{ form.CheckOut.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.CheckOut.as_widget }} </td>
+</tr>
+
+<tr>
+     <th> {{ form.CheckInMins1.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.CheckInMins1.as_widget }}{{ form.CheckInMins1.help_text }} </td>
+     <th> {{ form.CheckInMins2.label_tag }} </th> <td style='vertical-align:top;'> {{ form.CheckInMins2.as_widget }} {{ form.CheckInMins2.help_text }}</td>
+    </tr>
+    <tr>
+      <th>{{ form.CheckOutMins1.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.CheckOutMins1.as_widget }}{{ form.CheckOutMins1.help_text }} </td>
+         <th> {{ form.CheckOutMins2.label_tag }} </th> <td style='vertical-align:top;'> {{ form.CheckOutMins2.as_widget }} {{ form.CheckOutMins2.help_text }}</td>
+    </tr>
+    
+</tr>
+
+<tr>
+    {{ form.Color|field_as_td_h:1 }}
+</tr>
+
+
+<tr>
+    <th><input  type='checkbox' maxlength='30' name='ComeOverTime' id='id_ComeOverTime' />{{form.IsCalcComeOverTime.as_hidden }}{%trans 'Before:'%}</th>
+    <td > {{ form.ComeOverTimeMins.as_widget }}{{ form.ComeOverTimeMins.help_text }} </td>
+    <th>{{ form.TimeZoneOfDept.label_tag }}</th><td>{{form.TimeZoneOfDept.as_hidden }}{{ form.TimeZoneOfDept.help_text }}</td>
+</tr>
+
+<tr>
+    <th><input  type='checkbox' maxlength='30' name='OutOverTime' id='id_OutOverTime' />{{form.IsCalcOverTime.as_hidden }}{%trans 'After:'%}</th>
+    <td > {{ form.OverTimeMins.as_widget }}{{ form.OverTimeMins.help_text }} </td>
+    <th> {{ form.Holiday.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.Holiday.as_widget }}{{ form.Holiday.help_text }} </td>
+</tr>
+
+
+
+<tr>
+    <td colspan=4>
+
+    <fieldset style='border:1px solid #e9e9e9;'><legend>{%trans '中间休息时间'%}</legend><table><tbody>        
+    <tr>
+     <th> {{ form.IsCalcRest.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.IsCalcRest.as_widget }}{{ form.IsCalcRest.help_text }} </td>
+    </tr>
+        
+    <tr>
+     <th> {{ form.StartRestTime.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.StartRestTime.as_widget }}{{ form.StartRestTime.help_text }} </td>
+     <th> {{ form.EndRestTime.label_tag }} </th> <td style='vertical-align:top;'> {{ form.EndRestTime.as_widget }} {{ form.EndRestTime.help_text }}</td>
+    </tr>
+ 
+    <tr>
+      <th> {{ form.StartRestTime1.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.StartRestTime1.as_widget }}{{ form.StartRestTime1.help_text }} </td>
+         <th>{{ form.EndRestTime1.label_tag }} </th> <td style='vertical-align:top;'> {{ form.EndRestTime1.as_widget }} {{ form.EndRestTime1.help_text }}</td>
+    </tr>
+    
+        </tbody>
+        </table>
+    </fieldset>   
+ 
+    </td>
+
+</tr>
+
+
+<tr>
+    <td colspan=4>
+
+    <fieldset style='border:1px solid #e9e9e9;'><legend>{%trans '弹性时段设置'%}</legend><table><tbody>        
+
+
+    <tr>
+     <th> {{ form.TimeZoneType.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.TimeZoneType.as_widget }}{{ form.TimeZoneType.help_text }} </td>
+      
+     
+    <td>
+     {{ form.BeforeInMins|field_as_td_h:1 }} {{ form.AfterInMins|field_as_td_h:1 }} 
+    </td>
+     </tr>
+ 
+    
+        </tbody>
+        </table>
+    </fieldset>   
+ 
+    </td>
+
+</tr>
+
+
+
+{% endautoescape %}
+{% endblock %}
+{% block add_contents %}
+{% endblock %}
+

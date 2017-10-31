@@ -1,0 +1,52 @@
+{% extends "data_edit.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+
+{% block form %}
+{% autoescape off %}
+
+                                <tr><th><label for='id_pin' class='required'>{% trans '工号'%}</label></th>
+                                <td><input id='id_pin' readonly='readonly' type='text'  value='' maxlength='19' name='pin'  style='width:135px !important;'/></td></tr>
+                                <tr><th><label for='id_name' class='required'>{% trans '姓名'%}</label></th>
+                                <td><input id='id_name' readonly='readonly' type='text'  value='' maxlength='19' name='name'  style='width:135px !important;'/></td></tr>
+                                <tr><th><label for='id_Dept' class='required'>{% trans '部门'%}</label></th>
+                                <td><input id='id_Dept' readonly='readonly' type='text'  value='' maxlength='19' name='Dept'  style='width:135px !important;'/></td></tr>
+
+
+                                <tr><th><label for='id_card' class='required'>{% trans '卡号'%}</label></th>
+                                <td><input id='id_card' readonly='readonly' type='text'  value='' maxlength='19' name='card'  style='width:135px !important;'/></td></tr>
+
+                                <tr><th><label for='id_sys_card_no' class='required'>{% trans '卡账号'%}</label></th>
+                                <td><input id='id_sys_card_no' readonly='readonly' type='text'  value='' maxlength='19' name='sys_card_no'  style='width:135px !important;'/></td></tr>
+
+                                <tr><th><label for='id_card_serial_num' class='required'>{% trans '卡流水号'%}</label></th>
+                                <td><input id='id_card_serial_num' readonly='readonly' type='text'  value='' maxlength='19' name='card_serial_num'  style='width:135px !important;'/></td></tr>
+
+                
+                                <tr><th><label for='id_blances' class='required'>{% trans '账上余额'%}</label></th>
+                                <td><input id='id_blances'  readonly='readonly'  type='text'  value='0' maxlength='19' name='blance' style='width:135px !important;'/></td></tr>
+                          
+                                <tr><th><label for='id_card_blances' class='required'>{% trans '卡上余额'%}</label></th>
+                                <td><input id='id_card_blances'  readonly='readonly'  type='text'  value='0' maxlength='19' name='card_blances' style='width:135px !important;'/></td></tr>
+
+                                <tr><th><label for='id_apply_datetime' class='required' style='font-size: 25px;font-weight: bold;'>{% trans '纠错时间'%}</label></th>
+                                <td><input id='id_apply_datetime'  readonly='readonly'  type='text'  value=''  name='apply_datetime' style='width:135px !important;'/></td></tr>
+
+			  
+                                <tr><th><label for='id_money' class='required' style='font-size: 25px;font-weight: bold;'>{% trans '应消费金额'%}</label></th>
+                                <td><input id='id_money'  type='text'  value='' maxlength='19' name='money' style='width:135px !important;'/></td></tr>
+			                
+                   
+				<tr><td><input type="hidden" id="id_all_emp" value="filed_card"/></td></tr>
+			       <tr><td><input type="hidden" id="operate_type" name="operate_type"   value="9"/></td></tr>
+			       <tr><td><input type="hidden" id="user_pin" name="user_pin"   value=""/></td></tr>
+			       <tr><td><input type="hidden" id="pos_id" name="pos_id"   value=""/></td></tr>
+                          
+                                
+
+ 
+{% endautoescape %}
+{% endblock %}
+{% block edit_form_title %}
+	<span  style="display:none" id="id_span_title">{%trans '纠错'%}</span>
+{% endblock %}

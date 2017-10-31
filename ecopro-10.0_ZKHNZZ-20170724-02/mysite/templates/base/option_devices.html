@@ -1,0 +1,140 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+<div id='dlg_to_dev' style="padding: 20px;">
+<div class='ui-widget-header' style='width:700px;height: 28px;margin-left: 100px;margin-top: 10px;'><h3 style="padding-top: 8px;padding-left:10px"><a>{%trans '设备参数设置'%}</a></h3></div>
+<form id='id_edit_form_devices' method='post'><table style="margin-left: 100px;margin-top: 20px;">
+<tr><td>{%trans '正常联网时联接服务器的间隔时间（秒）:'%}</td><td><input id='id_Delay' name='Delay' value='30'  style='width:135px !important;'/>{%trans '对所有设备有效'%}</td>
+</tr>
+<tr><td>{%trans '是否实时传送新记录:'%}</td><td><select id='id_Realtime' name='Realtime' style='width:135px !important;'><option value='1' checked>{%trans '是'%}</option><option value='0'>{%trans '否'%}</option></select></td>
+</tr>
+<tr><td>{%trans '传送时间:'%}</td><td><input id='id_TransTimes' name='TransTimes' value=''  style='width:135px !important;'/>{%trans '格式如：07:09 (7时9分)'%}</td>
+</tr>
+<tr><td>{%trans '传送间隔时间（分）:'%}</td><td><input id='id_TransInterval' name='TransInterval' value='1'  style='width:135px !important;'/></td>
+</tr>
+<!--
+<tr><td>{%trans '通信密码:'%}</td><td><input id='id_compwd' name='compwd' value=''  style='width:135px !important;'/></td>
+</tr>
+-->
+<tr><td>{%trans '允许设备传送的数据类型:'%}</td><td><div id='id_TransType' name='TransType' style='border:1px solid #A6C9E2 ;background:white;padding:2px;width:135px !important;'></div></td>
+</tr>
+<tr><td colspan='2'><span>
+<front  style='font-weight:bold;'>备注</front>：<br/><br/>是否实时传送新记录: 选否表示按照传送时间和传送间隔时间规定传送<br/><br/>传送时间: 设定考勤机在某个时刻向服务器传送新数据，多个时间之间用分号(;)分开<br/><br/>传送间隔时间: 设定设备间隔多少分钟向服务器传送新数据<br/><br/>
+是否实时传送新记录、传送时间、传送间隔时间、允许设备传送的数据类型，对考勤设备有效
+</span></td>
+</tr>
+</table></form>
+<div  ><ul class='errorlist'><li id="option_devices_id_error" style="display:none;"></li></ul></div>
+{% if user|HasPerm:"iclock.sys_basic_setting" %}
+<div style="margin-left: 100px;margin-top: 20px;"><input id='id_devices_save' type='button' class='m-btn  zkgreen rnd' value='{%trans "Save" %}'/></div>
+{% endif %}
+</div>
+
+<script>
+$(function(){
+	$.ajax({ 
+        type: "POST",
+        url:"/iclock/att/getoptionAttParam/",
+        dataType:"json",
+        success:function(json){
+			var arr=json['message']
+			Delay=arr.Delay;
+			Realtime=arr.Realtime;
+			TransTimes=arr.TransTimes;
+			TransInterval=arr.TransInterval;
+			TransType=arr.TransType;
+                        compwd=arr.compwd
+                        $("#tab_base_options #id_Delay").val(Delay)
+                        $("#tab_base_options #id_Realtime").val(Realtime)
+                        $("#tab_base_options #id_TransTimes").val(TransTimes)
+                        $("#tab_base_options #id_TransInterval").val(TransInterval)
+                        //$("#id_compwd").val(compwd)
+                        var ds=["{%trans '设备原始记录'%}","{%trans '人员信息'%}","{%trans '现场考勤照片'%}"]
+                        var shtml="<table>"
+                        for(var u=0;u < ds.length;u++){
+                            if(TransType.substr(u,1)=='1'){
+				shtml+="<tr><td><span><input type='checkbox' alt='"+u+"' checked='checked'/>"+ds[u]+"</span></td></tr>"
+                            }else{
+				shtml+="<tr><td><span><input type='checkbox' alt='"+u+"'/>"+ds[u]+"</span></td></tr>"
+                            }
+                        }
+                        shtml+="</table>"
+                        $("#tab_base_options #id_TransType").html(shtml)
+        }})
+	$("#tab_base_options #id_devices_save").click(function(){
+		$("#tab_base_options #option_devices_id_error").html('')
+		if(valid_devices_option()) {
+			subsetoptiondata_opdev()
+		}
+	});
+});
+	function valid_devices_option() {
+		if(isNaN($("#tab_base_options #id_Delay").val())){
+			$("#tab_base_options #option_devices_id_error").html('正常联网间隔时间只能为数字').css("display","block");
+			return false
+		} else if ($("#tab_base_options #id_Delay").val().indexOf('-')!=-1||$("#tab_base_options #id_Delay").val()==0) {
+			$("#tab_base_options #option_devices_id_error").html('正常联网间隔时间需大于0').css("display","block");
+			return false
+		}
+		if($("#tab_base_options #id_Delay").val()=='') {
+			$("#tab_base_options #option_devices_id_error").html('正常联网间隔时间不能为空').css("display","block");
+			return false
+		}
+		if($("#tab_base_options #id_TransTimes").val()=='') {
+			$("#tab_base_options #option_devices_id_error").html('传送时间不能为空').css("display","block");
+			return false
+		}
+		if($("#tab_base_options #id_TransInterval").val()=='') {
+			$("#tab_base_options #option_devices_id_error").html('传送间隔时间不能为空').css("display","block");
+			return false
+		}
+		return true
+	}
+	
+	function getdivoption_opdev(){
+		var id=[];
+		$.each($("#id_TransType input"),function(){
+				if(this.checked) 
+					id.push(this.alt)
+		});
+		return id
+	}
+	
+	function subsetoptiondata_opdev(){
+		var Delay=$("#tab_base_options #id_Delay").val()
+		if(Delay<5){
+			Delay=5
+		}
+		var ErrorDelay=parseInt(Delay)+30
+		var Realtime=$("#tab_base_options #id_Realtime").val()
+		var TransTimes=$("#tab_base_options #id_TransTimes").val()
+		var TransInterval=$("#tab_base_options #id_TransInterval").val()
+        //var compwd=$("#id_compwd").val()
+		var TransType=getdivoption_opdev()
+		var type=0
+		for(var i=0;i<TransType.length;i++){
+			if(TransType[i]==0){
+				type+=1000000000
+			}else if(TransType[i]==1){
+				type+=101111111
+			}else if(TransType[i]==2){
+				type+=10000000
+			}
+		}
+		//var queryStr="ErrorDelay="+ErrorDelay+"&Delay="+Delay+"&Realtime="+Realtime+"&TransTimes="+escape(TransTimes)+"&TransInterval="+TransInterval+"&TransType="+type+"&compwd="+compwd;
+		var queryStr="ErrorDelay="+ErrorDelay+"&Delay="+Delay+"&Realtime="+Realtime+"&TransTimes="+escape(TransTimes)+"&TransInterval="+TransInterval+"&TransType="+type;
+		$.ajax({ 
+			type: "POST",
+			url:"/iclock/att/setoptionAttParam/",
+			data:queryStr,
+			dataType:"json",
+			success:function(retdata){
+				if(retdata.ret==0){
+					$("#tab_base_options #option_devices_id_error").html('保存成功').css("display","block");
+				} else{
+					$("#tab_base_options #option_devices_id_error").html(retdata.message).css("display","block");
+				}
+			}
+		});
+    }
+</script>

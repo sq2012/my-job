@@ -1,0 +1,98 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% block filters %}{% endblock %}
+{% block tblHeader %}
+<script>
+function ajaxFileUpload()
+ {
+	$.ajaxFileUpload
+			(
+				{
+				    url:'/iclock/att/savePhoto/',					
+					secureuri:false,
+					fileElementId:'id_fileUpload',  
+					dataType: 'json',
+					success: function (data, status)
+					{
+						if(data="result=0"){
+							$("#id_error").css("display","block");
+							$("#id_error").html("<ul class='errorlist'><li>{%trans 'Save Successfully!'%}</li></ul>");
+						}
+                        else
+                        {
+                            $("#id_error").css("display","block");
+                            $("#id_error").html("<ul class='errorlist'><li>{%trans 'Save Fail!'%}</li></ul>");
+                            
+                        }
+					},
+					error: function (data, status, e)
+					{
+						alert(e);
+					}
+				}
+			);
+	
+
+ }
+ 
+
+$(function(){
+$("#content").html("<h1><img src='/media/img/blogmarks.png' />{%trans 'Upload employee picture' %}</h1>"
++"<div class='module' style='position:relative; width: 100%;'>"
++"<table style='margin-bottom: 2px; float: left; width: 100%;'><tr>"
+	+"<td style='vertical-align:top;'><div id='show_dept_emp_tree' style='min-height: 200px;'></div></td>"
+	+"<td style='vertical-align:top;width:40%;'><div id='id_conditions'>"
+		+"{%trans 'The picture format is jpg,Name rule PIN.jpg(e.g.00008.jpg)' %}"
+		+"<form id='id_edit_form' method='POST' action='' enctype='multipart/form-data'><table id='id_setField'>"
+		+"<input type='hidden' id='id_hidden_emp' value='' name='UserIDs' />"
+        +"<input type='hidden' id='id_hidden_depts' value='' name='deptIDs' />"
+		+'{%trans "Picture"%}<input type="file" id="id_fileUpload" name="fileToUpload" size="15"/>'
+		+"<tr><td>"
+		+"<input type='button'  id='id_forget' class='btnOKClass' value='{%trans 'Submit' %}'/>&nbsp;<input type='submit' class='btnCancelClass' onclick='window.history.back(); return false;' value='{%trans 'Return' %}'/></td></tr>"
+		+"<tr><td colspan='2'><span id='id_error'></span></td></tr>"
+	+"</table></form></div></td>"
++"</tr></table></div>"
+);
+getDept_to_show_emp(500);  //生成单位员工
+$("#id_forget").click(function(){
+var deptIDs=$("#hidden_depts").val()
+var emp=getSelected_emp()
+var f=$("#id_fileUpload").val();
+$("#id_hidden_emp").val(emp);
+$("#id_hidden_depts").val(deptIDs);
+if(f=="")
+	{
+		$("#id_error").css("display","block");
+		$("#id_error").html("<ul class='errorlist'><li>{%trans 'Please select picture'%}</li></ul>");
+		return false;
+	}
+else if(emp.length<=0)
+	{
+		$("#id_error").css("display","block");
+		$("#id_error").html("<ul class='errorlist'><li>{%trans 'Please select employee'%}</li></ul>");
+		return false;
+	}
+else
+	{
+		ajaxFileUpload();
+	
+	}
+});
+});
+</script>
+
+<style>
+form th {
+text-align:left;
+padding-top:4px;
+vertical-align: top;
+}
+</style>
+
+
+
+{% endblock %}
+
+
+
+

@@ -1,0 +1,129 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% block tblHeader %}
+
+hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+//jqOptions=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{ colModel }}
+options[g_activeTabID].canAdd=false;
+tblName[g_activeTabID]='AttDataProofCmd';
+jqOptions[g_activeTabID].sortname='id';
+jqOptions[g_activeTabID].sortorder='desc';
+currentState=-1;
+State_AttDataProofCmd=['{%trans "正常"%}','{%trans "异常"%}']
+function showState_AttDataProofCmd(value)
+{
+//	if(currentState==value) return;
+	currentState=value;
+	createFilter_AttDataProofCmd();
+	if (value==0)
+        var url=g_urls[g_activeTabID]+"?flag=0";//正常
+    else if (value==1)
+        var url=g_urls[g_activeTabID]+"?flag=-1";//异常
+	else
+		var url=g_urls[g_activeTabID];
+    savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function strOfData_AttDataProofCmd(data)
+{
+	return data.Device+data.OperateTime;
+}
+
+function getRet(data)
+{
+	if(data[7]=="") return removeNone(data[6]);
+	return "<a href='"+data[7]+"'>"+removeNone(data[6])+"</a>"; 
+}
+//模糊查询
+function searchShowDevcmds(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+	var url=g_urls[g_activeTabID]+"?q="+escape(v)
+	savecookie("search_urlstr",url);
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+$(function(){
+	var info='<p>1.记录数据校对日志，用于查看系统自动与考勤机进行校对的详细情况</p>'
+	renderLeftInformation(info);
+	if(!options[g_activeTabID].canAdd)$("#id_newrec").css('display','none');
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowDevcmds();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowDevcmds();
+	});
+	$("#"+g_activeTabID+" #id_filtername").css("display","block")
+	   createFilter_AttDataProofCmd(-1);
+	$("#titleId").after("<td width='480px'>"
+		+"<span style='width:300px'>"
+		+"<label class='required' >{%trans 'Begin Date'%}</label>"
+		+"<input type='text' name='ComeTime' maxlength='10' id='id_ComeTime' style='width:120px !important;'>"
+		+"<label class='required' >{%trans 'End Date'%}</label>"
+		+"<input type='text' name='EndTime' maxlength='10' id='id_EndTime' style='width:120px !important;'>"
+		+"</span>"
+		+"<span style='width:80px'>"
+		+"<select name='id_date' id='id_date'><option value='OperateTime'>操作时间</option><option value='StartTime'>开始时间</option><option value='EndTime'>结束时间</option></select>"
+		+"</span>"
+		+"</td>"
+		+"<td width='60px'><span style='float:left;'><ul id='nav' class='nav'><li id='id_search'><span class='searchlink'></span><a href='#'>{%trans 'Query'%}</a></li></ul></span>"
+		+"</td>");
+	$("#"+g_activeTabID+" #id_ComeTime").datetimepicker(datetimepickerOptions);
+	$("#"+g_activeTabID+" #id_EndTime").datetimepicker(datetimepickerOptions);
+	$("#"+g_activeTabID+" #id_search").click(function(){
+		var ComeTime=$("#"+g_activeTabID+" #id_ComeTime").val();
+		var EndDate=$("#"+g_activeTabID+" #id_EndTime").val();
+		$.cookie("ComeTime",ComeTime, { expires: 7 });
+		$.cookie("EndDate",EndDate, { expires: 7 });
+		var isError=validate_form_AttDataProofCmd();
+		var urlTime="";
+		var urlTime1="";
+		if(!isError){
+			urlTime1=$("#"+g_activeTabID+" #id_date").val()+"__gte="+ComeTime+"&"+$("#id_date").val()+"__lt="+EndDate
+		}
+		urlTime=urlTime1
+		var url="/iclock/data/AttDataProofCmd/?"
+		if (urlTime!="" &&  urlTime!=null)
+			url+=urlTime;
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+		savecookie("search_urlstr",url);
+	});
+	
+	
+	
+})
+function createFilter_AttDataProofCmd(){
+
+	html="<li style=' border: 0px solid white;'><a href='#' style='color: #000;background:white;padding-left:0;'>{% trans '执行状态' %}</a>"
+		+"<ul><li><a href='#' onclick='showState_AttDataProofCmd(-1)'>{%trans "All"%}</a></li>";// "+(currentState==-1?"class='selected'":"")+"
+	for(i=0;i<=1;i++)
+		html+="<li><a href='#' onclick='showState_AttDataProofCmd("+i+")'>"+State_AttDataProofCmd[i]+"</a></li>";// "+(currentState==i?"class='selected'":"")+"
+    
+	$("#"+g_activeTabID+" #id_filterbar").html(html+'</ul></li>');
+}
+function validate_form_AttDataProofCmd(){   //验证表单的合法性(、开始时间、结束时间)
+	var t_ComeTime=$("#"+g_activeTabID+" #id_ComeTime").val();
+	var cTime=t_ComeTime.split("-");
+	var t_EndDate=$("#"+g_activeTabID+" #id_EndTime").val();
+	var eTime=t_EndDate.split("-");
+	cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+	edate=new Date(parseInt(eTime[0],10),parseInt(eTime[1],10)-1,parseInt(eTime[2],10));
+	if(cdate>edate || t_ComeTime=="" || t_EndDate==""){
+		return 1;
+	}else{
+		return 0
+	}
+}
+
+{% endblock %}
+
+
+
+

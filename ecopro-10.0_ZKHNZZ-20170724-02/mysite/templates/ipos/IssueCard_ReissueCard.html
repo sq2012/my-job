@@ -1,0 +1,599 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+<script>
+jqOptions=copyObj(jq_Options);
+jqOptions.onSelectRow=function(ids){show_detail_emp(ids);}
+
+{% autoescape off %}
+var _data={{params}}
+{% endautoescape %}
+var card_type=_data.itype
+var sys_pwd = _data.pwd
+var main_fan = _data.main
+var minor_fan = parseInt(main_fan)+1;
+var max_money=_data.max_money
+var zk_key=_data.pass_key
+
+var reN = 2;
+var reval = "";
+var private = "";
+if (_data.mng_cost){ var mng_cost=_data.mng_cost}
+else var mng_cost=0
+if (_data.card_cost){ var card_cost=_data.card_cost}
+else var card_cost=0
+function show_detail_emp(ids)
+{
+	var dataRow=$("#id_grid_").jqGrid("getRowData",ids);
+	$('#id_card_title').html('工号:'+dataRow.PIN+'  姓名:'+dataRow.EName)
+	$('#id_cardno1').val(dataRow.cardno)
+	$('#id_blance1').val(dataRow.blance)
+	$('#id_blance').val(dataRow.blance)
+	$('#old_sys_card_no').val(dataRow.sys_card_no)
+	$('#user_id').val(ids)
+		
+	
+	
+}
+
+function afterPost_IssueCard_ReissueCard(flag,FormObj){
+	$('#id_cardno').val('')	
+	$('#user_id').val('')
+
+}
+
+
+{% if "POS_IC"|filter_config_option %}
+
+function write_card()
+{
+        private = $("#id_card_privage").val();
+        if ($('#id_edit_form_consume').valid())
+        {
+            if (sys_pwd.length==6)
+            {
+                if ($("#id_cardno").val() == reval )//验证卡号是否一致
+                {
+                    var rinfo = isEmptyCard();//验证卡是否为空白卡
+                    var m = Number($("#id_money").val());//写卡金额
+                    if (!rinfo)
+                    {   
+                        $("#id_error").html('<ul class="errorlist"><li>这不是一张空白卡，不能发卡！请先初始化卡！</li></ul>');
+                        return;
+                    }
+                    else if(typeof(rinfo) != "boolean")
+                    {
+                       check_card(rinfo);
+                    }
+                    else
+                    {
+                            if(funSaveAddCardBakData())//第一次写卡时先往备份表插入一条记录
+                            {
+                                var pwdbyte = sys_pwd;//系统密码
+                                var cardno = $("#id_sys_card_no").val();//卡账号
+                                var money = Number($("#id_blance").val());//写卡金额
+                                var cardtype = $('#id_itype option:selected').text().split("---")[1];//卡类型编号
+				                if (!cardno){
+                                    $("#id_error").html('<ul class="errorlist"><li>补卡失败，卡账号为空！</li></ul>');
+                                    return false
+                                }
+                                var overpwd = $("#id_Password").val();
+                                var rval = ZK_PosIssueICCard(0,pwdbyte,overpwd,cardno,money*100,cardtype,2,main_fan,minor_fan);
+				if (rval.toString() == '0')//写卡成功
+                                {
+                                    if(isvild_write_Add_card(0,money,money*100,0))//验证写卡数据是否正确
+                                    {
+                                        if (funSaveIssuecardData())
+                                        {
+                                            //保存数据到系统
+                                            //re_load_from();
+                                            $("#id_error").html('<ul class="errorlist"><li>补卡成功</li></ul>');
+					        $('#id_grid_').jqGrid('setCell',$('#user_id').val(),'Card',$('#id_cardno').val())
+						$('#id_grid_').jqGrid('resetSelection')
+						$('#user_id').val('')
+
+                                        }
+                                        else
+                                        {
+                                            ZK_PosClearICCard(0,sys_pwd,main_fan,minor_fan)
+                                            $("#id_error").html('<ul class="errorlist"><li>补卡失败</li></ul>');
+                                            
+                                        }
+                                    }
+                                    else
+                                    {
+                                       $("#id_error").html('<ul class="errorlist"><li>补卡失败</li></ul>');                             
+                                    }
+                                }
+                                else
+                                {
+                                    check_card(rval);
+                                }
+                            }
+                        
+    //                    else
+    //                    {
+    //                        $("#id_info").remove();                
+    //                        $("#id_edit_form_consume").append('<div id="id_info" style="display: block;"><ul class="errorlist"><li>系统错误，补卡失败</li></ul></div>');                      
+    //                    }
+                    }
+                }
+                else
+                {
+                     $("#id_error").html('<ul class="errorlist"><li>卡号不一致，补卡失败！</li></ul>');                
+                     
+                }
+            }
+            else
+            {
+                $("#id_error").html('<ul class="errorlist"><li>当前系统发卡密码为系统默认密码（123456）请到消费参数设置中重新设置密码！</li></ul>');                
+            }
+        }
+    }
+{%endif%}
+
+
+function importissuecard(){
+var block_html=""
+           +"<form id='frmComebackDb' name='frmComebackDb' method='POST' action='/ipos/tasks/import_IssueCard/' enctype='multipart/form-data'>"
+           +"<table><tr>"
+                +'<th>'
+                     +'<table style="margin-top: 20px;">'
+                            +'<tr><th>'+gettext("Support Upload Fields" )+'</th><th>'+gettext("Index in File" )+'</th></tr>'
+                            +'<tr><td><input id="id_PIN" name="PIN" type="checkbox" checked disabled/>'+gettext("人员工号")+'</td>'
+                            +'<td><input name="PIN2file" id="id_PIN2file" type="text"  style="width:100px !important;"/></td>'
+                            +'</tr>'
+                            +'<tr><td><input id="id_name" name="name"  type="checkbox" checked disabled/>'+gettext("姓名")+'</td>'
+                            +'<td><input name="name2file" id="id_name2file" type="text" style="width:100px !important;"/></td>'
+                            +'</tr>'
+                            +'<tr><td><input id="id_card" name="card" type="checkbox" checked disabled/>'+gettext("卡号")+'</td>'
+                            +'<td><input name="card2file" id="id_card2file" type="text"  style="width:100px !important;"/></td>'
+                            +'</tr>'
+                            +'<tr><td><input id="id_balance" name="balance" type="checkbox" checked disabled/>'+gettext("金额")+'</td>'
+                            +'<td><input name="balance2file" id="id_balance2file" type="text"  style="width:100px !important;"/></td>'
+                            +'</tr>'
+                            +'<tr><td><input id="id_Password" name="Password" type="checkbox" checked disabled/>'+gettext("超额密码")+'</td>'
+                            +'<td><input name="Password2file" id="id_Password2file" type="text"  style="width:100px !important;"/></td>'
+                            +'</tr>'
+                            +'<tr><td><input id="id_itype" name="itype" type="checkbox" checked disabled/>'+gettext("消费卡类")+'</td>'
+                            +'<td><input name="itype2file" id="id_itype2file" type="text"  style="width:100px !important;"/></td>'
+                            +'</tr>'
+                            +'<tr><td><input id="id_whatrowid" name="whatrowid" type="checkbox" checked disabled/>'+gettext("whatrowid")+'</td>'
+                            +'<td><input name="whatrowid2file" id="id_whatrowid2file" type="text" value="2"  style="width:100px !important;"/>'+gettext("行开始导入")+'</td>'
+                            +'</tr>'
+                            +'<tr><td cospan="3"><input  type="hidden" name="fields" id="id_fields"/></td></tr>'
+                            +'<tr><td><input type="file" class="text" value="" name="fileUpload" id="fileUpload"/></td></tr>'
+		              +'</table>'
+                +'</th>'
+                +'<td>'
+				      +'<table>'
+                            +'<tr><th ><label>'+'一、'+gettext("导入模板示例：")+'</label></th></tr>'
+                            +'<tr><td ><img src="/media/img/ipos/id_IssueCard_import.png" ></td></tr>'
+                            +'<tr><td ><a href="/media/img/ipos/id_IssueCard_import.xls" target="_blank"><label style="color:red;">>>> 获取导入模版</label></a></td></tr>'
+                            +'<tr><th ><label>'+'二、'+gettext("导入模板说明：")+'</label></th></tr>'
+                            +'<tr><td >&nbsp;&nbsp;&nbsp;&nbsp;<label>'+'1、'+gettext("支持上传的文件格式有三种:以制表符分隔的TXT文件,编码是ANSI格式；以逗号分隔的CSV文件；Excel的标准格式")+'</label></td></tr>'
+                            +'<tr><td >&nbsp;&nbsp;&nbsp;&nbsp;<label>'+'2、'+gettext("'人员工号'、'卡号'、'消费卡类'是必选字段。")+'</label></td></tr>'
+                            +'<tr><td >&nbsp;&nbsp;&nbsp;&nbsp;<label>'+'3、'+gettext("人员必须在职，且没发过卡；卡号不可重复。")+'</label></td></tr>'
+                            +'<tr><td ><div id="id_message"></div>'
+                            +"</td></tr>"
+                       +"</table>"
+                +'</td>'
+           +'</tr></table>'
+           +'</form>'
+        $(block_html).dialog({modal:true,
+					resizable:false,
+					width: 820,
+					height:515,
+					buttons:[{id:'btnShowOK',text:gettext("Submit"),click:function(){$(this).submit();}},{text:gettext("Cancel"),click:function(){$(this).dialog("close"); }}],
+							  title:gettext("导入普通卡"),
+							  close:function(){$(this).dialog("destroy");}
+							});
+		var opts = {
+				url:'/ipos/tasks/import_IssueCard/',
+				dataType:'json',
+				success: showResponse
+			};
+		var fields=["PIN","name","card","balance","Password","itype"];
+		for(var i=0;i<fields.length;i++){
+			value=$.cookie("dept"+fields[i]+"_value");
+			if(value)
+				$("#id_"+fields[i]+"2file").val(value);
+			else
+				$("#id_"+fields[i]+"2file").val((i+1));
+		}
+
+		$('#frmComebackDb').submit(function() {
+			$(".errorlist").css("display","none");
+			var fields=["PIN","name","card","balance","Password","itype"];
+			$("#id_fields").val(fields);
+			for(var i=0;i<fields.length;i++){
+				 isChecked=($("#id_"+fields[i]).prop("checked"))?true:false
+				 value=$("#id_"+fields[i]+"2file").val();
+				 value1=$("#id_whatrowid2file").val();
+				 if(isChecked && value==""||value.match(/^[1-9]\d*$/)==null){
+					$("#id_"+fields[i]+"2file").after("<ul class='errorlist'><li>Please input selected field index in file</li></ul>");
+					return false;
+				 }
+				if(value1==""||value1.match(/^[1-9]\d*$/)==null){
+					$("#id_whatrowid2file").after("<ul class='errorlist'><li>Please input selected field index in file</li></ul>");
+					return false;
+
+				}
+				 $.cookie("dept"+fields[i]+"_checked",isChecked, { expires: 7 });
+				 $.cookie("dept"+fields[i]+"_value",value, { expires: 7 });
+			}
+			var flag=checkForm();
+			if(flag){
+				$(this).ajaxSubmit(opts);
+			}
+			return false;
+		});
+}
+
+function SaveFormData_issuecard_reissuecard(FormObj,url,flag,tableName)
+{
+	f=FormObj.get(0)
+	if (!$(f).valid()){$("#id_error").html(gettext("occur error!")).css("color","red").css('display','block'); return 0;}
+	var formStr=formToRequestString(f);
+	$.post(url,
+		formStr,
+		function (ret, textStatus) {
+			if(ret.ret==0)
+			{
+				if(flag=='addandcontinue')
+				{
+					if($.isFunction(window['afterPost_'+tableName]))
+					{
+						window['afterPost_'+tableName](flag,FormObj);
+					}
+				}
+				else
+				{
+					if($.isFunction(window['afterPost_'+tableName]))
+					{
+						window['afterPost_'+tableName](flag,FormObj);
+					}
+					$(FormObj).dialog("destroy");
+					reloadData();
+				}
+			}
+			//$("#id_error").html(ret.message).css("color","red").css('display','block');
+			$("#id_error").html('<ul class="errorlist"><li>'+ret.message+'</li></ul>').show();
+		},
+		"json");
+}
+
+		
+		
+		
+$(function(){
+        {% if "POS_IC"|filter_config_option %}
+                addZKOnline()	
+	{%endif%}
+        $("#"+g_activeTabID+" #searchbar").val("工号,姓名")
+        $("#"+g_activeTabID+" #queryButton").hide()
+        var inputEl = $("#"+g_activeTabID+" .search-input")
+        defVal[g_activeTabID] = inputEl.val();
+	 
+    	 inputEl.on("focus",function(){
+		             var _this = $(this);
+				if (_this.val() == defVal[g_activeTabID][g_activeTabID]) {
+				    _this.val('');
+				    _this.css('color','#000000');
+				    //_this.attr('role','disabled')
+				}
+		})
+	inputEl.on("blur",function(){
+		        var _this = $(this);
+			if (_this.val() == '') {
+			    _this.val(defVal[g_activeTabID][g_activeTabID]);
+			    _this.css('color','#CCCCCC');
+			    _this.attr('role','defvalue')
+			}
+			else
+			    _this.attr('role','cansearch')
+		})
+	inputEl.on("keydown",function(event) {
+			if (event.which == 13) {
+			      var _this = $(this);
+			       _this.attr('role','cansearch')
+			 }
+		})
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowDep_issuereiss();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowDep_issuereiss();
+	});
+	$("#"+g_activeTabID+" #id_import").click(function(){
+        importissuecard();
+	})
+	var hcontent=$("#id_content").height();
+	var hbar=$("#id_top").length>0?$("#id_top").height():0;
+	var h=hcontent-hbar
+	$('.module').css('height',h)
+	$('#id_card_west').css('height',h)
+	$('#id_emp_info').css('height',h)
+	$('#id_card_info').css('height',h)
+	$('#id_dining').hide();
+	$("#id_mng_cost").val(mng_cost)
+	$("#id_card_cost").val(card_cost)
+
+	jqOptions.datatype='local'
+	jqOptions.height=h-80
+	jqOptions.multiselect=false
+	jqOptions.width='auto'
+	jqOptions.pager="#id_pager_";
+	$.ajax({
+		type:"GET",
+		url:"/iclock/att/getColModel/?dataModel=employeeForReissueCard",
+		dataType:"json",
+		data:'',
+		success:function(json){
+			jqOptions.colModel=json['colModel']
+			$("#id_grid_").jqGrid(jqOptions);
+		}
+	});
+
+	var h=$("#id_content .ui-layout-west").height()-40
+	$('#showTree_').css('height',h)
+        ShowDeptData('')
+	var zTree = $.fn.zTree.getZTreeObj("showTree_");
+	zTree.setting.check.enable = false;
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		var deptID=treeNode.id;
+		var ischecked=0;
+		if($("#id_cascadecheck_").prop("checked"))
+			ischecked=1;
+		urlStr="/iclock/data/employee/?t=emp_reissuecard.js&deptIDs="+deptID+"&isContainChild="+ischecked+"&OffDuty=0&cardstatus=3&issuecard=0"
+		
+		if ($('#filterhascard').prop('checked')) {
+			urlStr=urlStr+"&issuecard=0"
+			
+		}
+		jqOptions.url=urlStr
+		jqOptions.datatype='json'
+		renderGridData('',jqOptions)
+                
+	}
+
+	
+	
+	{% if "POS_IC"|filter_config_option %}
+	
+	$('#id_sys_card_no').css("backgroundColor","scrollbar");
+	if(sys_pwd!=''&&isOnline())
+		$('#read_card').removeProp('disabled')
+	else if(sys_pwd=='')
+		$("#id_error").html('<ul class="errorlist"><li>请首先进行消费参数设置</li></ul>');
+
+	$("#read_card").click(function() {
+		$('#id_error').html('')
+		private = $("#id_card_privage").val();
+		if (private=="0")
+		{
+			var emp=$('#user_id').val();
+			if(emp==""||emp==null){
+				$("#id_error").html('<ul class="errorlist"><li>请首先选择人员!</li></ul>');                
+				return false;
+			}
+		}
+		$('#read_card').prop('disabled',true)
+		reval = readCard();
+		if (reval.length>4)
+                {
+                    $("#id_cardno").val(parseFloat(reval));
+                    write_card();
+                }
+		else
+                {
+                    check_card(reval);
+                }
+		$('#read_card').removeProp('disabled')
+        });
+{%endif%}
+	{% if "POS_ID"|filter_config_option %}
+	$("#id_error").html('<ul class="errorlist"><li>当前系统设置的为ID卡，请核对!</li></ul>');                
+	$("#btnShowOK").click(function() {
+			var emp=$('#user_id').val();
+			if(emp==""||emp==null){
+				$("#id_error").html('<ul class="errorlist"><li>请首先选择人员!</li></ul>');                
+				return false;
+			}
+		
+		if ($('#id_edit_form_consume').valid())
+		{
+			var urlAddr='/ipos/data/IssueCard/_new_/?mod_name=ipos&cardaction=reissue'
+		
+			SaveFormData_issuecard_reissuecard($('#id_edit_form_consume'),urlAddr,'addandcontinue','IssueCard_ReissueCard');
+		}
+	});
+
+	{%endif%}
+	
+	
+	
+        $('#id_edit_form_consume').validate({
+                                    rules: {
+					"cardno":{required:true,digits:true},
+                                        "blance": {required:true,min:0,max:max_money+1,isMoney:true},
+                                        "card_cost": {required:true,min:0.0,max:99,isMoney:true},
+                                        "mng_cost": {required:true,min:0.0,max:99,isMoney:true},
+                                        "Password": {required:true,digits:true,maxlength:6}
+                                        }
+	})
+
+	
+	
+});
+
+
+function searchShowDep_issuereiss(){
+    var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+    var url="/iclock/data/employee/?t=emp_reissuecard.js&OffDuty=0&cardstatus=3&issuecard=0&q="+escape(v)
+    savecookie("search_urlstr",url);
+    jqOptions.url=url
+	jqOptions.datatype='json'
+	renderGridData('',jqOptions)
+}
+
+
+</script>
+
+
+<div id="id_top">
+	<div class="sear-box quick-sear-box" >
+		
+		<!--
+		<div class="s-info right" id="filter_area">			
+
+			<span><input type='checkbox'  id='filterhascard' checked="checked"/>仅显示未补卡人员</span>
+		
+		</div>
+		-->
+
+		
+		
+		<div class="s-info right" id="sear_area">			
+			<div class="nui-ipt nui-ipt-hasIconBtn " >
+				<input id="searchbar" class="search-input" type="text"  value="工号" role='defvalue' autocomplete="off" />
+				<span id ="queryButton" class="nui-ipt-iconBtn">
+					<b id="_icon_2_28" class="nui-ico nui-ico-dArr "></b>
+				</span>
+				
+			</div>
+			
+			<div class="main-search-btn">
+			
+				<span class="chaxun icon iconfont icon-chaxun"></span>
+			</div>
+		</div>
+	</div>
+
+    {% if "POS_ID"|filter_config_option %}
+	<div id="id_toolbar">
+			<UL class="toolbar" id="navi">
+				<LI id="id_reload" class="first button-refresh"><SPAN></SPAN>{%trans "Reload"%}</LI>
+				<LI id="id_import" class="button-import"><SPAN></SPAN>{%trans "Import"%}</LI>
+
+			</ul>
+        </div>
+    {% endif %}
+	
+</div>
+
+
+
+
+<div class="module" style="position:relative; width: 99%;margin-top: 2px;">
+		<div id='id_card_west' class="left ui-layout-west" style='width: 240px;'>
+			<div class="ui-widget-header" style="height: 25px;">
+				<span id=id_opt_tree>
+				<input type='checkbox' id='id_cascadecheck_' checked/>{%trans "级联下级部门" %}
+				</span>
+			</div>
+			<div id='show_dept_tree_'>
+				<ul id='showTree_' class='ztree' style='margin-left: 0px;overflow:auto;height:200px;'></ul>	
+			</div>   
+		</div>
+		<div id="id_card_middle" style="height: 521px; width: 6px; top: 0px;" class="left ui-layout-resizer ui-layout-resizer-west ui-layout-resizer-open ui-layout-resizer-west-open">
+			
+		</div>		
+		
+		<div id='id_emp_info' class="left" style='width: 430px;margin-right: 10px;'>
+			<table id="id_grid_" >	</table>
+			<div id="id_pager_"></div>
+		</div>
+		
+		<div id='id_card_info' class="left ui-layout-west" style='width: 300px;'>
+			<div id='id_card_title' class="ui-widget-header" style="height: 25px;">
+			</div>
+
+			<div id="id_form" style='padding-left: 20px;'>
+				
+				<form method="post" id="id_edit_form_consume" enctype="multipart/form-data">
+				<table>
+				{% if "POS_IC"|filter_config_option %}
+				<tr><th><label for='id_cardno1' style='font-weight:bold !important; color:#333 !important;'>{% trans '原卡号'%}</label></th>
+                                <td><input id='id_cardno1' readonly='readonly' type='text'  value='' maxlength='19' name='cardno1'  style='width:135px !important;background:scrollbar !important;'/></td></tr>
+                                <tr><th><label for='id_blance1' style='font-weight:bold !important; color:#333 !important;'>{% trans '原卡余额'%}</label></th>
+                                <td><input id='id_blance1'  readonly='readonly'   type='text'  value='0' maxlength='19' name='blance1' style='width:135px !important;'/></td></tr>
+                          	<tr><th><label for='id_card_cost1' class='required'>{% trans '退还成本'%}</label></th>
+                                <td><input id='id_card_cost1'  type='text'  value='0' maxlength='19' name='card_cost1' style='width:135px !important;'/></td>
+                                
+                                <tr><th><label for='id_cardno' style='font-weight:bold !important; color:#333 !important;'>{% trans '新卡号'%}</label></th>
+                                <td><input id='id_cardno' readonly='readonly' type='text'  value='' maxlength='19' name='cardno'  style='width:135px !important;background:scrollbar !important;'/></td></tr>
+                                {%else%}
+                                <tr><th><label for='id_cardno' class='required'>{% trans '卡号'%}</label></th>
+                                <td><input id='id_cardno'  type='text'  value='' maxlength='19' name='cardno'  style='width:135px !important;'/></td></tr>
+				
+				{%endif%}
+				
+				<tr><th><label for='card_privage' class='required'>{% trans '卡类型'%}</label></th>
+                                <td><select  id='id_card_privage'  name='card_privage' style='width:135px !important;'>
+					<option value='0' selected>{%trans '普通卡'%}</option>	
+					
+				</select></td></tr>
+				
+				{% if "POS_IC"|filter_config_option %}
+                                <tr><th><label for='id_sys_card_no' style='font-weight:bold !important; color:#333 !important;'>{% trans '卡账号'%}</label></th>
+                                <td><input id='id_sys_card_no' readonly='readonly' type='text'  value='' maxlength='19' name='sys_card_no'  style='width:135px !important;'/></td></tr>
+				{%endif%}
+			
+                                <tr><th><label for='id_blance' class='required'>{% trans '金额'%}</label></th>
+                                <td><input id='id_blance'     type='text'  value='0' maxlength='19' name='blance' style='width:135px !important;'/></td></tr>
+                          
+                                <tr><th><label for='id_card_cost' class='required'>{% trans '卡成本'%}</label></th>
+                                <td><input id='id_card_cost'  type='text'  value='0' maxlength='19' name='card_cost' style='width:135px !important;'/></td></tr>
+			  
+                                <tr><th><label for='id_mng_cost' class='required'>{% trans '卡管理费'%}</label></th>
+                                <td><input id='id_mng_cost'  type='text'  value='0' maxlength='19' name='mng_cost' style='width:135px !important;'/></td></tr>
+                                <tr><th><label for='id_Password' class='required'>{% trans '超额密码'%}</label></th>
+                                <td><input id='id_Password'  type='text'  value='123456' maxlength='19' name='Password' style='width:135px !important;'/></td></tr>
+			                
+                                <tr><th><label for='id_itype' class='required'>{% trans '消费卡类'%}</label></th>
+                                <td>{{ form.itype.as_widget}}</td></tr>
+
+				<tr><td><input type="hidden" id="id_all_emp" value="filed_card"/></td></tr>
+			       <tr><td><input type="hidden" id="operate_type" name="operate_type"   value="12" /> </td></tr>
+			       <tr><td><input type="hidden" id="user_pin" name="user_pin"   value=""/> </td></tr>
+			       <tr><td><input type="hidden" id="user_id" name="UserID"   value=""/> </td></tr>
+			       <tr><td><input type="hidden" id="card_serial_no" name="card_serial_no"   value="1"/> </td></tr>
+			       <tr><td><input type="hidden" id="old_sys_card_no" name="old_sys_card_no"   value=""/> </td></tr>
+                          
+                                
+
+				</table>
+				</form>
+			</div>
+			<div id='id_error'></div>
+			<div style='padding-left: 100px;'>
+			{% if "POS_IC"|filter_config_option %}
+				
+			<button type="button" style='padding-left: 30px;padding-right: 30px;' disabled='disabled' class='m-btn  zkgreen rnd' id="read_card">补卡</button>
+			{%else%}
+			<button type="button" style='padding-left: 30px;padding-right: 30px;'  class='m-btn  zkgreen rnd' id="btnShowOK">保存</button>
+			{%endif%}
+
+			</div>
+
+		</div>
+		
+		
+		
+	 
+</div>
+
+
+
+
+
+
+
+

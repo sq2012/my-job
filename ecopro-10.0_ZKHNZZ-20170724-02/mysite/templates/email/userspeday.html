@@ -1,0 +1,18 @@
+{% load i18n %}
+
+<font size="5" style="font-weight:bold ">{{welcome}}</font>
+<br>
+<br>
+&nbsp&nbsp&nbsp&nbsp&nbsp<font size="2">{%trans "之所以收到这封邮件，是因为系统定制了审批邮件提醒"%}
+<br>
+<br>
+<table border="1" width="600" cellspacing="0" cellpadding="0" bordercolor="#141414" height="60">
+<tr align="center" bordercolor="#141414"><th>姓名</th><th>开始时间</th><th>结束时间</th><th>审批人</th></tr>
+
+<tr align="center" bordercolor="#141414"><td>{{u.UserID.EName}}</td><td>{{u.StartSpecDay}}</td><td>{{u.EndSpecDay}}</td><td>{{approval}}</td></tr>
+</table>
+
+</font>
+
+<br>
+

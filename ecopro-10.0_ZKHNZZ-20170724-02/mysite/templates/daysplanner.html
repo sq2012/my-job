@@ -1,0 +1,547 @@
+{% load i18n %}
+{% load iclock_tags %}
+<style>
+table 
+.first td{
+background:#90EE90;
+}
+#calendar {
+ font-size: 14px;
+}
+
+</style>
+
+<script>
+daylist=[]
+$(function(){
+  var het=$('#id_content').width()
+  $('#calendar').css({"width":"900px","margin": "3px"})
+  cal=$('#calendar').fullCalendar({
+  	header: {
+  		left: 'prev,next, today',
+  		center: 'title',
+  		right: 'month,agendaWeek,agendaDay'
+  		},		
+  	buttonText:{
+  		prev:'向前',
+  		next:'向后',
+  		today:'今天',
+  		month:'按月',
+  		agendaWeek:'按周',
+  		agendaDay:'按天'
+  		},
+  titleFormat:'yyyy年MM月dd日',
+  allDayText:'整天',
+  aspectRatio:2.0,
+  axisFormat:'H(:mm)',
+  timeFormat:{agendaDay:'H:mm{ - H:mm}',agendaWeek:'H:mm{ - H:mm}'},
+  theme:true,
+  selectable: true,
+  unselectCancel:'',
+  eventBackgroundColor:'#ff0000',
+  unselectAuto:false,
+  dayNames:['周日','周一','周二','周三','周四','周五','周六'],
+  dayNamesShort:['周日','周一','周二','周三','周四','周五','周六'],
+  editable: true,
+  droppable: true,
+  diableResizing:false,
+  eventResize: function(calEvent, dayDelta, minuteDelta, revertFunc, jsEvent, ui, view) {
+    var querystr="id="+calEvent.id+"&dayDelta="+dayDelta+"&minuteDelta="+minuteDelta+"&allDay="+calEvent.allDay;
+    $.ajax({ 
+        type: "POST",
+        url:"/iclock/att/resizeplannerbyid/",
+        dataType:"json",
+        data:querystr,
+        success:function(json){
+            if(json['ret']!=0){
+                alert("{%trans '保存失败'%}")
+            }
+        }
+    });
+    
+  
+  },eventDrop: function(calEvent, dayDelta, minuteDelta, allDay, revertFunc, jsEvent, ui, view) {
+    var querystr="id="+calEvent.id+"&dayDelta="+dayDelta+"&minuteDelta="+minuteDelta+"&allDay="+allDay;
+    $.ajax({ 
+        type: "POST",
+        url:"/iclock/att/moveplannerbyid/",
+        dataType:"json",
+        data:querystr,
+        success:function(json){
+            if(json['ret']!=0){
+                alert("{%trans '保存失败'%}")
+            }
+        }
+    });
+    
+  },
+  dayClick:function(start, allDay, jsEvent, view){
+  	showhtml(start,allDay,0)
+  },
+  eventClick:function(calEvent, jsEvent, view){
+    showChangehtml(calEvent)
+  },
+  viewDisplay:function(view) {//每次页面变化时渲染1个月的数据，渲染过不在重复渲染
+    var day = $('#calendar').fullCalendar('getDate');
+    var m="00"+(day.getMonth()+1);
+    var d="00"+day.getDate();
+    var daystr=day.getFullYear()+"-"+m.substring(m.length-2)+"-01"
+    var days=daylist.join(":")
+    if(days.indexOf(daystr)==-1){
+        daylist.push(daystr)
+        drowhtml(daystr)
+    }
+  }
+  })
+
+});
+
+function showhtml(start,allDay,id){
+    var m="00"+(start.getMonth()+1);
+    var d="00"+start.getDate();
+    var daystr=start.getFullYear()+"-"+m.substring(m.length-2)+"-"+d.substring(d.length-2)
+    var hour=start.getHours()
+    var hour1=hour+1
+    if(hour1>23){
+        hour1=0
+    }
+    hour="00"+hour
+    hour1="00"+hour1
+    var minutes="00"+start.getMinutes()
+    var strtime=hour.substring(hour.length-2)+":"+minutes.substring(minutes.length-2)
+    var endtime=hour1.substring(hour1.length-2)+":"+minutes.substring(minutes.length-2)
+	var html="<div id='id_day_form'><div class='module' style='position:relative;'>"
+				+"<table id='id_day_table'>"
+			
+				+"<tr><td>"
+                +"<div id='tabs_group'>"
+                +"	<ul>"
+                +"		<li><a href='#tabs-basic'>{%trans '基本信息'%}</a></li>"
+                +"		<li><a href='#tabs-note'>{%trans '备注'%}</a></li>"
+                +"		<li><a href='#tabs-type'>{%trans '类型'%}</a></li>"
+                +"	</ul>"
+                +"	<div id='tabs-basic'>"
+                +"            <div style='width:400px;height:330px;color:black;overflow:auto;' id='basic-plan' ><fieldset style='color:black;overflow:auto;'><table><tr><td><input id='id_startDay' type='hidden' value='"+daystr+"'/><span>{%trans '开始时间'%}</span><input type='text' id='id_StartTime' style='width:105px !important;' value='"+strtime+"' readonly/></td><td><span>{%trans '结束时间'%}</span><input type='text' id='id_EndTime' style='width:105px !important;'  value='"+endtime+"' readonly/></td></tr><tr><td colspan='2'><span>{%trans '描述'%}</span><center><textarea id='description' rows='5' cols='48'></textarea></center></td></tr></table></fieldset>"
+                +"<fieldset  style='color:black;overflow:auto;'><table><tr><td colspan=3><input type='checkbox' id='id_alarm' onclick='javascript:alarmcheck()'/><span>{%trans '报警'%}</span></td></tr><tr><td colspan=2><span>{%trans '提前'%}</span></td><td><span>{%trans '报警方式'%}</span></td></tr><tr><td><input id='id_notify' style='width:75px !important;' disabled/></td><td><select id='id_Unit' disabled><option value='2'>{%trans '分钟'%}</option><option value='1'>{%trans '小时'%}</option><option value='3'>{%trans '天'%}</option></select></td><td><select id='id_type' disabled><option value='0'>{%trans '邮件'%}</option><option value='1'>{%trans '短信'%}</option></select></td></tr>"
+                +"<tr><td colspan=3><span>{%trans '邮箱或手机号'%}</span></td></tr>"
+                +"<tr><td colspan=3><input id='id_phoneoremail' disabled/></td></tr></table></fieldset>"
+                +"</div>"
+                +"	</div>"
+                +"	<div id='tabs-note'>"
+                +"            <div style='width:400px;height:330px;color:black;overflow:auto;' id='note-plan' ><center><textarea id='id_note' rows='20' cols='50'></textarea></center></div>"
+                +"	</div>"
+                +"	<div id='tabs-type'>"
+                 +"           <div style='width:400px;height:330px;color:black;overflow:auto;' id='type-plan' ><table><tr><td colspan=3><fieldset style='width:360px;height:230px;color:black;overflow:auto;'><div id='id_typegroup'></div></fieldset></td></tr><tr><td><input type='button' id='id_new_type' value='{%trans '新增类型'%}' onclick='newtype()'/></td><td><input type='button' id='id_del_type' value='{%trans '删除类型'%}' onclick='deltype()'/></td><td><input type='button' id='id_col_type' value='{%trans '选择颜色'%}'/></td></tr></table></div>"
+                +"	</div>"				
+				+"</td></tr>"
+				+"<tr><td colspan='2'>"
+				+"<input type='hidden' id='id_start' value='"+start+"' name='start' />"
+				+"</td></tr>"
+				+"<tr><td colspan='2'><span id='id_error'></span></td>"
+				+"</table></form></td>"
+				+"</tr></table></div></div>";
+				options.dlg_width=480;
+				options.dlg_height=520;
+				$(html).dialog({modal:true,
+						  title:"{%trans '工作计划'%}",
+						  width:options.dlg_width,
+						  height:options.dlg_height,
+						  buttons:[{text:"{% trans "确定" %}",click:function(){SaveFormDataEx(start,allDay);  }},
+								   {text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}],
+						  close:function(){$(this).dialog("destroy"); }});
+                $("#tabs_group").tabs()
+                $.ajax({ 
+                	type: "POST",
+                	url:"/iclock/att/selplannertype/",
+                	dataType:"json",
+                	success:function(json){
+                        dorwhtml(json['message'])
+                    }
+                });
+                $("#id_col_type").ColorPicker({color:'#fff',
+                    onShow:function (){
+                        var result = getSelected_empid()
+                        if(result.length==0){
+                            alert("{%trans '请选择类型'%}")
+                            return false;
+                        }
+                        
+                    },
+                	onChange: function (hsb, hex, rgb) {
+                        var result = getSelected_empid()
+                        hex=parseInt('0x'+hex)
+                        $.ajax({ 
+                            type: "POST",
+                            url:"/iclock/att/colplannertype/",
+                            data:"id="+result[0]+"&color="+hex,
+                            dataType:"json",
+                            success:function(json){
+                                if(json['ret']==0){
+                                    dorwhtml(json['message'])
+                                }
+                            }
+                        });
+                    }
+                });
+                $("#id_StartTime").timepicker(timepickerOptions);
+                $("#"+g_activeTabID+" #id_EndTime").timepicker(timepickerOptions);
+                
+}
+
+function showChangehtml(calEvent){
+    start=calEvent.start
+    allDay=calEvent.allDay
+    id=calEvent.id
+    var ll=""
+    $.ajax({ 
+        type: "POST",
+        url:"/iclock/att/selplannerbyid/",
+        data:"id="+id,
+        dataType:"json",
+        async:false,
+        success:function(json){
+            if(json['ret']==0){
+                ll=json['message']
+            }
+        }
+    });
+	var html="<div id='id_day_form'><div class='module' style='position:relative;'>"
+				+"<table id='id_day_table'>"
+			
+				+"<tr><td>"
+                +"<div id='tabs_group'>"
+                +"	<ul>"
+                +"		<li><a href='#tabs-basic'>{%trans '基本信息'%}</a></li>"
+                +"		<li><a href='#tabs-note'>{%trans '备注'%}</a></li>"
+                +"		<li><a href='#tabs-type'>{%trans '类型'%}</a></li>"
+                +"	</ul>"
+                +"	<div id='tabs-basic'>"
+                +"            <div style='width:400px;height:330px;color:black;overflow:auto;' id='basic-plan' ><fieldset style='color:black;overflow:auto;'><table><tr><td><input id='id_planid' type='hidden' value='"+id+"'><input id='id_startDay' type='hidden' value='"+ll['startDay']+"'/><span>{%trans '开始时间'%}</span><input type='text' id='id_StartTime' style='width:105px !important;' value='"+ll['StartTime']+"' readonly/></td><td><span>{%trans '结束时间'%}</span><input type='text' id='id_EndTime' style='width:105px !important;'  value='"+ll['EndTime']+"' readonly/></td></tr><tr><td colspan='2'><span>{%trans '描述'%}</span><center><textarea id='description' rows='5' cols='48'>"+ll['description']+"</textarea></center></td></tr></table></fieldset>"
+                +"<fieldset  style='color:black;overflow:auto;'><table><tr><td colspan=3>"
+                if(ll['alarm']=="1" || ll['alarm']==1){
+                    html+="<input type='checkbox' id='id_alarm' onclick='javascript:alarmcheck()' checked/><span>{%trans '报警'%}</span></td></tr><tr><td colspan=2><span>{%trans '提前'%}</span></td><td><span>{%trans '报警方式'%}</span></td></tr><tr><td><input id='id_notify' style='width:75px !important;' value='"+ll['notify']+"' /></td><td><select id='id_Unit'><option value='2' "
+                    if(ll['unit']==2 || ll['unit']=='2'){
+                        html+="selected"
+                    }
+                    html+=">{%trans '分钟'%}</option><option value='1' "
+                    if(ll['unit']==1 || ll['unit']=='1'){
+                        html+="selected"
+                    }                    
+                    html+=">{%trans '小时'%}</option><option value='3' "
+                    if(ll['unit']==3 || ll['unit']=='3'){
+                        html+="selected"
+                    }  
+                    html+=">{%trans '天'%}</option></select></td><td><select id='id_type'><option value='0' "
+                    if(ll['type']==3 || ll['type']=='3'){
+                        html+="selected"
+                    }  
+                    html+=">{%trans '邮件'%}</option><option value='1' "
+                    if(ll['type']==3 || ll['type']=='3'){
+                        html+="selected"
+                    }  
+                    html+=">{%trans '短信'%}</option></select></td></tr>"
+                    +"<tr><td colspan=3><span>{%trans '邮箱或手机号'%}</span></td></tr>"
+                    +"<tr><td colspan=3><input id='id_phoneoremail' value='"+ll['phone']+"'/></td></tr></table></fieldset>"
+                    
+                }else{
+                   html+="<input type='checkbox' id='id_alarm' onclick='javascript:alarmcheck()' /><span>{%trans '报警'%}</span></td></tr><tr><td colspan=2><span>{%trans '提前'%}</span></td><td><span>{%trans '报警方式'%}</span></td></tr><tr><td><input id='id_notify' style='width:75px !important;' value='"+ll['notify']+"' disabled/></td><td><select id='id_Unit' disabled><option value='2'>{%trans '分钟'%}</option><option value='1'>{%trans '小时'%}</option><option value='3'>{%trans '天'%}</option></select></td><td><select id='id_type' disabled><option value='0'>{%trans '邮件'%}</option><option value='1'>{%trans '短信'%}</option></select></td></tr>" 
+                    +"<tr><td colspan=3><span>{%trans '邮箱或手机号'%}</span></td></tr>"
+                    +"<tr><td colspan=3><input id='id_phoneoremail' disabled/></td></tr></table></fieldset>"
+                }
+                
+                html+="</div>"
+                +"	</div>"
+                +"	<div id='tabs-note'>"
+                +"            <div style='width:400px;height:330px;color:black;overflow:auto;' id='note-plan' ><center><textarea id='id_note' rows='20' cols='50'>"+ll['note']+"</textarea></center></div>"
+                +"	</div>"
+                +"	<div id='tabs-type'>"
+                 +"           <div style='width:400px;height:330px;color:black;overflow:auto;' id='type-plan' ><table><tr><td colspan=3><fieldset style='width:360px;height:230px;color:black;overflow:auto;'><div id='id_typegroup'></div></fieldset></td></tr><tr><td><input type='button' id='id_new_type' value='{%trans '新增类型'%}' onclick='newtype()'/></td><td><input type='button' id='id_del_type' value='{%trans '删除类型'%}' onclick='deltype()'/></td><td><input type='button' id='id_col_type' value='{%trans '选择颜色'%}'/></td></tr></table></div>"
+                +"	</div>"				
+				+"</td></tr>"
+				+"<tr><td colspan='2'>"
+				+"<input type='hidden' id='id_start' value='"+ll['startDay']+"' name='start' />"
+				+"</td></tr>"
+				+"<tr><td colspan='2'><span id='id_error'></span></td>"
+				+"</table></form></td>"
+				+"</tr></table></div></div>";
+				options.dlg_width=480;
+				options.dlg_height=520;
+				$(html).dialog({modal:true,
+						  title:"{%trans '工作计划'%}",
+						  width:options.dlg_width,
+						  height:options.dlg_height,
+						  buttons:[{text:"{% trans "修改" %}",click:function(){ChangeFormData(calEvent,start,allDay);  }},
+                                   {text:"{% trans "删除" %}",click:function(){DelFormData(calEvent);  }},
+								   {text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}],
+						  close: function() {$("#id_day_form").remove();}});
+                $("#tabs_group").tabs()
+                dorwhtml(ll['group'])
+                $("#id_col_type").ColorPicker({color:'#fff',
+                    onShow:function (){
+                        var result = getSelected_empid()
+                        if(result.length==0){
+                            alert("{%trans '请选择类型'%}")
+                            return false;
+                        }
+                        
+                    },
+                	onChange: function (hsb, hex, rgb) {
+                        var result = getSelected_empid()
+                        hex=parseInt('0x'+hex)
+                        $.ajax({ 
+                            type: "POST",
+                            url:"/iclock/att/colplannertype/",
+                            data:"id="+result[0]+"&color="+hex,
+                            dataType:"json",
+                            success:function(json){
+                                if(json['ret']==0){
+                                    dorwhtml(json['message'])
+                                }
+                            }
+                        });
+                    }
+                });
+                $("#id_StartTime").timepicker(timepickerOptions);
+                $("#"+g_activeTabID+" #id_EndTime").timepicker(timepickerOptions);
+                
+}
+
+function newtype(){
+    var result = prompt("{%trans '请输入用类型名称'%}","");
+    if(result!=null&&result!=""){
+        $.ajax({ 
+        	type: "POST",
+        	url:"/iclock/att/newplannertype/",
+        	data:"name="+result,
+        	dataType:"json",
+        	success:function(json){
+                if(json['ret']==0){
+                    dorwhtml(json['message'])
+                }
+            }
+        });
+        
+    }
+}
+
+
+function deltype(){
+    var result = getSelected_empid()
+    if(result.length>0){
+        $.ajax({ 
+        	type: "POST",
+        	url:"/iclock/att/delplannertype/",
+        	data:"id="+result,
+        	dataType:"json",
+        	success:function(json){
+                if(json['ret']==0){
+                    dorwhtml(json['message'])
+                }
+            }
+        });
+        
+    }else{
+        alert("{%trans '请选择类型'%}")
+    }
+}
+
+
+function dorwhtml(data){
+    var html="<table><tr><td style='width:50px' >&nbsp;</td><td style='width:150px'>&nbsp</td><td style='width:150px'>&nbsp</td></tr>"
+    for(var i=0;i<data.length;i++){
+        var hex="000000"
+        if(data[i]['color']==""){
+        	hex="000000"
+        }else{
+        	hex="000000"+parseInt(data[i]['color'],10).toString(16)	
+        	hex=hex.substring(hex.length-6,hex.length)		
+        }
+        var checktag=""
+        if(data[i]['check']){
+            checktag="checked"
+        }
+        html+="<tr><td><input class='class_select_emp' type='checkbox' value='"+data[i]['id']+"' "+checktag+"/></td><td>"+data[i]['name']+"</td><td><p id='id_color"+data[i]['id']+"' style='width:50px;background-color:#"+hex+"'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</p></td></tr>"
+    }
+    html+="</table>"
+    $("#id_typegroup").html(html)
+}
+
+function alarmcheck(){
+    var tag=$("#id_alarm").prop("checked")
+    if(tag){
+        $("#id_phoneoremail").removeAttr("disabled");
+        $("#id_notify").removeAttr("disabled");
+        $("#id_type").removeAttr("disabled");
+        $("#id_Unit").removeAttr("disabled");
+    }else{
+        $("#id_phoneoremail").attr("disabled","disabled")
+        $("#id_phoneoremail").val("")
+        $("#id_notify").attr("disabled","disabled")
+        $("#id_notify").val("")
+        $("#id_type").attr("disabled","disabled")
+        $("#id_Unit").attr("disabled","disabled")
+    }
+}
+
+function getSelected_empid() {
+	var id=[];
+	$.each($(".class_select_emp"),function(){
+			if(this.checked) 
+				id.push(this.value)
+	});
+	return id;
+}
+
+function SaveFormDataEx(start,allDay){
+    var strs=$("#id_StartTime").val()
+    var ends=$("#"+g_activeTabID+" #id_EndTime").val()
+    var day=$("#id_startDay").val()
+    var descr=$("#description").val()
+    var alarm=$("#id_alarm").prop("checked")
+    if(alarm){
+        alarm=true;
+    }else{
+        alarm=false;
+    }
+    var notify=$("#id_notify").val()
+    var unit=$("#id_Unit").val()
+    var types=$("#id_type").val()
+    var phone=$("#id_phoneoremail").val()
+    var note=$("#id_note").val()
+    var group=getSelected_empid()
+    var employeeid=$("#id_hidden_data").val()
+    if(group.length>0){
+        group=group[0];
+    }else{
+        group='';
+    }
+    if(descr.length>0&&strs!=""&&ends!=""){
+        var tt=/^\+?[1-9][0-9]*$/.test(notify)
+        if(!tt&&alarm){
+            alert("{%trans '请填写数字'%}")
+        }else{
+            var querystr="startDate="+day+"&start="+strs+"&end="+ends+"&descr="+descr+"&alarm="+alarm+"&notify="+notify+"&unit="+unit+"&types="+types+"&phone="+phone+"&note="+note+"&group="+group+"&allDay="+allDay+"&emp="+employeeid;
+            $.ajax({ 
+                type: "POST",
+                url:"/iclock/att/addplanner/",
+                data:querystr,
+                dataType:"json",
+                success:function(json){
+                    if(json['ret']==0){
+                        var mess=json['message']
+                        var eventObject = {
+                            id:mess[0],
+                        	title: mess[3],
+                        	start: mess[1],
+                        	end: mess[2],
+                        	allDay: mess[4]			
+                        };
+                        $('#calendar').fullCalendar('renderEvent', eventObject, true);   
+                         
+                    }
+                    $("#id_day_form").remove();
+                }
+            });
+        }
+    }else{
+        alert("{%trans '请填写描述和时间'%}")
+    }
+    
+}
+function ChangeFormData(calEvent,start,allDay){
+    var planid=$("#id_planid").val()
+    var strs=$("#id_StartTime").val()
+    var ends=$("#"+g_activeTabID+" #id_EndTime").val()
+    var day=$("#id_startDay").val()
+    var descr=$("#description").val()
+    var alarm=$("#id_alarm").prop("checked")
+    if(alarm){
+        alarm=true;
+    }else{
+        alarm=false;
+    }
+    var notify=$("#id_notify").val()
+    var unit=$("#id_Unit").val()
+    var types=$("#id_type").val()
+    var phone=$("#id_phoneoremail").val()
+    var note=$("#id_note").val()
+    var group=getSelected_empid()
+    if(group.length>0){
+        group=group[0];
+    }else{
+        group='';
+    }
+    if(descr.length>0&&strs!=""&&ends!=""){
+        var tt=/^\+?[1-9][0-9]*$/.test(notify)
+        if(!tt&&alarm){
+            alert("{%trans '请填写数字'%}")
+        }else{
+            var querystr="planid="+planid+"&startDate="+day+"&start="+strs+"&end="+ends+"&descr="+descr+"&alarm="+alarm+"&notify="+notify+"&unit="+unit+"&types="+types+"&phone="+phone+"&note="+note+"&group="+group+"&allDay="+allDay;
+            $.ajax({ 
+                type: "POST",
+                url:"/iclock/att/changeplanner/",
+                data:querystr,
+                dataType:"json",
+                success:function(json){
+                    if(json['ret']==0){
+                        var mess=json['message']
+                        calEvent.title = mess[3];
+                        calEvent.start = mess[1];
+                        calEvent.end = mess[2];
+                        calEvent.allDay = mess[4];
+                        $('#calendar').fullCalendar('updateEvent', calEvent);
+                    }
+                    $("#id_day_form").remove();
+                }
+            });
+        }
+    }else{
+        alert("{%trans '请填写描述和时间'%}")
+    }
+    
+}
+
+function DelFormData(calEvent){
+    var id=calEvent.id;
+    $.ajax({ 
+         type: "POST",
+         url:"/iclock/att/delplanner/",
+         data:"planid="+id,
+         dataType:"json",
+         success:function(json){
+         if(json['ret']==0){
+             $('#calendar').fullCalendar('removeEvents', id); 
+         }
+         $("#id_day_form").remove();
+    }})    
+}
+function drowhtml(st){
+    var employeeid=$("#id_hidden_data").val()
+    $.ajax({ 
+        type: "POST",
+        url:"/iclock/att/selplanner/",
+        data:"st="+st+"&emp="+employeeid,
+        dataType:"json",
+        success:function(json){
+            if(json['ret']==0){
+                var data=json['message'];
+                for(var i=0;i<data.length;i++){
+                    var eventObject = {
+                        id:data[i]['id'],
+                        title: data[i]['desc'],
+                        start: data[i]['st'],
+                        end: data[i]['et'],
+                        allDay: data[i]['allDay']			
+                    };
+                    $('#calendar').fullCalendar('renderEvent', eventObject, true); 
+                }
+            }
+        }
+    });
+
+}
+</script>
+<input type="hidden" id="id_hidden_data" value="{{ UserID }}" />
+<div id='calendar'>
+    
+</div>

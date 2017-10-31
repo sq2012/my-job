@@ -1,0 +1,285 @@
+{% load iclock_tags %}
+{% load i18n %}
+{% autoescape off %}
+
+
+<div id="id_form" >
+<div style='height: 410px;'>
+<form method="post" id="id_edit_form" enctype="multipart/form-data">
+<div class='left' style='width:670px;height: 400px;'>
+<table>
+<tr><th></th><td>
+	<span  style="display:none" id="id_span_title">
+		{% if add %}{% trans "Add" %}  {% else %} {% trans "Edit" %} {% endif %} {{ dataOpt.verbose_name|escape }}</span>
+	<span  style="display:none" id="id_span_parent">{{ parent_name }}</span>
+	<input type='hidden' id='id_span_param' value={{ param_value }}  />
+	
+</td></tr>
+
+
+
+<tr>
+
+    <th><font color='red'>*</font>{{ form.PIN.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.PIN.as_widget }} </td>
+
+    <th> {{ form.EName.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.EName.as_widget }} </td>
+
+</tr>
+<tr>
+    <th><font color='red'>*</font>{{ form.Workcode.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.Workcode.as_widget }} </td>
+	
+    <th> <font color='red'>*</font>{{ form.DeptID.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.DeptID.as_widget }} </td>
+</tr>
+
+<tr>
+
+    <!-- <th> {{ form.Card.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.Card.as_widget }} </td> -->
+
+    <!-- <th> {{ form.BorrowDept.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.BorrowDept.as_widget }} </td> -->
+	<th> {{ form.OffPosition.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.OffPosition.as_widget }} </td>
+	<th> {{ form.Privilege.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.Privilege.as_widget }}{{form.Privilege.help_text}} </td>
+</tr>
+
+<tr>
+    <th> {{ form.MVerifyPass.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.MVerifyPass.as_widget }} </td>
+    <th> {{ form.Hiredday.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.Hiredday.as_widget }} </td>
+</tr>
+
+<tr>
+    <th> {{ form.Gender.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.Gender.as_widget }} </td>
+    <th> {{ form.Birthday.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.Birthday.as_widget }} </td>
+</tr>
+
+<tr>
+   <th> {{ form.Employeetype.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.Employeetype.as_widget }} </td>
+    <th> {{ form.Address.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.Address.as_widget }} </td>
+</tr>
+
+<tr>
+    <th> {{ form.Tele.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.Tele.as_widget }} </td>
+    <th> {{ form.Mobile.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.Mobile.as_widget }} </td>
+</tr>
+
+<tr>
+    <th> {{ form.National.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.National.as_widget }} </td>
+    <th> {{ form.Title.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.Title.as_widget }} </td>
+</tr>
+
+
+<tr>
+    <th> {{ form.Educational.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.Educational.as_widget }} </td>
+    <th> {{ form.ATT.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.ATT.as_widget }} </td>
+</tr>
+
+<tr>
+    <th> {{ form.INLATE.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.INLATE.as_widget }} </td>
+    <th> {{ form.OutEarly.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.OutEarly.as_widget }} </td>
+</tr>
+<tr>
+    <th> {{ form.sysPass.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.sysPass.as_widget }} </td>
+    <th> {{ form.email.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.email.as_widget }} </td>
+</tr>
+
+
+<tr>
+    <th> {{ form.Trialstarttime.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.Trialstarttime.as_widget }} </td>
+    <th> {{ form.Trialendtime.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.Trialendtime.as_widget }} </td>
+</tr>
+
+<tr>
+    <th> {{ form.Contractstarttime.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.Contractstarttime.as_widget }} </td>
+    <th> {{ form.Contractendtime.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.Contractendtime.as_widget }} </td>
+</tr>
+
+<!--<tr>
+    <th> {{ form.OffPosition.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.OffPosition.as_widget }} </td>
+</tr>-->
+<tr>
+	<td></td>
+</tr>
+<tr>
+
+    <th height="20">{% trans '登记指纹'%}:</th>
+    <td colspan="2">
+        <table>
+            <tr>
+                <td>
+                    <div class="floatL Link_blue1" style="">
+						{% ifequal "opt_basic_enroll"|get_params:request '1' %}
+
+
+								<a href="javascript:void(0)" id="id_fp_register" onclick="submitRegister()">{% trans '登记'%}</a>
+						{% else %}
+							<a href="javascript:void(0)" id="id_fp_register" title={% trans '请首先在系统选项开启支持采集器采集指纹并给该用户指纹采集权限' %}>{% trans '登记'%}</a>
+						
+						
+						{%endifequal%}
+						&nbsp;&nbsp;{% trans '已登记指纹 ' %} {{ fcount}}
+                    </div>
+                </td>
+            </tr>
+        </table>
+        <input type="hidden" id="id_finnger" name="finnger" alt="" value=""/>
+        <input type="hidden" id="id_template"  value="" name="template" alt=""/>
+        <input type="hidden" id="id_finnger10" name="finnger10" alt="" value=""/>
+        <input type="hidden" id="id_template10"  value="" name="template10" alt=""/>
+        <input type="hidden" id="id_delfinger"  value="" name="delfinger" alt=""/>
+        <input type="hidden" id="id_fptype"  value="" name="fptype" alt=""/>
+        <input type="hidden" id="id_durfinger"  value="" name="durfinger" alt=""/>
+        <input type="hidden" id="id_durfpid"  value="" name="durfpid" alt=""/>
+        <input type="hidden" id="id_delflag"  value="" name="delflag" alt="delete"/>
+		<input type="hidden" id="id_identity_img"  value="" name="identity_img" alt=""/>
+        {% if "IACCESS"|filter_config_option %} 
+            <input type="hidden" id="id_forceavalidflag"  value="1" name="delflag" alt="delete"/>
+        {% else %}
+            <input type="hidden" id="id_forceavalidflag"  value="0" name="delflag" alt="delete"/>
+        {% endif %}
+        
+    </td>
+    
+</tr>
+
+
+
+<tr id="addition_fields">{% block addfields %}{% endblock %}</tr>
+</td>
+</tr>
+</table>
+</div>
+<div class='left'>
+	<table >
+		<tr>
+			<td>
+				<img id='id_img' src="{{img}}"  width="102px" height="126px"/>
+			</td>
+		<tr>
+		<tr>
+			<td>
+				<div class="floatL Link_blue1">
+				<a onclick='ReadCard_onclick_employee()' title='' id='id_read_employee' style="padding-left: 10px;" href='#'>{%trans '读取身份证信息'%}</a>
+				</div>
+			</td>
+		<tr>
+		<tr><td><br/></td></tr>
+		<tr>
+			<td>
+				<div id="preview" style='width:102px;height:126px;display:none'></div>
+				<img id='id_upload_img' src="{{up_img}}" width="102px" height="126px"/>
+			</td>
+		</tr>
+		<tr>
+			<td>
+				<input type='file' name='up_img' id='id_upload'/>
+			</td>
+		<tr>
+		<tr>
+			<td>
+				上传照片的扩展名为jpg
+			</td>
+		<tr>
+	</table>
+</div>
+<script>
+//上传照片，立即显示
+function PreviewImg(file) {
+    var porImg = $(file);
+    var viewImg = $('#id_upload_img');
+    var image = porImg.val();
+    if (!/^\S*\.(?:png|jpe?g|bmp|gif)$/i.test(image)) {
+        layer.msg('请选择图片~', {
+            shift: 6
+        });
+        porImg.val("");
+        return false;
+    }
+    if (file["files"] && file["files"][0]) {
+        var reader = new FileReader();
+        reader.onload = function(evt) {
+            viewImg.attr({
+                src: evt.target.result
+            });
+        }
+        reader.readAsDataURL(file.files[0]);
+    } else {
+        var ofile = document.getElementById("id_upload");
+        var oBox = document.getElementById("preview");
+        ofile.select();
+        viewImg.hide();
+        $(oBox).show()
+        //在file控件下获取焦点情况下 
+        //document.selection.createRange() 将会拒绝访问
+        ofile.blur();
+        //获取文本内容值，在IE8中,选择文件之后,显示文件的本地的路径
+        var imgSrc = document.selection.createRange().text;
+        //将图片显示在预览
+        oBox.style.filter = "progid:DXImageTransform.Microsoft.AlphaImageLoader(enabled=true,sizingMethod=scale)";
+        oBox.filters.item("DXImageTransform.Microsoft.AlphaImageLoader").src = imgSrc;
+        $('#id_PIN').focus()
+    }
+}
+$('#id_upload').change(function(){
+	PreviewImg(this)
+});
+</script>
+
+{% ifequal app 'acc' %}
+<div class='left'  style='width:300px;height: 410px;border: 1px solid #dddddd;'>
+    <div class='alert alert-info' style='height: 20px;margin-left: 0px;margin-top: 0px;'>门禁设置</div>
+    
+    <table>
+                    <tr>
+                        <th >{% trans "权限组:" %}</th>
+                        <td >
+                            <div>
+                                <!--
+                                <input type="text" id="level_name" name="level_name" size="20"/>
+                                <input type="button" id="id_query_level" class="select_query" title={% trans "查询" %} value=""/>
+                                -->
+                                <input type="checkbox" id="id_select_all" name="level_name" size="1"/>全选
+                                
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>&nbsp;</th>
+                        <td>
+                            <div id="id_level" style="border:1px solid #71A8D8;height:190px;overflow: auto;width: 180px;background: #FFFFFF;">{{level}}</div></div>
+                        </td>
+                    </tr>
+        
+        
+        
+        
+        <tr>{{acc_form.acc_super_auth|field_as_td_h:1}} </tr>  
+        <tr>{{acc_form.morecard_group|field_as_td_h:1}} </tr>  
+        <tr>{{acc_form.isblacklist|field_as_td_h:1}} </tr>  
+        <tr>{{acc_form.set_valid_time|field_as_td_h:1}} </tr>  
+        <tr><th> {{ acc_form.acc_startdate.label_tag }} </th>  <td style='vertical-align:top;'> {{ acc_form.acc_startdate.as_widget }} </td> </tr>  
+        <tr><th> {{ acc_form.acc_enddate.label_tag }} </th>  <td style='vertical-align:top;'> {{ acc_form.acc_enddate.as_widget }} </td> </tr>  
+      
+       
+    </table>
+   
+</div>
+
+{% else %}
+
+
+{% endifequal %}
+
+</form>
+{% ifequal "opt_basic_enroll"|get_params:request '1' %}
+
+<script src="{{ MEDIA_URL }}/jslib/baseISSObject.min.js"></script>
+<script src="{{ MEDIA_URL }}/jslib/baseFPRegister.min.js"></script>
+<script src="{{ MEDIA_URL }}/jslib/empFPRegister.min.js"></script>
+{%endifequal%}
+
+{% endautoescape %}
+
+
+{% block add_contents %}{% endblock %}
+{% block add_contents_2c %}{% endblock %}
+</div>
+<div id="id_error"></div>
+</div>

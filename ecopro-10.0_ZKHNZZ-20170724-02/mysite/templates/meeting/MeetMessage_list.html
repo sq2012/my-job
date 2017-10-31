@@ -1,0 +1,331 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block extraSection %}
+<script src="{{ MEDIA_URL }}jslib/jquery-te-1.4.0.min.js?scriptVersion=1.4.0"></script>
+
+{% endblock %}
+{% block tblHeader %}
+//var jqOptions=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{ colModel }}
+dtFields[g_activeTabID] = "{{ dtFields }}"
+tblName[g_activeTabID]='MeetMessage';
+jqOptions[g_activeTabID].sortname='-id';
+jqOptions[g_activeTabID].pager='#id_pager_'+tblName[g_activeTabID];
+var Meet_json=[]
+
+function datas(id){
+	var r=$("#id_grid_"+tblName[g_activeTabID]).jqGrid("getRowData",id);
+	var id=id
+	var Name=r.MessageNotice
+	var data=[id,Name];
+	return data
+}
+
+function ShowMeetMessageData(page,tag,isDiy)
+{
+	var setting = {
+            check: {enable: !tag,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},          
+	    async: {
+			    enable: true,
+			    url: "/meeting/getData/?func=MeetMessages",
+			    autoParam: ["id"]
+		    }
+	};
+	$.fn.zTree.init($("#showTree_"+page), setting,null);	
+}
+
+function strOfData_MeetMessage(data)
+{
+	return stripHtml(data.MessageID)+" "+data.MessageNotice;
+}
+
+function doAction_MeetMessage(url, action)
+{	
+	var result=getSelected(0,"true");
+	selected_data=datas(result.ss);
+	var shift_id=selected_data[0]
+	if (action == 'meet_add_participants')
+		createDlgmeet_MeetMessage();
+}
+
+function createDlgmeet_MeetMessage(id)
+{
+        if(typeof id=='undefined')
+	{
+		var result=getSelected(0,"true");
+		if (result.ss.length>1){
+			alert(gettext("仅允许选择一个模板"));
+			return;
+		}else
+			selected_data=datas(result.ss);
+	}
+	else
+        {
+		  var result={ss:id}
+		  selected_data=datas(id);
+         }
+	alert(selected_data) 
+}
+
+/*
+function del_meet(id)
+{
+        $.ajax({type: "POST",
+                        url: "/meeting/data/Meet_details/?action=del",
+                        data: 'K='+id,
+                        dataType:"json",
+                        success: function(){
+				$("#id_grid_mini").jqGrid("delRowData",id);
+
+			
+			},
+                        error: function(request){
+                                alert($.validator.format(gettext('{0} failed!\n\n{1}'), opName, request.statusText)); $.unblockUI(); 
+                                }
+                        });
+}
+*/
+function getEmailAddress(id){
+        $.ajax({
+            type: "POST",
+            url:"/meeting/getData/?func=getEmails&Meetid="+id,
+            dataType:"json",
+            success: function(json){
+                     $("#id_Emails").val(json[0]);
+                }});
+}
+
+
+function getjqteoptions(){
+        var varsTitleq = [
+            {title:"文本格式"},
+            {title:"字体"},
+            {title:"颜色"},
+            {title:"粗体",hotkey:"B"},
+            {title:"斜体",hotkey:"I"},
+            {title:"下划线",hotkey:"U"},
+            {title:"有序排列",hotkey:"."},
+            {title:"无需排列",hotkey:","},
+            {title:"下标",hotkey:"down arrow"},
+            {title:"上标",hotkey:"up arrow"},
+            {title:"左进",hotkey:"left arrow"},
+            {title:"右进",hotkey:"right arrow"},
+            {title:"左对齐"},
+            {title:"中间对齐"},
+            {title:"右对齐"},
+            {title:"删除线",hotkey:"K"},
+            {title:"增加链接",hotkey:"L"},
+            {title:"删除链接"},
+            {title:"清除样式",hotkey:"Delete"},
+            {title:"水平线",hotkey:"H"},
+            {title:"源码"}
+            ];
+        var jqteStatus = true;
+        qoptions={'titletext':varsTitleq, 'status':jqteStatus , 'source':false};
+        return qoptions;
+}
+
+function getmeetOptions(){
+        var htl="<option value=''> </option>"
+        for(var i=0;i< Meet_json.length;i++){
+                htl+="<option value='"+Meet_json[i].id+"'>"+Meet_json[i].conferenceTitle+"</option>"
+        }
+        return htl;
+}
+
+function process_dialog_MeetMessage(obj){
+		$(obj).dialog({modal:true,resizable:false})
+        $('#id_MessageContent',obj).removeClass().addClass('jqteedit');
+		$('#id_Emails',obj).prop('rows','2')
+        var optionse=getjqteoptions()
+        $('.jqteedit',obj).jqte(optionse);
+        $(".status",obj).click(function()
+        {
+            jqteStatus = jqteStatus ? false : true;
+            $('.jqteedit').jqte({"status" : jqteStatus})
+        });
+		$('#id_edit_form .jqte .jqte_editor').css('width','545px').css('height','100px').css('resize','none')
+		tmp_option=copyObj(datetimepickerOptions)
+        tmp_option['showSecond']=true
+        tmp_option['timeFormat']='HH:mm:ss'
+        $("#id_SendTime",obj).datetimepicker(tmp_option);
+		delete tmp_option
+        $("#id_Meet_ID",obj).change(function(){
+                    if ($("#id_Meet_ID",obj).val()!=''){
+                        var emails=getEmailAddress($("#id_Meet_ID",obj).val());
+                    }
+                })
+        f=$(obj).find("#id_edit_form").get(0);
+	$(f).validate({
+			rules: {
+					MessageID: {"required":true},
+					MessageNotice: {"required":true}
+				}
+			});
+}
+
+function doAction_MeetMessage(url, action)
+{	
+	var result=getSelected(0,"true");
+	selected_data=datas(result.ss);
+	var selected_id=selected_data[0]
+	if (action == 'send_Meet_Email')
+		alert(url)
+}
+
+
+//会议通知模糊查询
+function searchShowMeetMessage(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+    var url="/meeting/data/MeetMessage/?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function beforePost_MeetMessage(obj){
+        var MessageID=$("#id_Title",obj).val()
+        var MessageNotice=$("id_MessageNotice",obj).val()
+        if(MessageID=="" || MessageNotice==""){
+            $("#id_error",obj).css("display","block");
+            $("#id_error",obj).html("<ul class='errorlist'><li>{%trans '消息编号和消息主题为必填字段!'%}</li></ul>");
+            return false;
+        }
+		return true
+	}
+
+
+
+$(function(){
+
+        $("#"+g_activeTabID+" #queryButton").hide()
+
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	   searchShowMeetMessage();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	   if(event.keyCode==13)
+	  searchShowMeetMessage();
+	});
+
+
+        $.ajax({
+            type: "POST",
+            url:"/meeting/getData/?func=hasMeets",
+            dataType:"json",
+            success: function(json){
+                    Meet_json=json;
+                    
+                }});
+        
+        
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+                //processNewModel();
+				/*
+                var currDate=new Date();
+                td=currDate.getFullYear()
+                        +"-"
+                        +(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+                        +"-"
+                        +currDate.getDate()
+                        +" "
+                        +currDate.getHours()
+                        +":"
+                        +currDate.getMinutes()
+                        +":"
+                        +currDate.getSeconds()
+                        ;
+				*/
+				td=moment().format("YYYY-MM-DD HH:mm:ss")
+                var block_html="<div id='id_form'><form id='id_edit_form' method='post'><table>"
+                +"<tr><th><font color='red'>*</font><label for='id_MessageID'>消息编号:</label></th><td><input id='id_Title' type='text' name='MessageID' maxlength='80'></td>"
+                +"<th><font color='red'>*</font><label for='id_MessageNotice'>消息主题:</label></th><td><input id='id_MessageNotice' name='MessageNotice' type='text'/></td></tr>"
+                
+                +"<tr><th><label for='id_MessageContent'>内容:</label></th><td colspan=3><textarea id='id_MessageContent' name='MessageContent' type='text' value='' class='jqteadd'/></td></tr>"
+                +"<tr><th><label for='id_Meet_ID'>会议</label></th><td><select id='id_Meet_ID' name='Meet_ID' class='valid'>"+getmeetOptions()+"</select></td></tr>"
+                +"<tr><th><label for='id_Emails'>邮件地址:</label></th><td><textarea id='id_Emails' type='text' name='Emails' /></td>"
+                +"<th><label for='id_CopyForEmail'>抄送地址:</label></th><td><textarea id='id_CopyForEmail' type='text' name='CopyForEmail' /></td></tr>"
+                
+                +"<tr><th><label for='id_SendTime'>发送时间:</label></th><td><input id='id_SendTime'  type='text'  value='' maxlength='19' name='SendTime'  style='width:140px '/></td></tr>"
+                +"</table></form><div id='id_error'></div></div>"
+                var dlg=$(block_html).dialog({	modal:true,
+														resizable:false,
+                                                          width: 800,
+                                                          height:500,
+                                                          title:"增加 会议通知",
+                                                          buttons:[
+                                                               // {id:"btnShowOK",text:"{% trans "save and return" %}",click:function(){ if(typeof beforePost=="function"){if(beforePost(this,"_new_")==false) return ;}  SaveFormData(this,g_urls[g_activeTabID]+"_new_/",'edit',"MeetMessage");  }},
+                                                                {id:"btnShowOK",text:"{% trans "save and return" %}",click:function(){ if(typeof beforePost_MeetMessage=="function"){if(beforePost_MeetMessage(this,"_new_")==false) return ;}  SaveFormData(this,g_urls[g_activeTabID]+"_new_/",'edit',"MeetMessage");  }},
+                                                                {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}
+                                                          ],
+                                                          close:function(){$(this).dialog("destroy")}
+                                                        })
+                optionses=getjqteoptions()
+                $('.jqteadd').jqte(optionses);
+                $(".status").click(function()
+                {
+                        jqteStatus = jqteStatus ? false : true;
+                        $('.jqteadd').jqte({"status" : jqteStatus})
+                });
+				$('#id_edit_form .jqte .jqte_editor').css('width','545px').css('height','100px').css('resize','none')
+                $("#id_SendTime").val(td);
+				var tpickerOptions=copyObj(datetimepickerOptions)
+				tpickerOptions.showSecond=true
+				tpickerOptions.timeFormat='HH:mm:ss'
+                $("#id_SendTime").datetimepicker(tpickerOptions);
+                $("#id_Meet_ID").change(function(){
+                    if ($("#id_Meet_ID").val()!=''){
+                        var emails=getEmailAddress($("#id_Meet_ID").val());
+                    }
+                })
+                return	dlg;
+	});
+
+
+});
+
+{% endblock %}
+
+
+{% block loadData %}
+	//html="<span id=id_opt_tree><input type='checkbox' id='id_cascadecheck_' checked/>{%trans '级联下级部门' %}</span>"
+	//$("#id_west .ui-widget-header").html(html)
+	html="<div id='show_dept_tree_'>"
+		+"<ul id='showTree_"+g_activeTabID+"' class='ztree' style='margin-left: 0px;height:100%;'></ul>"
+		+"</div>"   
+	$("#west_content_tab_meeting_MeetMessage").html(html)
+
+//	var h=$("#"+g_activeTabID+" #west_content").height()-20
+//	$('#showTree_'+g_activeTabID).css('height',h)
+
+        ShowMeetMessageData(g_activeTabID,true)
+        loadNULLPage('#id_grid_'+tblName[g_activeTabID]);
+	var zTree = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+	zTree.setting.check.enable = false;
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		var deptID=treeNode.id;
+		var deptName=treeNode.name;
+                if (deptID==0)
+                    var urlStr="/meeting/data/MeetMessage/"
+                else
+                    var urlStr="/meeting/data/MeetMessage/?id="+deptID
+                
+		savecookie("search_urlstr",urlStr);
+		 $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+	}
+
+
+{% endblock %}
+
+
+{% block extractButton %}
+    <!--<LI id="id_send_Meet_Email" class="button-Send"  onclick='batchOp(function(url){doAction_MeetMessage(url, "send_Meet_Email")},undefined,"{%trans '发送参会通知' %}");'><SPAN></SPAN>{%trans "发送参会通知"%}</LI>-->
+    <LI id="id_send_Meet_Email"   onclick="batchOp('?action=send_Meet_Email',null,'{%trans "发送参会通知"%}');"><SPAN  class="icon iconfont icon-fasongtongzhi"></SPAN>{%trans "发送参会通知"%}</LI> 
+
+{% endblock %}
+

@@ -1,0 +1,195 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+//var jqOptions=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{ colModel }}
+dtFields[g_activeTabID] = "{{ dtFields }}"
+tblName[g_activeTabID]='Meet_order';
+jqOptions[g_activeTabID].sortname='-id';
+jqOptions[g_activeTabID].pager='#id_pager_'+tblName[g_activeTabID];
+function strOfData_Meet_order(data)
+{
+	return stripHtml(data.MeetID)+" "+data.conferenceTitle;
+}
+
+function processDlgMeetStatus_order(obj,LocationID){
+	if ($('#id_meeting_status_order').hasClass('fc'))
+		$('#id_meeting_status_order').fullCalendar('destroy')
+	$('#id_meeting_status_order').fullCalendar({
+			       header: {
+				       left: 'prev,next,today',
+				       center: 'title',
+				       right: 'agendaDay'
+			       },		
+			       buttonText:{
+				       prev:'向前',
+				       next:'向后',
+				       today:'今天',
+				       month:'按月',
+				       agendaWeek:'按周',
+				       agendaDay:'按天'
+			       },
+			       defaultView: 'agendaDay',
+			       titleFormat:'MM-DD',
+			       allDayText:'整天',
+			       aspectRatio:1,
+			       timeFormat: 'H:mm',
+			       axisFormat:'H(:mm)',
+			       theme:true,
+			       selectable: true,
+			       unselectCancel:'',
+			       eventBackgroundColor:'#ff0000',
+			       unselectAuto:false,
+			       dayNames:['周日','周一','周二','周三','周四','周五','周六'],
+			       dayNamesShort:['周日','周一','周二','周三','周四','周五','周六'],
+			       editable: false,
+			       droppable: false,
+			       diableResizing:false,
+			       	events: {
+				url: '/meeting/getData/?func=latestmeeting&roomNo='+LocationID
+				}
+
+							       
+			       
+			       
+			       
+			       
+	   })
+
+}
+
+function process_dialog_Meet_order(obj)
+{
+	$("#id_Endtime",obj).val($("#id_Endtime",obj).val().substring(0,$("#id_Endtime",obj).val().length-3))
+	$("#id_Starttime",obj).val($("#id_Starttime",obj).val().substring(0,$("#id_Starttime",obj).val().length-3))
+	$("#id_Enrolmenttime",obj).val($("#id_Enrolmenttime",obj).val().substring(0,$("#id_Enrolmenttime",obj).val().length-3))
+	$("#id_LastEnrolmenttime",obj).val($("#id_LastEnrolmenttime",obj).val().substring(0,$("#id_LastEnrolmenttime",obj).val().length-3))
+	$("#id_EarlySignOfftime",obj).val($("#id_EarlySignOfftime",obj).val().substring(0,$("#id_EarlySignOfftime",obj).val().length-3))
+	$("#id_LastSignOfftime",obj).val($("#id_LastSignOfftime",obj).val().substring(0,$("#id_LastSignOfftime",obj).val().length-3))
+	$("#id_lunchtimestr",obj).val($("#id_lunchtimestr",obj).val().substring(0,$("#id_lunchtimestr",obj).val().length-3))
+	$("#id_lunchtimeend",obj).val($("#id_lunchtimeend",obj).val().substring(0,$("#id_lunchtimeend",obj).val().length-3))
+	
+	$("#id_Endtime",obj).datetimepicker(datetimepickerOptions);
+	$("#id_Starttime",obj).datetimepicker(datetimepickerOptions);
+	$("#id_Enrolmenttime",obj).datetimepicker(datetimepickerOptions);
+	$("#id_LastEnrolmenttime",obj).datetimepicker(datetimepickerOptions);
+	$("#id_EarlySignOfftime",obj).datetimepicker(datetimepickerOptions);
+	$("#id_LastSignOfftime",obj).datetimepicker(datetimepickerOptions);
+	$("#id_lunchtimestr",obj).datetimepicker(datetimepickerOptions);
+	$("#id_lunchtimeend",obj).datetimepicker(datetimepickerOptions);
+        $("#id_user",obj).val({{request.user.id}})
+        var currDate=new Date();
+            td=currDate.getFullYear()
+                    +"-"
+                    +(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+                    +"-"
+                    +currDate.getDate()
+                    +" ";
+
+        $("#id_ApplyDate",obj).val(td+" "+currDate.getHours()
+                                +":"
+                                +currDate.getMinutes()
+                                +":"
+                                +currDate.getSeconds());
+        $("#id_ApplyDate",obj).css("disabled","disabled")
+        $("#id_user",obj).parent().parent().css("display","none")
+        $("#id_LocationID",obj).change(function(){
+                processDlgMeetStatus_order(obj,$('#id_LocationID',obj).val())
+        });
+
+	f=$(obj).find("#id_edit_form").get(0)
+	$(f).validate({
+			rules: {
+					"MeetID": {"alnum":true},
+					"conferenceTitle":{string:true,"maxlength":20},
+					"id_Endtime": {"required":true},
+					"id_Starttime": {"required":true}
+				}
+			});
+
+
+}
+
+//会议安排模糊查询
+function searchShowMeet_Meet_order(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+    var url="/meeting/data/Meet_order/?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+
+$(function(){
+
+        $("#"+g_activeTabID+" #queryButton").hide()
+    
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+            processNewModel();
+	});
+
+
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	   searchShowMeet_Meet_order();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	   if(event.keyCode==13)
+	  searchShowMeet_Meet_order();
+	});
+
+});
+
+
+extraBatchOp=[
+    {caption:'{%trans "有关会议预约相关操作"%}',
+        submenu:[
+        {% if user|HasPerm:"meeting.orderAudit_meet_order" %}
+        {action: '"?action=orderAudit&to=Accept"', title: '{%trans "审核：通过"%}'},
+        {action: '"?action=orderAudit&to=Refuse"', title: '{%trans "审核：拒绝"%}'}
+        {% endif %}
+        ]}
+];
+
+function beforePost_Meet_order(obj){
+	st=$('#id_Starttime',obj).val()
+	et=$('#id_Endtime',obj).val()
+	lst=$('#id_lunchtimestr',obj).val()
+	let=$('#id_lunchtimeend',obj).val()
+	if(st>et||lst>let){
+		$("#id_error",obj).html('开始时间大于结束时间，保存失败').css('color','red').show();
+		return false;
+		}else{
+		return true
+		}
+	}
+{% endblock %}
+
+
+{% block loadData %}
+loadNULLPage('#id_grid_'+tblName[g_activeTabID]);
+ var urlStr="/meeting/data/Meet_order/"
+savecookie("search_urlstr",urlStr);
+ $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+ $.ajax({type: "POST",
+    url: '/meeting/getData/?func=lastweekmeeting',
+    dataType:"json",
+    success: function(retdata){
+                    var re=retdata;
+                    var html="<div style='color:red;font-size:15px;padding: 5px;'>未来7天会议安排：</div>"
+                    for(var i=0;i< re.length;i++){
+                        html+="<div style='color:green;padding-left: 15px;'>"+re[i]['name']+"（"+re[i]['st']+"至"+re[i]['et']+"）</div>"
+                    }
+                    $("#west_content_tab_meeting_Meet_order").html(html)
+    },
+    error: function(){
+    $.unblockUI();alert($.validator.format(gettext('Operating failed for {0} !'),options.title));}
+    });
+ 
+
+{% endblock %}
+

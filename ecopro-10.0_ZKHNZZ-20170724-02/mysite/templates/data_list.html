@@ -1,0 +1,547 @@
+{% load iclock_tags %}
+{% load i18n %}
+
+{% block content_title %}{% endblock %}
+<script>
+pageQueryString=location.search; //当前 页面 的查询字符串，页面
+options[g_activeTabID]={pagerId:"pages", tblId:"tbl", showSelect: true, canSelectRow:false,showStyle:false,
+	canEdit: {% if request|reqHasPerm:"change" %}true{% else %}false{% endif %},
+	canAdd: {% if request|reqHasPerm:"add" %}true{% else %}false{% endif %},
+	canDelete: {% if request|reqHasPerm:"delete" %}true{% else %}false{% endif %},
+	canSearch: true, keyFieldIndex:"0", title:'{{ dataOpt.verbose_name|cap }}',
+
+	dlg_width:'auto',
+	dlg_height:'auto',
+	edit_col:1
+	
+};
+//var jqOptions=copyObj(jq_Options);
+//jqOptions.rowNum={{ limit }}
+
+jqOptions[g_activeTabID]=copyObj(jq_Options);
+jqOptions[g_activeTabID].rowNum={{ limit }}
+
+
+canDefine={% if user|HasPerm:"iclock.preferences_user" %}true{% else %}false{% endif %}
+{% autoescape off %}
+grid_disabledfields[g_activeTabID]={{ disabledcols }};
+{% endautoescape %}
+{% block additionDataOptions %}
+{% endblock %}
+isSelectAll=false;
+extraBatchOp=[];
+dtFields=""
+var Custom_Jqgrid_Height=""
+var page_tab=""
+function canEdit(){}
+//function process_style(){}
+function beforePost(obj,actionName){return true;}
+function afterPost(flag,FormObj){}
+function strOfData(data){}
+function ActionHint(action, aName){return ""}
+function process_dialog_again(temp_data,flag,urlAddr,other){}
+function process_dialog(temp_data,flag,urlAddr){}
+function createQueryDlg(){};
+function itemCanBeDelete(aData){return true;}
+
+var groupHeaders=[]
+{% autoescape off %}{% block tblHeader %}{% endblock %}{% endautoescape %}
+
+
+function delAllRec()
+{	
+	var s_url=loadcookie("search_urlstr")
+	if (s_url==""||s_url=='null'||!s_url){alert("{%trans '请先根据条件查询再进行删除全部！'%}");return;};	
+	i=s_url.indexOf('?')
+	//if (i==-1) {alert("{%trans '没有选择条件，不能删除'%}");return;}
+	if (tblName[g_activeTabID]=='department'){
+		var comfir = confirm(window.delAllHint_dept?delAllHint_dept():"{%trans 'Clear all data, are you sure?'%}")
+	} else{
+		var comfir = confirm(window.delAllHint?delAllHint():"{%trans 'Clear all data, are you sure?'%}")
+	}
+	if(comfir)
+	{	
+		urlstr=s_url.split("?")[0]+'_clear_/'
+		if (i>0) urlstr+=s_url.substr(i,s_url.length)
+		$.blockUI({title:'',theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}</br></h1>'});
+		$.post(urlstr, 
+			'',
+			function (ret, textStatus) {
+				if(ret.ret==0)
+				{
+				var message=ret.message
+				reloadData()
+				}
+				$.unblockUI()
+
+			},
+			"json");
+
+	}
+}
+
+function delOldRec(days)
+{
+	var ret=false;
+	createEndDateDlg1("{%trans 'Clear Obsolete Data'%}");
+
+	$("#btnShowOK").click(function(){
+			var fromTime=$("#id_endTime0").val();
+			 if(!valiDate(fromTime))
+			 { 
+			    $("#id_error").css("display","block")
+				$("#id_error").html("<ul><li class='error'>"+gettext('Must input a valid date!')+"</li></ul>"); 
+				 return false;
+			 }
+			 else
+			 {
+				$("#id_error").css("display","none");
+				ret=confirm("{%trans 'Delete before _days_ days, out-of-date records, are you sure?'%}".replace("_days_",fromTime));
+				if(ret) 
+				{			
+					urlstr=g_urls[g_activeTabID].split("?")[0]+"_del_old_/?start="+fromTime;
+					$.blockUI({title:'',theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}</br></h1>'});
+			
+					$.post(urlstr, 
+						'',
+						function (ret, textStatus) {
+							if(ret.ret==0)
+							{
+							//var i=ret.indexOf("message=\"");
+							var message=ret.message
+							reloadData()
+							}
+							$.unblockUI()
+			
+						},
+						"json");
+				}	 
+			}
+	});
+
+}
+
+function setDataFilter(url, value)
+{
+	if( typeof(value)=="object")
+	{
+		var maxUrlLength=20*1024;
+		while((value.join(",").length>maxUrlLength))
+			value.pop(0);
+	}
+	url=getQueryStr(window.location.href, [url], url+'='+value);
+	window.location.href=url;
+}
+
+
+
+function loadNULLPage(id)
+{
+		var hcontent=$("#"+g_activeTabID+" #id_content").height();
+		var hbar=$("#"+g_activeTabID+" #id_top").height();
+		var height=hcontent-hbar-70;
+		if (groupHeaders.length>0)
+		 height=height-30;
+		
+		if(typeof(Custom_Jqgrid_Height)!='undefined'&&Custom_Jqgrid_Height!=""){
+			jqOptions[g_activeTabID].height=Custom_Jqgrid_Height;
+		}else{jqOptions[g_activeTabID].height=height;}
+		jqOptions[g_activeTabID].rowNum={{limit}}
+		jqOptions[g_activeTabID].rowList=[]//[jqOptions.rowNum,jqOptions.rowNum*2]
+		//jqOptions.url='';
+		jqOptions[g_activeTabID].data=[]
+		jqOptions[g_activeTabID].datatype='local'
+		//if(tblName[g_activeTabID]=="iclock"){
+		//	if($.cookie("page")!=null){
+		//		jqOptions[g_activeTabID].page=$.cookie("page")
+		//	}
+		//}
+		$(id).jqGrid(jqOptions[g_activeTabID]);
+	        //$("#id_grid").jqGrid('setFrozenColumns');
+		if (groupHeaders.length>0)
+		$(id).jqGrid('setGroupHeaders', {useColSpanStyle: true,groupHeaders:groupHeaders})
+		//else
+	        $(id).jqGrid('setFrozenColumns');
+		
+}			
+
+
+
+
+function loadPage(pgNum)
+{
+	if(pgNum!=undefined) return loadPageData('p', pgNum);
+	else return loadPageData();
+}
+
+$(function(){
+	//outerLayout.show('west')
+	//outerLayout.resizeAll()
+	{% block initwindow %}
+	
+//		initwindow_tabs();
+	
+	{% endblock %}
+	
+	{% block initGrid %}
+	//如果在具体页面重写了block Data部分，就不要调用下面函数，写一个空块跳过,如iclock_list.html
+		initGridHtml(tblName[g_activeTabID])
+	{% endblock %}
+	
+	
+	{% block customHeight %}
+	
+	{% endblock %}
+	
+	
+	if(!options[g_activeTabID].canAdd) $("#"+g_activeTabID+" #id_newrec").attr('disabled','true');
+	if(!options[g_activeTabID].canDelete) {$("#"+g_activeTabID+" #id_clearrec").attr('disabled','true');
+				$("#"+g_activeTabID+" #id_clearrec1").attr('disabled','true');	}
+	if(!options[g_activeTabID].canSearch) $("#"+g_activeTabID+" #changelist-search").remove();
+	if(options[g_activeTabID].showStyle) $("#"+g_activeTabID+" #id_show_style").show();
+	//if(options.canHome)
+	//$("#"+g_activeTabID+" #id_add_home").show();
+	
+	var hcontent=$("#"+g_activeTabID+" #id_content").height();
+	var hbar=$("#"+g_activeTabID+" #id_top").length>0?$("#"+g_activeTabID+" #id_top").height():0;
+	var h=hcontent-hbar
+	//$("#"+g_activeTabID+" .module").css('height',h)
+	
+	get_grid_fields(jqOptions[g_activeTabID]);           //此句应该在下一句的前面
+	hiddenfields(jqOptions[g_activeTabID]);
+	{% block loadData %}	
+		loadPage();
+	{% endblock %}
+	setShowStyle();
+	
+	//$("input","#id_show_style").click(
+	//function(){
+	//if( typeof process_style=="function"){
+	//		process_style()
+	//	}
+	//}
+	//
+	//);
+	
+	$("#"+g_activeTabID+" #id_reload").click(function(){
+		reloadData(tblName[g_activeTabID]);
+	});
+	$("#"+g_activeTabID+" #id_custom").click(function(){
+		ShowCustomField(jqOptions[g_activeTabID]);
+	});
+	
+	$("#"+g_activeTabID+" #queryButton").click(function(){
+		        if($.isFunction(window["createQueryDlg_"+tblName[g_activeTabID]]))
+						window["createQueryDlg_"+tblName[g_activeTabID]]()
+	});
+	var inputEl = $("#"+g_activeTabID+" .search-input")
+		 defVal[g_activeTabID] = inputEl.val();
+		 inputEl.on("focus",function(){
+				     var _this = $(this);
+					if (_this.val() == defVal[g_activeTabID]) {
+					    _this.val('');
+					    _this.css('color','#000000');
+					    //_this.attr('role','disabled')
+					}
+			})
+		inputEl.on("blur",function(){
+				var _this = $(this);
+				if (_this.val() == '') {
+				    _this.val(defVal[g_activeTabID]);
+				    _this.css('color','#CCCCCC');
+				    _this.attr('role','defvalue')
+				}
+				else
+				    _this.attr('role','cansearch')
+			})
+		inputEl.on("keydown",function(event) {
+				if (event.which == 13) {
+				      var _this = $(this);
+				       _this.attr('role','cansearch')
+				 }
+			})
+		
+	
+{% block $function %}
+
+{% endblock %}
+
+	
+});
+
+function resetError()
+{
+	$("#"+g_activeTabID+" #id_error").hide();
+	$("#"+g_activeTabID+" #id_error").html('')
+
+}
+
+function processEdit(blockHtml,urlAddr,actionName,tableName,other){
+	if (tableName==undefined) {
+		tableName=tblName[g_activeTabID]
+	}
+	var str=blockHtml.substr(0,30);
+	if(str.indexOf("result=1")==0)
+	{			
+		var i=str.indexOf("message=");
+		if (i>0)
+			var message=blockHtml.substr(i+8)
+		else
+			var message=blockHtml
+		alert(message);
+		return 1;
+	}
+	var temp_div=$(blockHtml);
+	init_dialog(temp_div)
+	//if(typeof process_dialog=="function")	process_dialog(temp_div,'edit',urlAddr);
+	if($.isFunction(window["process_dialog_"+tableName]))
+	{
+		window["process_dialog_"+tableName](temp_div,'edit',urlAddr)
+	}
+	setting={modal:true,width:options[g_activeTabID].dlg_width,height:options[g_activeTabID].dlg_height,
+	close: function() {$(this).dialog("destroy");}
+	}
+	if(options[g_activeTabID].canEdit)
+	setting["buttons"]=[{id:'btnShowOK',text:'{%trans "save and return" %}',click:function(){resetError();if($.isFunction(window['beforePost_'+tableName])){if (window['beforePost_'+tableName](this,actionName)==false){return;}} SaveFormData(this,urlAddr,'edit',tableName);  }},{text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}]
+	temp_div.dialog(setting);
+	temp_div.dialog("option","title",temp_div.find("#id_span_title").html());
+	if(!options[g_activeTabID].canEdit) $('#btnShowOK',temp_div).remove()
+	if($.isFunction(window["process_dialog_again_"+tableName]))
+	{
+		window["process_dialog_again_"+tableName](temp_div,'edit',actionName,other)
+	}
+}
+
+function processNewModel(tableName)
+{
+		if (tableName==undefined) {
+                        tableName=tblName[g_activeTabID]
+                }
+		urlAddr=g_urls[g_activeTabID].split("?")[0]+"_new_/?mod_name="+mod_name;
+		$.ajax({
+			type:"GET",
+			url:urlAddr,
+			dataType:"html",
+			async:false,
+			success:function(msg){
+				msg=$.trim(msg)
+				processNewModelLoop(msg,urlAddr,"_new_",tableName);			
+			}
+		});
+}
+
+{% block processNewModelLoop %}
+function processNewModelLoop(blockHtml,urlAddr,actionName,tableName){
+	temp_data=$(blockHtml)
+	init_dialog(temp_data)
+       // if(typeof process_dialog=="function")
+        if($.isFunction(window["process_dialog_"+tableName]))
+        {
+                window["process_dialog_"+tableName](temp_data,'add',urlAddr)
+        }
+        setting={modal:true,autoOpen:true,width:options[g_activeTabID].dlg_width,height:options[g_activeTabID].dlg_height,resizable:false,
+                         
+        close: function() {$(this).dialog("destroy");}
+        }
+        if (options[g_activeTabID].canAdd)
+        setting["buttons"]=[{text:"{% trans "save and continue" %}",click:function(){ resetError();if($.isFunction(window['beforePost_'+tableName])){if (window['beforePost_'+tableName](this,actionName)==false){return;}} SaveFormData(this,urlAddr,'addandcontinue',tableName);  }},
+                                           {text:"{% trans "save and return" %}",click:function(){resetError(); if($.isFunction(window['beforePost_'+tableName])){if (window['beforePost_'+tableName](this,actionName)==false){return;}}  SaveFormData(this,urlAddr,'add',tableName);  }},
+                                           {text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}]
+        temp_data.dialog(setting);
+        temp_data.dialog("option","title",temp_data.find("#id_span_title").html());
+		if($.isFunction(window["process_dialog_again_"+tableName])){
+			window["process_dialog_again_"+tableName](temp_data,'add',actionName)		
+		}
+        //process_dialog_again(temp_data,"add",actionName,tblName)		
+}
+{% endblock %}
+
+function setShowStyle(){
+		var html="";
+		html=getextraBatchOpHTML(extraBatchOp)
+		if(html=='')
+		  $("#"+g_activeTabID+" #id_op_menu_").hide();
+		else
+		{
+			$("#"+g_activeTabID+" #op_menu_").html(html);
+			$("#"+g_activeTabID+" #id_op_menu_").css("display","block");
+			$("#"+g_activeTabID+" #id_op_menu_").iMenu();
+
+			
+		}
+		$("#"+g_activeTabID+" #id_export").iMenu();
+}
+/*
+function exportData(url, value)
+{
+	url=getQueryStr(window.location.href, [url], url+'='+value);
+	window.location.href=url;
+}
+
+function exportRec()
+{
+	createDialog('f', setDataFilter, dataExportsFormats, "{%trans "Export"%} {{ title }} {%trans "list"%}", "{%trans "format"%}", 400);
+}
+*/
+
+</script>
+
+
+
+<div style="width:100%;height: 100%;overflow: auto;" >
+
+<div id="id_top">
+	{% block top %}
+	<div class="sear-box quick-sear-box" >
+		{% block other_area %}
+		<!--需要自定义的页面加入此块
+							 <div id='id_add_home' style="float: left;"><img src="../media/img/home.png" title="{% trans '设置为起始页' %}" onclick="javascript:saveHome();" style="width:16px;"/> </div>
+		-->		
+				
+		{% endblock %}
+
+
+		{% block otherQuery %}
+		{% endblock %}
+
+		<div class="s-info right" id="filter_area">			
+					<span class="label" id="id_filtername" style="display: none;">{%trans "Filter By:"%}</span>
+					<span id="id_filterbar" class="nav" style="float:left;width:100px;"></span>
+		
+		</div>
+		
+		{% block sear_area %}
+		
+		
+		
+		
+		<div class="s-info right" id="sear_area">			
+			<div class="nui-ipt nui-ipt-hasIconBtn " >
+				<input id="searchbar" class="search-input" type="text"  value="{{ cl.searchHint }}" role='defvalue' autocomplete="off" style="width: 154px;"/>
+				<span id ="queryButton" class="nui-ipt-iconBtn">
+					<b id="_icon_2_28" class="nui-ico nui-ico-dArr "></b>
+				</span>
+				
+			</div>
+			
+			<div class="main-search-btn">
+			
+				<span id="searchButton" class="chaxun icon iconfont icon-chaxun"></span>
+			</div>
+			
+			
+		</div>
+		{% endblock %}
+		
+
+<!--		
+				<span style="display: inline-block;margin-left: 10px;">
+					<div id="id_searchbar" class='search-pu'>
+						<div class="nui-ipt nui-ipt-hasIconBtn " >
+							<input id="searchbar" class="search-input" type="text"  value="{{ cl.searchHint }}" role='defvalue' autocomplete="off" />
+							<span id ="queryButton" class="nui-ipt-iconBtn">
+								<b id="_icon_2_28" class="nui-ico nui-ico-dArr "></b>
+							</span>
+							
+						</div>
+						
+						<div class="main-search-btn">
+						
+							<span><img id="searchButton" src="/media/img/s.gif" title="{%trans "Search"%}" style="cursor:hand;"></span>
+						</div>
+						
+					</div>
+					 <span id='id_add_home' style="float: right;display:none;"><img src="../media/img/home.png" title="{% trans 'Add to home page' %}" onclick="javascript:saveHome();" /> </span>
+				</span>
+				<span style="display: inline-block;">
+					<span id="id_filtername" style="position: relative;float:left; margin-top: 6px;display:none;"><b>{%trans "Filter By:"%}</b></span>
+					<span id="id_filterbar" class="nav" style="float: left;"></span>
+					
+					<span id="id_show_style" style="display:none;float: left;">
+					{% trans "Style:"%}<input type="radio" name="showStyle" value="0" checked />{% trans "Table style" %}
+						<input type="radio" name="showStyle" value="1"/>{% trans "List style" %}&nbsp;&nbsp;
+					</span>
+				</span>
+				
+				
+-->				
+				
+	</div>
+	{% endblock %} 
+
+	{% block toolbar %}
+
+	<div id="id_toolbar" style='min-width: 1000px;'>	
+			<UL class="toolbar" id="navi">
+				<LI id="id_reload"><SPAN class="icon iconfont icon-shuaxin"></SPAN>{%trans "Reload"%}</LI>
+				{% block exportOp %}
+				<LI id="id_export" ><SPAN  class="icon iconfont icon-daochu"></SPAN>{%trans "Export"%}
+					<ul id="op_menu_export" class="op_menu">
+						<li><span >{%trans "文件格式"%}</span>
+							<ul>
+							<li onclick="javascript:clickexport(tblName[g_activeTabID],0);"><a href="#">EXCEL</a></li>
+							<li onclick="javascript:clickexport(tblName[g_activeTabID],1);"><a href="#">TXT</a></li>
+							<li onclick="javascript:clickexport(tblName[g_activeTabID],2);"><a href="#">PDF</a></li>
+							</ul>
+						</li>
+					</ul>
+				</LI>
+				{% endblock %}
+
+				{% block importOp %}
+				
+				{% endblock %}
+				{% block newrec %}
+				{% if request|reqHasPerm:"add" %}
+				 <LI id="id_newrec" ><SPAN class="icon iconfont icon-xinzeng"></SPAN>{%trans "Append"%}</LI>
+				{% endif %}
+				{% endblock %}
+				
+				{% block aDelete %}
+				{% if request|reqHasPerm:"delete" %}
+				<LI id="aDelete"  onclick="batchOp('?action=del',itemCanBeDelete,'{%trans "Delete"%}');"><SPAN class="icon iconfont icon-shanchu"></SPAN>{%trans "Delete"%}</LI>
+				{% endif %}
+				{% endblock %}
+				
+				{% block allDelete %}
+					<!--
+				{% if request.user.is_superuser %}
+				 <LI id="allDelete" onclick="delAllRec();"><SPAN class="icon iconfont icon-shanchuquanbu"></SPAN>{%trans "Clear All"%}</LI>
+				{% endif %}
+				-->
+				
+				{% endblock %}
+			
+				{% block extractButton %}
+				{% endblock %}
+				
+				{% block extractOP %}
+				<LI id="id_op_menu_" ><SPAN class="icon iconfont icon-shuju"></SPAN>{%trans "Operation for selected"%}
+					<ul id="op_menu_" class="op_menu">
+					</ul>
+				</LI>
+				{% endblock %}
+			
+				<LI id="id_custom"><SPAN class="icon iconfont icon-select"></SPAN>{%trans "Preferences"%}</LI>
+				{% block extraBatchOp %}{% endblock %}
+				
+			</UL>
+			
+		
+	</div>
+	
+	{% endblock %} 
+	
+</div>
+
+<div class="module" >
+	{% block Data %}
+	
+	{% endblock %} 
+	 
+</div>
+{% block extraSection %}{% endblock %}
+<div id="id_tip" class="tip" style="visibility:hidden"></div>
+</div>
+
+

@@ -1,0 +1,363 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+<script>
+{% block tblHeader %}
+        tblName[g_activeTabID]='annual_leave';
+        jqOptions[g_activeTabID].colModel={{ colModel }}
+	jqOptions[g_activeTabID].pager='id_pager_'+tblName[g_activeTabID]	
+
+function getSelected_empNames_ex(page_style){
+	var emp=$("#id_grid_"+page_style).jqGrid('getGridParam','selarrrow');
+	var empNames=[];
+	if(typeof emp=='undefined') return empNames;
+	for(var i=0;i<emp.length;i++)
+	{
+		pin=$("#id_grid_"+page_style).jqGrid('getCell',emp[i],3);
+		empNames.push(pin)
+	}
+
+return empNames;
+}
+
+        $(function(){
+                $("#"+g_activeTabID+" #searchButton").click(function(){
+                        searchShowItems();
+                });
+                $("#"+g_activeTabID+" #searchbar").keypress(function(event){
+                        if(event.keyCode==13)
+                                searchShowItems();
+                });
+                $("#"+g_activeTabID+" #searchbar").val(gettext("考勤编号,身份证号,姓名"))
+                $("#"+g_activeTabID+" #id_toolbar").css("width",$("#id_content").width());
+                $("#"+g_activeTabID+" #o_DeptID").val(($.cookie("DeptID")==null?"":$.cookie("DeptID")));
+                $("#"+g_activeTabID+" #o_PIN").val(($.cookie("PIN")==null?"":$.cookie("PIN")));
+                $("#"+g_activeTabID+" #o_EName").val(($.cookie("EName")==null?"":$.cookie("EName")));
+                $("#"+g_activeTabID+" #o_Hiredday").val(($.cookie("TTime")==null?"":$.cookie("TTime")));
+                $("#"+g_activeTabID+" #o_Desc").val(($.cookie("Desc")==null?"":$.cookie("Desc")));
+	
+	
+	
+	
+		
+		var currDate=new Date();
+		var times=currDate.getFullYear()
+		var html=""
+		for(var i=0;i<16;i++){
+			if(i==6){
+				html+="<option selected>"+(times+i-6)+"</option>"
+			}else{
+				html+="<option>"+(times+i-6)+"</option>"
+			}
+		}
+		$("#"+g_activeTabID+" #id_year").html(html)
+
+                
+                //根据条件查询
+                $("#"+g_activeTabID+" #id_search").click(function(){
+                        var deptIDs=getSelected_dept("showTree_"+g_activeTabID)
+			
+                        if(deptIDs==undefined)
+                                deptIDs=''
+				
+                        var urlStr="";
+                        var urlTime="";
+                        var urlTime1="";
+                        var ord="asc";
+                        var sortname="";
+
+			
+			
+                        urlStr+=urlTime
+                        if(deptIDs!='' && deptIDs!=undefined ){
+                               urlStr+="&deptIDs="+deptIDs 
+                        }
+                        $.cookie("url",urlStr, { expires: 7 });
+                        ischecked=0;
+                        
+                        if($("#id_cascadecheck_"+g_activeTabID).prop("checked"))
+                                ischecked=1;
+                        var url="/iclock/data/annual_leave/?isContainChild="+ischecked
+                
+                        if (urlStr!="" &&  urlStr!=null)
+                                url+=urlStr;
+                
+                        if($("#"+g_activeTabID+" #o_DeptID").prop("checked"))
+                                sortname+="UserID__DeptID__DeptNumber,";
+                        if($("#"+g_activeTabID+" #o_PIN").prop("checked"))
+                                sortname+="UserID__PIN,";
+                        if($("#"+g_activeTabID+" #o_EName").prop("checked"))
+                                sortname+="UserID__EName,";
+                        if($("#"+g_activeTabID+" #o_Hiredday").prop("checked"))
+                                sortname+="TTime,";
+                
+                        if($("#"+g_activeTabID+" #o_Desc").prop("checked"))
+                                ord="desc";
+                        if (sortname=="")
+                        {
+                                $("#"+g_activeTabID+" #o_Hiredday").prop("checked",true)
+                                sortname="TTime,"
+                        }
+                        sortname=sortname.substring(0,sortname.length-1)
+                        savecookie("search_urlstr",url);
+                        $("#id_grid_"+tblName[t_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json",sortorder:ord,sortname:sortname}).trigger("reloadGrid");
+                });
+                
+                $("#tbl").html("<thead><tr><th abbr='UserID__PIN'>{% trans 'PIN' %}</th><th abbr='UserID__EName'>{% trans 'EName' %}</th><th abbr='UserID__DeptID__DeptName'>{% trans 'department name' %}</th>{{ cl.FieldName.TTime }}{{ cl.FieldName.State }}{{ cl.FieldName.Verify }}{{ cl.FieldName.WorkCode }}{{ cl.FieldName.Reserved }}{{ cl.FieldName.SN }}<th>{%trans 'Picture'%}</th></tr></thead>"+$("#tbl").html());
+   
+   
+   
+                $("#"+g_activeTabID+" #id_reload").click(function(){
+					$("#id_con_error").css("display","none");
+					var year=$("#"+g_activeTabID+" #id_year").val()
+					times=year+"-01"//+times+"-01"
+					var t_url='/iclock/report/annual_leave/?y='+times+'&q='
+					reloadData('annual_leave',t_url);
+                });
+                
+                $("#"+g_activeTabID+" #id_filters").click(function(){
+                        $("#id_grid_"+tblName[g_activeTabID]).jqGrid('searchGrid',{multipleSearch:true,search:{top:100,left:100}});
+                });
+        
+        });
+        //模糊查询
+        function searchShowItems(){
+                var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+                if (flag!='cansearch'&&flag!='defvalue') return;
+                if (flag!='defvalue')
+                    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+                else
+                    var v=""
+		var year=$("#"+g_activeTabID+" #id_year").val()
+		times=year+"-01"
+		urlStr="/iclock/report/annual_leave/?y="+times+"&q="+escape(v)
+		savecookie("search_urlstr",urlStr);
+				
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+        }
+
+	function createQueryDlg_annual_leave(){
+		createDlgdeptfor10('employee_search',1)
+		$('#dlg_for_query_employee_search').dialog({
+		buttons:[{id:"btnShowOK",text:gettext('搜索'),
+		  click:function(){searchbydept_annual_leave('employee_search');$(this).dialog("destroy"); }},
+		 {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+		}] })
+	}
+
+        function searchbydept_annual_leave(page){
+                var dept_ids=getSelected_dept("showTree_"+page)
+                if (dept_ids!=null){
+                        if(dept_ids==undefined||dept_ids==''){
+                                alert("{% trans "请选择单位" %}")
+                                return false;
+                        }
+                }else{
+                        alert("{% trans "请选择单位" %}")
+                        return false;
+                }
+                var ischecked=0;
+                if($("#id_cascadecheck_"+page).prop("checked"))
+                        ischecked=1;
+                urlStr="deptIDs="+dept_ids+"&isContainChild="+ischecked
+		var emp=getSelected_emp_ex("sel_employee_search");
+		if(emp.length>0){
+		    urlStr="UserIDs="+emp
+		}
+		var year=$("#"+g_activeTabID+" #id_year").val()
+		times=year+"-01"
+		urlStr="/iclock/report/annual_leave/?y="+times+"&"+urlStr
+		savecookie("search_urlstr",urlStr);
+				
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+
+        }
+	
+	
+function saveannual(querystr){
+	var year=$("#id_year_cl").val()
+	var day=$("#id_days_cl").val()
+	if(day==''){
+		alert("{%trans '天数不能为空'%}")
+		return false;
+	}
+	querystr+="&year="+year+"&days="+day
+	$.ajax({ type: "POST",
+		url: "/iclock/att/saveannualdays/",
+		data:querystr,
+		dataType:"json",
+		success: function(ret){
+			alert("{%trans '保存成功'%}")
+			reloadData();
+			$("#dlg_to_dev").remove();
+		},
+		error: function(request, errorMsg){
+			 alert($.validator.format(gettext('Operating failed for {0} : {1}'), options[g_activeTabID].title, errorMsg));
+			}
+	});
+	
+}
+$("#"+g_activeTabID+" #id_newrec").click(function(){
+	var deptID=$("#"+g_activeTabID+" #hidden_selDept").val()
+	var deptName=$("#"+g_activeTabID+" #hidden_deptsName").val()
+	if (deptID==''||deptName=='') {
+		alert('请选择单位')
+		return
+	}
+	var ischecked=0;
+	if($("#id_cascadecheck_"+g_activeTabID).prop("checked"))
+		ischecked=1;
+	//var emp=getSelected_emp_ex("annual_leave");
+	var emp=$("#id_grid_"+tblName[g_activeTabID]).jqGrid('getGridParam','selarrrow');
+	var empname=getSelected_empNames_ex(g_activeTabID)
+	var str=""
+	if(emp.length>0){
+		str+="{%trans '考勤号码'%}"+empname
+	}else{
+		str=deptName
+		if(ischecked==1){
+			str+="{%trans '及其下级单位'%}"
+		}else{
+			
+		}
+		str+="{%trans '全体人员'%}"
+	}
+	
+	str+="{%trans '修改年假信息'%}"
+	var querystr="DeptID="+deptID+"&emp="+emp+"&ischecked="+ischecked
+	var block_html="<div id='dlg_to_dev'>"
+					+           "<table>"
+									+"<tr><td><div style='width:380px;word-wrap:break-word'>"+str+"</div></td></tr>"
+									+"<tr><td><select id='id_year_cl'></select><span>{%trans '年年假修改为'%}</span><input id='id_days_cl' style='width:40px'/><span>{%trans '天'%}</span></td></tr>"
+					+            "</table>"
+					+       "</div>"
+	
+	$(block_html).dialog({modal:true,
+                         resizable:false,　
+						  width: 400,
+						  height:260,
+						  title:"{% trans '调整人员年假天数' %}",
+						  buttons:[{id:"btnShowOK",text:'{%trans "Submit" %}',click:function(){saveannual(querystr)}},
+								 {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}],
+						  close:function(){$(this).dialog("destroy"); }		
+						})
+	var currDate=new Date();
+	var times=currDate.getFullYear()
+	var html=""
+	for(var i=0;i<16;i++){
+		if(i==6){
+			html+="<option selected>"+(times+i-6)+"</option>"
+		}else{
+			html+="<option>"+(times+i-6)+"</option>"
+		}
+	}
+	$("#id_year_cl").html(html)
+	
+	
+})
+	
+	
+
+{% endblock %}
+{% block loadData %}
+
+	html="<span id=id_opt_tree><input type='checkbox' id='id_cascadecheck_"+g_activeTabID+"' />{%trans '级联下级单位' %}</span>"
+	$("#"+g_activeTabID+" #id_west").html(html)
+	html="<div id='show_dept_tree_'>"
+		+"<ul id='showTree_"+g_activeTabID+"' class='ztree' style='margin-left: 0px;height:100%;'></ul>"
+		+"</div>"
+		+"<input type='hidden' value='' id='hidden_depts' />"
+		+"<input type='hidden' value='' id='hidden_deptsName' />"
+		+"<input type='hidden' value='' id='hidden_selDept' />"
+	$("#west_content_tab_iclock_annual_leave").html(html)
+	//var h=$("#"+g_activeTabID+" #west_content").height()-20
+	//$('#showTree_'+g_activeTabID).css('height',h)
+        ShowDeptData(g_activeTabID,true)
+        loadNULLPage('#id_grid_'+tblName[g_activeTabID]);
+	var zTree = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+	zTree.setting.check.enable = false;
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		var deptID=treeNode.id;
+		var deptName=treeNode.name;
+		$.cookie("dept_ids",deptID, { expires: 7 });
+		
+		$("#"+g_activeTabID+" #hidden_selDept").val(deptID);
+		$("#"+g_activeTabID+" #hidden_depts").val(deptID);
+		$("#"+g_activeTabID+" #hidden_deptsName").val(deptName)
+		
+		
+		var ischecked=0;
+		if($("#id_cascadecheck_"+g_activeTabID).prop("checked"))
+			ischecked=1;
+			
+                var ord="asc";
+                var sortname="";
+		
+		var year=$("#"+g_activeTabID+" #id_year").val()
+		times=year+"-01"
+		urlStr="/iclock/report/annual_leave/?deptIDs="+deptID+"&isContainChild="+ischecked+'&y='+times
+		savecookie("search_urlstr",urlStr);
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+
+	 
+	}
+{% endblock %}
+</script>
+
+{% block otherQuery %}
+	
+		<div class="s-info left" id="time_area">			
+		<span class='left'>{%trans "年份"%}</label><select id="id_year" name="year"></select>
+		</span>
+		
+            <!--     <span id="id_order" class='left' style='width:330px'><label class="required">{%trans "Order"%}</label>
+			<input type="checkbox" name="DeptID" id="o_DeptID" />{%trans "department"%}
+			<input type="checkbox" name="PIN" id="o_PIN" />{%trans "人员代码"%}
+			<input type="checkbox" name="EName" id="o_EName" />{%trans "EName"%}
+			<input type="checkbox" name="TTime" id="o_Hiredday"  checked />{%trans "聘用日期"%}
+			<input type="hidden" name="Asc" id="o_Asc" />
+			<input type="checkbox" name="Desc" id="o_Desc"  checked />{%trans "Descending Order"%}
+		</span> -->
+	</div>
+
+{% endblock%}
+{% block toolbar %}
+        <div id="id_toolbar">
+                <UL class="toolbar" id="navi">
+                        <LI id="id_reload"><SPAN class="icon iconfont icon-shuaxin"></SPAN>{%trans "Reload"%}</LI>
+			<LI id="id_export"><SPAN  class="icon iconfont icon-daochu"></SPAN>{%trans "Export"%}
+                                <ul id="op_menu_" class="op_menu">
+                                        <li><span>{%trans "文件格式"%}</span>
+                                                <ul>
+                                                <li onclick="javascript:clickexport(tblName[g_activeTabID],0);"><a href="#">EXCEL</a></li>
+                                                <li onclick="javascript:clickexport(tblName[g_activeTabID],1);"><a href="#">TXT</a></li>
+                                                <li onclick="javascript:clickexport(tblName[g_activeTabID],2);"><a href="#">PDF</a></li>
+                                                </ul>
+                                        </li>
+                                </ul>
+                        </LI>
+                        {% block extractOP %}
+                        {% endblock %}
+                        <LI id="id_custom"><SPAN class="icon iconfont icon-select"></SPAN>{%trans "Preferences"%}</LI>
+                        {% block extraBatchOp %}{% endblock %}
+			
+			{% if request|reqHasPerm:"change" %}
+				<LI id="id_newrec"><SPAN class="icon iconfont icon-xinzeng"></SPAN>{%trans "调整年假天数"%}</Li>
+			{% endif %}
+			
+			
+                </UL>
+                
+       </div>
+
+{% endblock %}
+
+
+<div class="module">
+</div>
+
+
+
+
+
+

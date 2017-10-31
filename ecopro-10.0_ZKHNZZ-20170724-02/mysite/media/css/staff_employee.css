@@ -1,0 +1,74 @@
+/* === Remove input autofocus webkit === */
+*:focus {outline: none;}
+
+/* === Form Typography === */
+/*body {font: 14px/21px "Lucida Sans", "Lucida Grande", "Lucida Sans Unicode", sans-serif;}*/
+
+/* === List Styles === */
+.contact_form ul {
+	width:650px;
+	list-style-type:none;
+	list-style-position:outside;
+	margin:0px;
+	padding:0px;
+}
+.contact_form li{
+	padding:5px;
+	border-bottom: 1px solid #eee;
+	position:relative;
+} 
+/*.contact_form li:first-child, .contact_form li:last-child {*/
+	/*border-bottom:1px solid #777;*/
+/*}*/
+
+/* === Form Header === */
+.contact_form h2 {
+	margin:0;
+	display: inline;
+}
+#head_img {
+    width: 70px;
+    height: 70px;
+	margin:-48px 0 0 0;
+	border-radius: 6px;
+	display:inline;
+	float:right;
+}
+
+/* === Form Elements === */
+.contact_form label {
+	width:85px;
+	display:inline-block;
+	float:left;
+	padding:3px;
+}
+.contact_form input {
+	height:15px; 
+	width:220px; 
+	padding:4px 8px;
+}
+.contact_form #genders input,#pin_pw input,#username_pw input {
+	height:12px;
+	width:12px;
+	padding:5px 15px;
+}
+.contact_form textarea {padding:8px; width:300px;}
+.contact_form button {margin-left:120px;}
+
+	/* form element visual styles */
+	.contact_form input, .contact_form textarea {
+		border:1px solid #aaa;
+		border-radius:2px;
+		padding-right:30px;
+		-moz-transition: padding .25s;
+		-webkit-transition: padding .25s;
+		-o-transition: padding .25s;
+		transition: padding .25s;
+	}
+	.contact_form input:focus, .contact_form textarea:focus {
+		background: #fff;
+		border:1px solid #555;
+		padding-right:70px;
+	}
+
+

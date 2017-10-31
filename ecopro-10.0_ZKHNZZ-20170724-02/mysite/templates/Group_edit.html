@@ -1,0 +1,80 @@
+{% load iclock_tags %}
+{% load i18n %}
+
+<div id="id_form" >
+
+<form method="post" id="id_edit_form" enctype="multipart/form-data">
+<table>
+<tr><th></th><td>
+	<span  style="display:none" id="id_span_title">
+		{% if add %}{% trans "Add" %}  {% else %} {% trans "Edit" %} {% endif %} {{ dataOpt.verbose_name|escape }}</span>
+	<span  style="display:none" id="id_span_parent">
+		{{ parent_name }}</span>
+</td></tr>
+
+{% autoescape off %}
+<tr>
+    <th>
+    <font color="red">*</font><label for="id_name" >{%trans "Group name"%}:</label>
+    </th>
+    <td style='vertical-align:top;'> {{ form.name.as_widget }} </td>   
+</tr>
+<tr>
+    <td style="display:none;">{{ form.permissions.as_widget }}</td>
+</tr>
+{% endautoescape %}
+
+<tr id="addition_fields">{% block addfields %}{% endblock %}</tr>
+</td>
+</tr>
+</table>
+</form>
+
+<div id="tabs_group" >
+	<ul>
+		<li><a href="#tabs-basic">{%trans "基本"%}</a></li>
+		<li><a href="#tabs-device">{%trans "设备"%}</a></li>
+		<li><a href="#tabs-att">{%trans "考勤"%}</a></li>
+		<li><a href="#tabs-acc">{%trans "门禁"%}</a></li>
+		<li><a href="#tabs-meeting">{%trans "会议"%}</a></li>
+		<li><a href="#tabs-visitors">{%trans "访客"%}</a></li>
+		<li><a href="#tabs-ipos">{%trans "消费"%}</a></li>
+		<li><a href="#tabs-system">{%trans "系统"%}</a></li>
+
+	</ul>
+	<div id="tabs-basic">
+            <ul style='width:101%;height:330px;color:black;overflow:auto;' class='ztree' id='basic-permissions' ></ul>
+	</div>
+	<div id="tabs-device">
+            <div style='width:101%;height:330px;color:black;overflow:auto;' class='ztree' id='device-permissions' ></div>
+	</div>
+	<div id="tabs-system">
+            <div style='width:101%;height:330px;color:black;overflow:auto;' class='ztree' id='system-permissions' ></div>
+	</div>
+	<div id="tabs-att">
+            <div style='width:101%;height:330px;color:black;overflow:auto;' class='ztree' id='att-permissions' ></div>
+	</div>
+	<div id="tabs-acc">
+		<div style='width:101%;height:330px;color:black;overflow:auto;' class='ztree' id='acc-permissions' ></div>
+	</div>
+	<div id="tabs-meeting">
+            <div style='width:101%;height:330px;color:black;overflow:auto;' class='ztree' id='meeting-permissions' ></div>
+	</div>
+	<div id="tabs-visitors">
+            <div style='width:101%;height:330px;color:black;overflow:auto;' class='ztree' id='visitors-permissions' ></div>
+	</div>
+	<div id="tabs-ipos">
+            <div style='width:101%;height:330px;color:black;overflow:auto;' class='ztree' id='ipos-permissions' ></div>
+	</div>
+	
+	
+</div>
+
+
+
+<div id="id_error"></div>
+
+{% block add_contents %}{% endblock %}
+{% block add_contents_2c %}{% endblock %}
+
+</div>

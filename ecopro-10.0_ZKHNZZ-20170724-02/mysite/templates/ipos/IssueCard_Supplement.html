@@ -1,0 +1,612 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+<script>
+jqOptions=copyObj(jq_Options);
+jqOptions.onSelectRow=function(ids){};
+{% if "POS_IC"|filter_config_option %}
+jqOptions.colModel=[
+		{'name':'id','width':50,'sortable':false,'label':'{% trans '序号' %}'},
+		{'name':'card_no','width':100,'sortable':false,'label':'{% trans '卡号' %}'},
+		{'name':'sys_card_no','width':100,'sortable':false,'label':'{% trans '卡账号' %}'},
+		{'name':'pin','width':100,'sortable':false,'label':'{% trans '工号' %}'},
+		{'name':'card_blance','width':100,'sortable':false,'label':'{% trans '卡余额' %}'}
+		]
+{% elif "POS_ID"|filter_config_option %}
+jqOptions.colModel=[
+		{'name':'id','width':50,'sortable':false,'label':'{% trans '序号' %}'},
+		{'name':'card_no','width':100,'sortable':false,'label':'{% trans '卡号' %}'},
+		{'name':'pin','width':100,'sortable':false,'label':'{% trans '工号' %}'},
+		{'name':'name','width':100,'sortable':false,'label':'{% trans '姓名' %}'},
+		{'name':'card_blance','width':100,'sortable':false,'label':'{% trans '卡余额' %}'}
+		]
+{% endif %}
+
+{% autoescape off %}
+var _data={{params}}
+{% endautoescape %}
+var card_type=_data.itype
+var sys_pwd = _data.pwd
+var main_fan = _data.main
+var minor_fan = parseInt(main_fan)+1;
+var max_money=parseInt(_data.max_money)
+var zk_key=_data.pass_key
+
+var reN = 2;
+var reval = "";
+var private = "";
+var curi=0;
+var read_tag=0;
+var is_batch=0;
+function afterPost_IssueCard_Supplement(flag,FormObj){
+
+	curi+=1
+	$('#id_grid_').jqGrid('addRowData',curi,{id:curi,card_no:$("#id_card").val(),name:$("#id_EName").val(),'card_blance':(parseFloat($("#id_money").val())+parseFloat($("#id_blances").val())),pin:$('#id_PIN').val()});
+	
+	$('#id_card').val('')	
+	$('#user_id').val('')
+	$('#id_PIN').val('')	
+	$('#id_EName').val('')	
+	$('#id_blances').val('')	
+
+    {% if "POS_ID"|filter_config_option %}
+	    $('#id_card').focus()
+	       
+	{%endif%}
+		
+
+}
+
+function card_supplement()
+{   
+   if($("#id_money").val()==''||$("#id_money").val()=='0'){
+    $("#id_error").html('<ul class="errorlist"><li>充值金额不能为空!</li></ul>');
+    return;
+    }
+
+    var card_no = $("#id_card").val();
+    
+    if(isOnline(1)){
+        if($('#id_edit_form_consume').valid())
+        {
+            var reval = readCard();
+           if (reval.length>4)
+              {
+                if(card_no == reval )
+                {
+                    if(funValidCard())
+                    {
+                          var m = parseFloat($("#id_money").val());
+                          var inserter_money =  m + parseFloat($("#id_card_blances").val());
+			  
+                          inserter_money=Math.round(inserter_money * 100) / 100;
+                          if (Number(max_money) >= Number(inserter_money))
+                          {
+                              $('#id_op_card_blance').val(inserter_money); 
+                              if(funSaveBakData()) //第一次写卡时先往备份表插入一条记录
+                                {
+					var rval = writeICMoney(0,sys_pwd,Math.round(m * 100),0,main_fan,minor_fan); //写卡数据           
+					if (rval.toString() == '0')//充值写卡成功
+					    {
+					     
+							      //验证写卡数据是否通过 没有通过则自动纠错 
+							      if(isvild_write_card($('#id_card_serial_num').val(),Math.round(m * 100),Math.round(inserter_money * 100),Number($("#id_card_blance").val())*100))
+								  {
+								      if(funSaveData($('#id_edit_form_consume')))//充值成功保存数据
+								      {
+									      
+									  $("#id_error").html('<ul class="errorlist"><li>充值成功！！！请移走卡片</li></ul>');
+									  $("#id_btn_Sup").prop("disabled","disabled");
+									  if(is_batch!=1)
+									  $("#id_read_card").removeProp("disabled");
+									      curi+=1
+									      $('#id_grid_').jqGrid('addRowData',curi,{id:curi,card_no:$("#id_card").val(),sys_card_no:$("#id_sys_card_no").val(),'card_blance':$("#id_op_card_blance").val(),pin:$('#id_PIN').val()},'first');
+	                                        if(is_batch==1)
+                                                id_card_setinterval = setTimeout("batch_read_card()", 2000);
+
+									  
+								      }
+								      else
+								      {
+									      
+									  var rval = writeICMoney(0,sys_pwd,-m*100,0,main_fan,minor_fan); //写卡数据           
+								      }   
+								  }       
+							      else
+								  {
+								      $("#id_error").append('<ul class="errorlist"><li>充值失败</li></ul>');                             
+								      $("#id_btn_Sup").attr("disabled","disabled");
+								  }
+					      }
+					else
+					   {
+					      
+					      check_card(reval);
+					   }
+                                }
+                            }
+                            else
+                            {
+                                $("#id_money").val(0);
+                                $("#id_error").html('<ul class="errorlist"><li>卡上金额超出！充值失败！</li></ul>');                
+                                $("#id_btn_Sup").prop("disabled","disabled");
+                            }
+                        }
+                        else
+                            {
+                                $("#id_btn_Sup").attr("disabled","disabled");
+                            }
+
+                }
+                else
+                {
+                    $("#id_error").html('<ul class="errorlist"><li>充值卡号不一致，充值失败！</li></ul>');                
+                    $("#id_btn_Sup").prop("disabled","disabled");
+                }
+              }
+           else
+              {
+                  check_card(reval);
+              }
+        }
+    }
+}
+
+
+
+		
+function get_card_number(sys_card_no,cardInfo){
+	urlStr="/ipos/getData/?func=IssueCard&sys_card_no="+sys_card_no
+        {% if "POS_ID"|filter_config_option %}
+	urlStr= "/ipos/getData/?func=IssueCard&cardno="+parseFloat(sys_card_no)+"";
+	{%endif%}
+	$.ajax({
+		url:urlStr,
+		dataType:"json",
+	    async: false,
+		type:"POST",
+		success:function(data){
+			if(data.length>0)
+			{
+				
+		                {% if "POS_IC"|filter_config_option %}
+
+				if (cardInfo[4].split('=')[1] != '255')//管理卡
+				{
+					$("#id_sys_card_no").val(cardInfo[1].split('=')[1]);
+					$("#id_card_serial_num").val(cardInfo[7].split('=')[1]);
+					$("#id_card_blances").val(Number(cardInfo[6].split('=')[1]) / 100);
+					
+					$("#id_Dept").val(data[0].Dept);
+					$("#id_PIN").val(data[0].PIN);
+					$("#id_EName").val(data[0].name);
+					$("#id_blances").val(data[0].blance);
+					
+					$('#id_reimburse_blance').val(0);
+					$("#card_type").val(cardInfo[4].split('=')[1]);
+					var card_status = data[0].cardstate;
+					sys_blance = Number(data[0].blance)
+					if (card_status !="1")
+					{
+                        $("#id_error").html('<ul class="errorlist"><li>当前用户卡不是有效卡，请认真核对该卡资料！</li></ul>');
+						//var truthBeTold = window.confirm("当前用户卡不是有效卡，请认真核对该卡资料！单击“确定”继续。单击“取消”停止。");
+				    }
+					else
+					{
+				    
+						if (Number(max_money) >= Number($("#id_card_blances").val()))
+						{
+                            if(is_batch!=1)
+						     $("#id_btn_Sup").removeProp("disabled");
+
+						}
+					      else
+						{
+						    $("#id_money").val(0);
+						    $("#id_error").html('<ul class="errorlist"><li>卡上金额超出卡最大金额该卡为异常卡，请核对卡片资料！</li></ul>');                
+						    $("#id_btn_Sup").prop("disabled","disabled");
+						}
+					}
+				}
+				else
+				   {
+				       $("#id_error").html('<ul class="errorlist"><li>当前卡片为管理卡或者操作卡，操作失败！</li></ul>');
+				       $("#id_btn_Sup").prop("disabled","disabled");
+				   }
+                    
+                
+                {%endif%}
+                {% if "POS_ID"|filter_config_option %}
+                    $("#id_PIN").val(data[0].PIN);
+                    $("#id_EName").val(data[0].name);
+                    $("#id_blances").val(data[0].blance);
+                     $("#id_btn_Sup").removeProp("disabled");
+                     $("#id_money").val('')
+                     $("#id_money").focus()
+                     $('#id_error').html('')
+                {%endif%}
+		
+		
+		
+		
+			}
+			else
+			{
+			    //$("input[type=text]").val("");
+			    $("#id_money").val('');
+			    $("#id_btn_Sup").prop("disabled","disabled");
+		            {% if "POS_ID"|filter_config_option %}
+				
+				$("#id_error").html('<ul class="errorlist"><li>卡号'+sys_card_no+'不存在</li></ul>');
+			    {%else%}
+			    
+			    $("#id_error").html('<ul class="errorlist"><li>卡账号'+sys_card_no+'不存在</li></ul>');
+			{%endif%}
+	
+
+			}
+
+		}
+	});
+}
+function SaveFormData_ID_Supplement(FormObj,url,flag,tableName)
+{
+	f=FormObj.get(0)
+	if (!$(f).valid()){$("#id_error").html(gettext("occur error!")).css("color","red").css('display','block'); return 0;}
+	var formStr=formToRequestString(f);
+	$.post(url, 
+		formStr,
+		function (ret, textStatus) {
+			if(ret.ret==0)
+			{
+				if(flag=='addandcontinue')
+				{
+					if($.isFunction(window['afterPost_'+tableName]))
+					{
+						window['afterPost_'+tableName](flag,FormObj);
+					}
+				}
+				else
+				{
+					if($.isFunction(window['afterPost_'+tableName]))
+					{
+						window['afterPost_'+tableName](flag,FormObj);
+					}
+					$(FormObj).dialog("destroy");
+					reloadData();
+				}		
+			}
+			//$("#id_error").html(ret.message).css("color","red").css('display','block');
+			$("#id_error").html('<ul class="errorlist"><li>'+ret.message+'</li></ul>').show();
+		},
+		"json");
+}
+
+
+function read_card() {
+		    $('#id_op_card_blance').val(0)
+		    var reval = readCard();
+		    if (reval.length>4)
+		       {
+			   $("#id_card").val(reval);
+
+
+			   var cardInfo =ZK_PosReadICCard(0,sys_pwd,main_fan,minor_fan).split(',');
+
+			    if (cardInfo.length >1)
+				{
+				  var sys_card_no = cardInfo[1].split('=')[1];
+				 get_card_number(sys_card_no,cardInfo);
+				}
+			    else
+				{
+					check_card(cardInfo);
+					}
+
+		       }
+		    else
+		       {
+			   check_card(reval);
+		       }
+
+}
+function batch_read_card() {
+		    //$('#id_op_card_blance').val(0)
+		    var reval = readCard();
+		    if (reval.length>4)
+		       {
+                if (reval != $("#id_card").val() || read_tag==0 ) {
+                    $("#id_card").val(reval);
+
+
+                    var cardInfo = ZK_PosReadICCard(0, sys_pwd, main_fan, minor_fan).split(',');
+
+                    if (cardInfo.length > 1) {
+                        var sys_card_no = cardInfo[1].split('=')[1];
+                        get_card_number(sys_card_no, cardInfo);
+                        card_supplement();
+                    }
+                    else {
+                        check_card(cardInfo);
+                    }
+                }
+                else
+                {
+                   $("#id_error").html('<ul class="errorlist"><li>请放另外一张卡！</li></ul>');
+                   if(is_batch==1) {
+                       id_card_setinterval = setTimeout("batch_read_card()", 2000);
+                   }
+                   else
+                        $("#id_error").html('');
+
+                }
+		       }
+		    else
+		       {
+			   check_card(reval);
+			   if(is_batch==1)
+                id_card_setinterval=setTimeout("batch_read_card()",2000);
+		       }
+
+}
+function Init_begin()
+{
+
+    id_card_setinterval=setTimeout("batch_read_card()",2000);
+    read_tag+=1;
+}
+
+
+		
+		
+		
+$(function(){
+	{% if "POS_IC"|filter_config_option %}
+		addZKOnline();
+	
+	{%endif%}
+	
+	var hcontent=$("#id_content").height();
+	var hbar=$("#id_top").length>0?$("#id_top").height():0;
+	var h=hcontent-hbar-10
+	$('.module').css('height',h)
+	$('#id_card_west').css('height',h)
+	$('#id_emp_info').css('height',h)
+	$('#id_card_info').css('height',h)
+	$('#id_dining').hide();
+	
+	jqOptions.datatype='local'
+	jqOptions.height=h-100
+	jqOptions.multiselect=false
+	jqOptions.width='auto'
+	jqOptions.pager="#id_pager_";
+	jqOptions.caption='已充值卡'
+	$("#id_grid_").jqGrid(jqOptions);
+
+	var h=$("#id_content .ui-layout-west").height()-40
+        {% if "POS_IC"|filter_config_option %}
+                $('#id_card').css("backgroundColor","scrollbar");
+                $('#id_sys_card_no').css("backgroundColor","scrollbar");
+                if(sys_pwd!=''&&isOnline()) {
+                    $('#id_read_card').removeProp('disabled');
+                    $('#id_batch_btn_Sup').removeProp('disabled');
+                }
+                else if(sys_pwd=='')
+                    $("#id_error").html('<ul class="errorlist"><li>请首先进行消费参数设置</li></ul>');
+
+                $("#id_read_card").click(function() {
+                     $('#id_error').html('');
+                    $("#id_batch_btn_Sup").prop('disabled',true);
+                        read_card();
+
+                   });
+                 $("#id_btn_Sup").click(function() {
+                     $('#id_error').html('');
+
+                    card_supplement();
+                    $('#id_read_card').removeProp('disabled');
+
+                });
+
+
+
+                $("#id_batch_btn_Sup").click(function() {
+                    if($("#id_money").val()==''||$("#id_money").val()=='0'){
+                    $("#id_error").html('<ul class="errorlist"><li>充值金额不能为空!</li></ul>');
+                    return;
+                    }
+                    is_batch=1;
+                    $("#id_batch_btn_Sup").prop('disabled',true);
+                    $("#id_error").html('<ul class="errorlist"><li>开始批量充值，请将卡片放在写卡器上!</li></ul>');
+                    $("#id_read_card").prop('disabled',true);
+                    $("#id_stop_btn_Sup").removeProp('disabled');
+                        Init_begin();
+
+
+                   });
+
+            $("#id_stop_btn_Sup").click(function()
+                 {
+                      $("#id_stop_btn_Sup").prop('disabled',true);
+                      $('#id_error').html('');
+                     $('#id_batch_btn_Sup').removeProp('disabled');
+                       is_batch=0;
+                 });
+
+
+
+
+    {%else%}
+	    $('#id_card').removeProp('readonly');
+	    $('#id_card').focus();
+
+       $("#id_btn_Sup").click(function() {
+
+		$('#id_error').html('')
+		if ($('#id_edit_form_consume').valid())
+		{
+			var urlAddr='/ipos/data/IssueCard/?action=Supplement'
+
+			SaveFormData_ID_Supplement($('#id_edit_form_consume'),urlAddr,'addandcontinue','IssueCard_Supplement');
+		}
+        });
+
+	
+    {%endif%}
+
+    $("#id_card").change(function(){
+	var card = $("#id_card").val();
+	get_card_number(card,"");
+    });
+	
+$('#id_edit_form_consume').validate({
+  	                        rules: {
+				    "card":{required:true,digits:true},
+  	                            "money": {required:true,min:0.1,max:9999,"maxlength":7,isMoney:true}}
+  	                        }
+  	            );
+
+
+
+
+	
+	
+});
+function A(){
+   document.getElementById('id_money').value=
+   document.getElementById('SS').options[document.getElementById('SS').selectedIndex].value;
+}
+
+
+</script>
+
+<div id="id_top">
+	
+	<div class='alert' style='height: 20px;margin-left: 5px;margin-top: 5px;'>充值：可以实现手工充值或批量充值操作,IC卡充值的时候，需要连接读卡器！在读卡和充值期间不要移动卡片。</div>
+		
+		
+
+
+	<!-- <div id="id_toolbar">
+			<UL class="toolbar" id="navi">
+				<LI id="id_reload"><SPAN class='icon iconfont icon-shuaxin'></SPAN>{%trans "Reload"%}</LI>
+
+			</ul>
+        </div> -->
+
+	
+</div>
+
+
+
+
+<div class="module" style="position:relative; width: 99%;margin-top: 2px;">
+		
+		<div id='id_emp_info' class="left" style='width: 500px;margin-right: 10px;'>
+			<table id="id_grid_" >	</table>
+			<div id="id_pager_"></div>
+		</div>
+		
+		<div id='id_card_info' class="left ui-layout-west" style='width: 300px;'>
+			<div id='id_card_title' class="ui-widget-header" style="height: 25px;">
+			</div>
+
+			<div id="id_form" style='padding-left: 20px;'>
+				
+				<form method="post" id="id_edit_form_consume" enctype="multipart/form-data">
+				<table>
+                {% if "POS_IC"|filter_config_option %}
+                                <tr><th><label for='id_card' style='font-weight:bold !important; color:#333 !important;'>{% trans '卡号'%}</label></th>
+                                <td><input id='id_card' readonly='readonly' type='text'  value='' maxlength='10' name='card'  style='width:135px !important;'/></td></tr>
+                {%else%}
+                                <tr><th><label for='id_card' class='required'>{% trans '卡号'%}</label></th>
+                                <td><input id='id_card' type='text'  value='' maxlength='10' name='card'  style='width:135px !important;'/></td></tr>
+                {%endif%}
+				{% if "POS_IC"|filter_config_option %}
+
+                                <tr><th><label for='id_sys_card_no' style='font-weight:bold !important; color:#333 !important;'>{% trans '卡账号'%}</label></th>
+                                <td><input id='id_sys_card_no' readonly='readonly' type='text'  value='' maxlength='19' name='sys_card_no'  style='width:135px !important;'/></td></tr>
+				{%endif%}
+                                <tr><th><label for='id_PIN' style='font-weight:bold !important; color:#333 !important;'>{% trans '工号'%}</label></th>
+                                <td><input id='id_PIN' readonly='readonly' type='text'  value='' maxlength='19' name='PIN'  style='width:135px !important;'/></td></tr>
+                                <tr><th><label for='id_EName' style='font-weight:bold !important; color:#333 !important;'>{% trans '姓名'%}</label></th>
+                                <td><input id='id_EName' readonly='readonly' type='text'  value='' maxlength='19' name='EName'  style='width:135px !important;'/></td></tr>
+				{% if "POS_IC"|filter_config_option %}
+                                <tr><th><label for='id_Dept' style='font-weight:bold !important; color:#333 !important;'>{% trans '部门'%}</label></th>
+                                <td><input id='id_Dept' readonly='readonly' type='text'  value='' maxlength='19' name='Dept'  style='width:135px !important;'/></td></tr>
+				{%endif%}
+                
+                                <tr><th><label for='id_blances' style='font-weight:bold !important; color:#333 !important;'>{% trans '账上余额'%}</label></th>
+                                <td><input id='id_blances' readonly='readonly' type='text'  value='0' maxlength='19' name='blance' style='width:135px !important;'/></td></tr>
+				
+				{% if "POS_IC"|filter_config_option %}
+                          
+                                <tr><th><label for='id_card_blances' style='font-weight:bold !important; color:#333 !important;'>{% trans '卡上余额'%}</label></th>
+                                <td><input id='id_card_blances' readonly='readonly' type='text'  value='0' maxlength='19' name='card_blances' style='width:135px !important;'/></td></tr>
+			  
+                                <tr><th><label for='id_op_card_blance' style='font-weight:bold !important; color:#333 !important;'>{% trans '加后金额'%}</label></th>
+                                <td><input id='id_op_card_blance' readonly='readonly' type='text'  value='0' maxlength='19' name='op_card_blance' style='width:135px !important;'/></td></tr>
+			 
+                                <tr><th><label for='id_card_serial_num' style='font-weight:bold !important; color:#333 !important;'>{% trans '卡流水号'%}</label></th>
+                                <td><input id='id_card_serial_num' readonly='readonly' type='text'  value='' maxlength='19' name='card_serial_num' style='width:135px !important;'/></td></tr>
+			         {%endif%} 
+				  
+				        
+                                <tr ><th><label for='id_money' class='required' style='font-size: 25px;font-weight: bold;'>{% trans '充值金额'%}</label></th>
+                                <td><select id="SS"  onChange="A()" style='width:158px;!important;height: 30px;'>
+										<option value="100">100</option>
+										<option value="50">50</option>
+										<option value="10">10</option>
+										<option value="200">200</option>
+									</select>
+									<input id='id_money'  type='text'  value='100' maxlength='19' name='money' style='width:135px;!important;height: 30px;font-size: 25px;position:absolute;left: 644px;top:266px;'/>
+
+								</td></tr>
+
+				<tr><td><input type="hidden" id="id_all_emp" value="filed_card"/></td></tr>
+			       <tr><td><input type="hidden" id="operate_type" name="operate_type"   value="1"/></td></tr>
+			       <tr><td><input type="hidden" id="user_pin" name="user_pin"   value=""/></td></tr>
+			       <tr><td><input type="hidden" id="user_id" name="user_id"   value=""/></td></tr>
+                          
+                                
+
+				</table>
+				</form>
+			</div>
+			<div id='id_error'></div>
+			<div style='padding-left: 30px;'>
+			    {% if "POS_IC"|filter_config_option %}
+                    <div>
+				        <button type="button" disabled='disabled' style='width:100px;'  class='m-btn  zkgreen rnd' id="id_read_card">读卡</button>
+				        <button type="button" disabled='disabled' style='width:100px;'  class='m-btn  zkgreen rnd ' id="id_btn_Sup">充值</button>
+                    </div>
+                    <div style="padding-top: 30px;">
+				        <button type="button" disabled='disabled'  style='width:100px;' class='m-btn  zkgreen rnd' id="id_batch_btn_Sup">批量充值</button>
+				        <button type="button" disabled='disabled'   style='width:100px;' class='m-btn  zkgreen rnd ' id="id_stop_btn_Sup">停止充值</button>
+
+
+                    </div>
+
+
+			    {%else%}
+				<button type="button"  style='padding-left: 30px;padding-right: 30px;'  class='m-btn  zkgreen rnd ' id="id_btn_Sup">充值</button>
+				
+			    {%endif%}
+				
+			
+			</div>
+
+		</div>
+		
+		
+		
+	 
+</div>
+
+
+
+
+
+
+
+

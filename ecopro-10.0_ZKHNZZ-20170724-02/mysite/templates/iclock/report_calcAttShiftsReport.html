@@ -1,0 +1,51 @@
+{% extends "report_att.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+
+
+{% block line %}
+    <div id="search_conditions" style='display:inline;width:315px'>
+        <label >{%trans '过滤异常情况'%}</label>
+        <select id="id_conditions" name="conditions">
+            <option value='0'>--------</option>
+            <option value='1'>正常</option>
+            <option value='2'>迟到</option>
+            <option value='3'>早退</option>
+            <option value='4'>未签到</option>
+            <option value='5'>未签退</option>
+            <option value='6'>旷工</option>
+            <option value='7'>智能排班</option>
+            <option value='8'>正常排班</option>
+        </select>
+    </div>
+{% endblock %}
+{% block getDateUrl %}
+
+function getDateUrl()
+{
+	var condition=$("#id_conditions").val();
+        
+        var ComeTime=$("#"+g_activeTabID+" #id_ComeTime").val();
+	var EndDate=$("#"+g_activeTabID+" #id_EndTime").val();
+	var isError=validate_form_att();
+	$.cookie("ComeTime",ComeTime, { expires: 7 });
+	$.cookie("EndDate",EndDate, { expires: 7 });
+	$("#id_con_error").css("display","none");
+
+	var urlStr=g_urls[g_activeTabID]
+	
+	if(!isError){
+		if(urlStr.indexOf("?")!=-1)
+			urlStr+="&startDate="+ComeTime+"&endDate="+EndDate
+		else
+			urlStr+="?startDate="+ComeTime+"&endDate="+EndDate
+                urlStr+="&condition="+condition
+
+	}else{
+		alert(gettext("请检查时间格式是否正确，且最多查询31天！"));
+		urlStr='';
+	}
+	return urlStr
+
+}
+{% endblock %} 

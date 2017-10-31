@@ -1,0 +1,92 @@
+{% extends "report_meeting.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+
+	
+	
+
+{% block loadData %}
+
+function ShowMeetRoomData(page,tag,isDiy)
+{
+	var setting = {
+            check: {enable: !tag,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},          
+	    async: {
+			    enable: true,
+			    url: "/meeting/getData/?func=rooms",
+			    autoParam: ["id"]
+		    }
+	};
+	$.fn.zTree.init($("#showTree_"+page), setting,null);	
+}
+initInnerWindow()	
+$('#'+g_activeTabID+' #id_opt_tree').hide()
+var h=$("#"+g_activeTabID+" #id_content").height()-40
+$('#showTree_report').css('height',h)
+ShowMeetRoomData('report',true)
+var zTree = $.fn.zTree.getZTreeObj("showTree_report");
+zTree.setting.check.enable = false;
+zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+        
+        var IsGridExist=$("#id_grid_report").jqGrid('getGridParam','records')
+        if(typeof(IsGridExist)=='undefined')
+        {
+                //alert('请首先选择报表类型')
+                return false
+        }
+        
+        
+        var deptID=treeNode.id;
+        var deptName=treeNode.name;
+        $.cookie("dept_ids",deptID, { expires: 7 });
+        var ischecked=0;
+        if($("#id_cascadecheck_report").prop("checked"))
+                ischecked=1;
+
+        urlStr=getDateUrl()
+        if (urlStr=='')return
+        if(urlStr.indexOf("?")!=-1)
+                var urlStr=urlStr+"&deptIDs="+deptID+"&isContainChild="+ischecked
+        else
+                var urlStr=urlStr+"?deptIDs="+deptID+"&isContainChild="+ischecked
+
+        savecookie("search_urlstr",urlStr);
+        RenderReportGrid(urlStr)
+        
+}
+
+{% endblock %}
+<!--重写方法，显示日期栏,隐藏查询框,加按钮-->
+{% block date_range %}
+
+
+        <div id="search_Time" class='left' style="width:400px;display: block">
+           <label  >{%trans "Begin Date"%}</label>
+           <input type="text" name="ComeTime" maxlength="10" id="id_ComeTime" style='width:80px !important;'>
+
+           <label >{%trans "End Date"%}</label>
+           <input type="text" name="EndTime" maxlength="10" id="id_EndTime"  style='width:80px !important;'>
+
+			<span><a id='id_search' class='m-btn  zkgreen rnd mini'>{%trans 'Query'%}</a></span>
+
+        </div>
+
+{% endblock %}
+
+
+{% block search %}
+        <div class="s-info right" id="sear_area" style="display: none">
+            <div class="nui-ipt nui-ipt-hasIconBtn " >
+                <input id="searchbar" class="search-input" type="text"  value="工号" role='defvalue' autocomplete="off" />
+                <span id ="queryButton" class="nui-ipt-iconBtn">
+                    <b id="_icon_2_28" class="nui-ico nui-ico-dArr "></b>
+                </span>
+
+            </div>
+
+            <div class="main-search-btn">
+
+                <span id="searchButton" class="chaxun icon iconfont icon-chaxun"></span>
+            </div>
+        </div>
+{% endblock %}

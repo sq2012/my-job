@@ -1,0 +1,37 @@
+﻿{% load iclock_tags %}
+{% load i18n %}
+
+<div id="id_form" >
+	<div style="float: left;">
+{% block SynCard %}{% endblock %}
+<form method="post" id="id_edit_form" enctype="multipart/form-data">
+<table style="width: 100%;">
+<tr><th></th><td>
+{% block edit_form_title %}
+	<span  style="display:none" id="id_span_title">
+		{% if add %}{% trans "Add" %}  {% else %} {% trans "Edit" %} {% endif %} {{ dataOpt.verbose_name|escape }}</span>
+{% endblock %}
+	<span  style="display:none" id="id_span_parent">{{ parent_name }}</span>
+	<input type='hidden' id='id_span_param' value={{ param_value }}  />
+	
+</td></tr>
+{% block form %}
+{% endblock %}
+
+<tr id="addition_fields">{% block addfields %}{% endblock %}</tr>
+</td>
+</tr>
+</table>
+</form>
+<br/>
+
+<div id="id_error" style='height: 20px;'></div>
+{% block add_contents %}{% endblock %}
+</div>
+
+{% block add_contents_2c %}
+
+{% endblock %}
+
+
+</div>

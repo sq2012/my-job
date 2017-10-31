@@ -1,0 +1,624 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+//options.disableCols=["0"];
+selectDept=[]
+selectName=""
+options[g_activeTabID].dlg_height=570;
+options[g_activeTabID].dlg_width=1000;
+tblName[g_activeTabID]='user';
+app_user='{{app}}'
+//hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+//hasImport={% if user|HasPerm:"iclock.import_User" %}true{% else %}false{% endif %}
+//jqOptions=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{colModel}}
+jqOptions[g_activeTabID].sortname='id';
+jqOptions[g_activeTabID].pager='id_pager_'+tblName[g_activeTabID]
+flag={% if request.user.is_superuser %}true{% else %}false{% endif %}
+
+function getdpts_user(itemid,username){
+    createDataDialog('department', "{%trans '授权单位' %}("+username+")",  1024,'/iclock/simple_data/department/?itemid='+itemid+'&&gettype=2')
+}
+function getdevicebyuser(itemid,username){
+    createDataDialog('devices', "{%trans '授权设备' %}("+username+")",  1024,'/iclock/simple_data/iclock/?itemid='+itemid)
+}
+function strOfData_user(data)
+{
+	return stripHtml(data.username);
+}
+$(function(){
+
+       var info='<div class="west_info"><p>1.用户即为使用该系统的管理员</p><p>2.如果管理所有单位，请勾选授权所有单位</p><p>3.授权时段是配合时段和班次中的配置使用，对于集团性单位有利于各分公司建立各自的排班时段。</p><p>4.设置授权单位时建议使用级联下级选项，好处在于下级单位调整无需重新授权</p><p></p></div>'
+        renderLeftInformation(info);
+        smenu="<ul><li  class='subnav_on' onclick=submenuClick('/iclock/data/user/',this);><a href='#'>用户</a></li></ul>"
+        //$('#menu_div').html(smenu)	
+
+	savecookie("search_urlstr",g_urls[g_activeTabID])
+	$("#"+g_activeTabID+" #id_third").html("");
+    $("#"+g_activeTabID+" #id_newrec").click(function(event){
+    	processNewModel();
+    });
+	$("#"+g_activeTabID+" #queryButton").hide()
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowUser();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13){
+	     searchShowUser();
+	    }
+	});
+	$("#"+g_activeTabID+" #searchbar").val('{%trans "用户名" %}')  
+	//if ({{"opt_basic_approval"|get_params}}=='1'){
+		{% if user|HasPerm:"iclock.browse_userroles" %}
+			var html="<li id='iclock_userRoles' class='Registerlink' onclick="+"menuClick('/iclock/data/userRoles/',this);"+"><SPAN class='icon iconfont icon-shezhiguishu'></SPAN>{%trans 'userRoles'%}</LI>"
+			$("#"+g_activeTabID+" #id_custom").after(html)
+		{% endif %}
+	//}
+	
+	if(app_user=='att'||app_user=='adms')
+       {
+	 //  $('#id_authe_zone').hide();
+	}
+	
+});
+function beforePost_user(obj,actionName){
+	var subflag=true;
+	var pwd =$("#id_Password",obj).val()
+    var reptpwd =$("#id_ResetPassword",obj).val()
+    var authDept= $("#department",obj).val()
+    var is=$("#id_is_superuser",obj).prop("checked")
+    var is_alldept=$("#id_is_alldept",obj).prop("checked")
+ 	if(pwd.length==0){
+		$("#id_error",obj).css("display","block");
+		$("#id_error",obj).html("<ul class='errorlist'><li>{%trans 'Password is empty' %}</li></ul>");					
+		subflag=false;
+	}else if(pwd.length<4){
+        $("#id_error",obj).css("display","block");
+        $("#id_error",obj).html("<ul class='errorlist'><li>{%trans 'Password length less than 4' %}</li></ul>");					
+        subflag=false;
+    }else if(pwd!=reptpwd){
+        $("#id_error",obj).css("display","block");
+        $("#id_error",obj).html("<ul class='errorlist'><li>{%trans 'Twice password not equal' %}</li></ul>");					
+        subflag=false;            
+    }
+    else if(authDept=="" && (!is&&!is_alldept)){
+        $("#id_error",obj).css("display","block");
+        $("#id_error",obj).html("<ul class='errorlist'><li>{%trans 'Please select a department' %}</li></ul>");					
+        subflag=false;
+    }
+    
+    if(is||is_alldept)
+    {
+    //为了满足r授权单位为必输字段的要求
+	//deptids=[1]
+	authData=[{'deptid':1,'iscascadecheck':1}]
+	//$("#id_AuthedDept",obj).html(getOptions_html_User(deptids));	
+    	$("#id_AuthedDept",obj).val(JSON.stringify(authData));
+
+    }
+    
+    
+	return subflag
+}
+
+
+
+//授权时段单位
+function user_deptTree(obj){
+		var depName=$("#id_span_parent",obj).html();
+		depName=$.trim(depName)
+		$('#id_AutheTimeDept',obj).after('<div>'
+		+'<span style="float:left;border-top:1 solid #5B80B2;"><input alt="department_time" type="text" style="width:140px !important;" readOnly="readOnly"  id="department_time"  value="'+depName+'"></span>'
+		+'<span style="float:left;"><img  alt="{%trans 'open department tree'%}" src="/media/img/sug_down_on.gif" id="id_drop_dept_time"/></span>'
+		+'</div>'
+		);
+		$("#id_AutheTimeDept",obj).css("display","none");
+		
+		$("#id_drop_dept_time",obj).click(function(){
+			createQueryDlgbypage('user_timezone')
+			var zTree = $.fn.zTree.getZTreeObj("showTree_user_timezone");
+			zTree.setting.check.enable = false;
+			
+			$('#dlg_for_query_user_timezone').dialog({ position: { my: "left top-150", at: "right top",of:"#id_drop_dept_time"},buttons:[{id:"btnShowOK",text:gettext('确定'),
+									  click:function(){save_hide_Autued_Deptment(obj,'user_timezone');}},
+									 {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+									}] })
+		
+	});
+
+	}
+
+function user_ZoneTree(obj){
+		var zoneName=$("#id_span_parent",obj).html();
+		zoneName=$.trim(zoneName)
+		$('#id_AuthedZone',obj).after('<div>'
+		+'<span style="float:left;border-top:1 solid #5B80B2;"><input alt="zone" type="text" style="width:140px !important;" readOnly="readOnly"  id="zone"  value="'+zoneName+'"></span>'
+		+'<span style="float:left;"><img  alt="{%trans '打卡区域树'%}" src="/media/img/sug_down_on.gif" id="id_drop_zone"/></span>'
+		+'</div>'
+		);
+		$("#id_AuthedZone",obj).css("display","none");
+		
+		$("#id_drop_zone",obj).click(function(){
+			createQueryDlgbypage_zone('user_zone')
+			var zTree = $.fn.zTree.getZTreeObj("showTree_user_zone");
+			zTree.setting.check.enable = true;
+			
+			$('#dlg_for_query_user_zone').dialog({ buttons:[{id:"btnShowOK",text:gettext('确定'),
+									  click:function(){save_hide_Autued_Deptment(obj,'user_zone');}},
+									 {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+									}] })
+		
+	});
+
+	}
+
+
+
+function process_dialog_user(obj,actionName){
+	var leng=arguments.length;
+
+	$("#id_Password",obj).after("{%trans 'The length must be great than 4,Default:111111'%}")
+	$("#id_ResetPassword",obj).after("{%trans 'Must be same as Password'%}")
+	$("#id_groups",obj).parent().find('span').html("{% trans '用户拥有管理组的权限，可以多选。首先要设置管理组，如果为空将没有任何权限' %}")
+	
+	$("#id_AuthedZone",obj).after("{% trans '此功能仅限于门禁模块使用。' %}")
+//	$("#id_last_name",obj).parent().parent().hide();
+
+/*
+	if(!flag)
+	{
+		$("#id_is_superuser",obj).parent().parent().hide();
+		$('#id_is_alldept',obj).parent().parent().hide();
+
+	}	
+	else
+		$("#id_is_superuser",obj).parent().parent().show();
+*/	
+	is=$("#id_is_superuser",obj).prop("checked")
+	is_alldept=$("#id_is_alldept",obj).prop("checked")
+	deptTree(obj);
+	if(!is&&!is_alldept){
+		if(!flag)
+		$('#id_is_public',obj).parent().parent().hide();
+	}
+	else
+	{
+		if(is)
+		$('#id_is_alldept',obj).parent().parent().hide();
+		if(is_alldept)
+		{
+		var dept=$('#id_AuthedDept',obj)
+		if(dept.attr('multiple')!=undefined)
+			dept.parent().parent().parent().hide();
+		else
+			dept.parent().parent().hide();
+	
+		}
+	}
+
+
+	//if (flag)
+		user_deptTree(obj)
+	//else
+	//	$("#id_AutheTimeDept",obj).parent().parent().hide()
+	user_ZoneTree(obj)
+	$('#id_is_resetPw',obj).click(function()
+	{
+		toggleShowPwd(this.checked,obj);
+	})
+	$('#id_is_superuser',obj).click(function()
+	{
+		toggleShowSuper(!this.checked,obj);
+	})
+
+	$('#id_is_alldept',obj).click(function()
+	{
+		var dept=$('#id_AuthedDept',obj)
+		if(!this.checked)
+		{
+			if(dept.attr('multiple')!=undefined)
+				dept.parent().parent().parent().show();
+			else
+				dept.parent().parent().show();
+		
+		}
+		else
+		{
+			if(dept.attr('multiple')!=undefined)
+				dept.parent().parent().parent().hide();
+			else
+				dept.parent().parent().hide();
+	
+		
+		}
+		
+	
+	})
+	if(actionName=="add"){
+		$("#id_groups",obj).get(0).selectedIndex=0
+		$('#id_is_staff',obj).attr("checked","checked");
+		//$('#id_is_resetPw',obj).parent().parent().hide();
+		if(app_user=='att'||app_user=='adms')
+		{
+		 //   $('#zone',obj).parent().parent().parent().parent().hide();
+		}
+	}
+	if(actionName=='edit'){
+		
+		$.each($('#id_is_resetPw',obj),function(){
+			if($(this).prop("checked"))
+				toggleShowPwd(this.checked,obj);
+			else
+				toggleShowPwd(false,obj);
+		});
+		if(!flag)
+		$('#id_username',obj).attr('readonly','True')//非超级管理员用户名不能修改
+		
+		
+		
+		
+		
+	}
+
+    $("#department",obj).attr({name:"_DeptName"})
+
+    f=$(obj).find("#id_edit_form").get(0)
+    $(f).validate({
+    		rules: {
+    				"username": {required:true,"maxlength":30,string:true},
+				"Password":{"minlength":4,required:true},
+				'first_name':{"maxlength":24,string:true}
+				
+    			}
+    		});
+    
+}
+
+
+function toggleShowPwd(show,obj)
+{
+	if(show)
+	{
+		$('#id_ResetPassword',obj).parent().parent().show();
+		$('#id_Password',obj).parent().parent().show();
+		$('#id_ResetPassword',obj).val('');
+		$('#id_Password',obj).val('');
+	}
+	else
+	{
+		$('#id_ResetPassword',obj).parent().parent().hide();
+		$('#id_Password',obj).parent().parent().hide();
+		$('#id_ResetPassword',obj).val('111111');
+		$('#id_Password',obj).val('111111');
+	}
+}
+
+function toggleShowSuper(show,obj)
+{
+	var dept=$('#id_AuthedDept',obj)
+	if(show)
+	{
+		$('#id_AutheTimeDept',obj).parent().parent().show();
+		$('#id_is_staff',obj).parent().parent().show();
+	
+		is_alldept=$("#id_is_alldept",obj).prop("checked")
+	
+		$('#id_is_alldept',obj).parent().parent().show();
+		$('#id_is_public',obj).parent().parent().hide();
+		$('#id_groups',obj).parent().parent().show();
+		if(!is_alldept)
+		{
+		if(dept.attr('multiple')!=undefined)
+			dept.parent().parent().parent().show();
+		else
+			dept.parent().parent().show();
+		}
+		//deptTree(obj);
+	}
+	else
+	{
+	
+	
+		$('#id_AutheTimeDept',obj).parent().parent().hide();
+		$('#id_is_staff',obj).parent().parent().hide();
+	
+	
+		$('#id_is_alldept',obj).parent().parent().hide();
+		$('#id_is_public',obj).parent().parent().show();
+
+	
+		$('#id_groups',obj).parent().parent().hide();
+		if(dept.attr('multiple')!=undefined ||!dept.attr('multiple'))
+			dept.parent().parent().parent().hide();
+		else
+			dept.parent().parent().hide();
+	}
+	
+}
+function getOptions_html_User(deptids){
+	var html=""
+	
+	for(var i=0;i<deptids.length;i++)
+		html+="<option value='"+deptids[i]+"' selected>"+deptids[i]+"</option>"
+	return html;
+}
+function contain_child(obj){
+	$(".parent",obj).click(function(event){
+		par=$(this).attr("alt");
+		ischecked=$(this).prop("checked")
+		$.each($(".file input",obj),function(){
+			var file_par=$(this).attr("alt1")
+			file_par=file_par.split(",")
+			if(IsContain(file_par,par)){
+				if(!ischecked)
+					$(this).removeAttr("checked")
+				else
+					$(this).attr("checked","checked")
+			}
+		});
+		$.each($(".folder input",obj),function(){
+			var folder_par=$(this).attr("alt1");
+			if(folder_par!=undefined){
+				fld_par=folder_par.split(",");
+				if(IsContain(fld_par,par)){
+					if(!ischecked)
+						$(this).removeAttr("checked")
+					else
+						$(this).attr("checked","checked")
+				}
+			}
+		});
+	event.stopPropagation();
+	return true;
+	
+	});
+	
+}
+
+
+
+
+function save_hide_Autued_Deptment (obj,page) {
+	if (page=='user_auth')
+	{
+		deptNames=getSelected_deptNames("showTree_"+page);
+		$("input[alt='department']",obj).val(formatArrayEx(deptNames));
+		
+		var deptIDs=getSelected_dept("showTree_"+page)
+		var authData=[]
+		for (i in deptIDs)
+		{
+			if($("#diyBtn_"+deptIDs[i]).prop("checked"))
+				var Data={deptid:deptIDs[i],iscascadecheck:1}
+			else
+				var Data={deptid:deptIDs[i],iscascadecheck:0}
+			authData.push(Data)
+		}
+				
+		
+		$("#id_AuthedDept",obj).val(JSON.stringify(authData));
+		dlgdestroy(page)
+	}else if(page=='user_zone'){
+		var zones=getSelected_dept("showTree_"+page);
+		    if(zones.length>0)
+		    {
+			    var names=getSelected_deptNames("showTree_"+page);
+			    var ischecked=0;
+			    if($("#id_cascadecheck_"+page).prop("checked"))
+				    ischecked=1;
+			    $("#id_isContainChild",obj).val(ischecked)
+			    $("#zone",obj).val(formatArrayEx(names));
+			    $("#id_AuthedZone",obj).val(JSON.stringify(zones));
+		    }
+		    else
+		    {
+			    $("#zone",obj).val('')
+			    $("#id_AuthedZone",obj).val('');
+		    }
+		    dlgdestroy(page)
+	}
+	else
+	{
+		var deptids=getSelected_dept("showTree_"+page);
+		if(deptids.length>0)
+		{
+			var deptID=deptids[0]
+			var deptNames=getSelected_deptNames("showTree_"+page);
+			var ischecked=0;
+			if($("#id_cascadecheck_"+page).prop("checked"))
+				ischecked=1;
+			$("#id_isContainChild",obj).val(ischecked)
+			$("#department_time",obj).val(formatArrayEx(deptNames));
+			$("#id_AutheTimeDept",obj).val(deptID);
+		}
+		else
+		{
+			$("#department_time",obj).val('')
+			$("#id_AutheTimeDept",obj).val('');
+		}
+		dlgdestroy(page)
+	}
+}
+
+
+function SaveAuthedDept(url,urlStr,title,pagename)
+{
+        var deptIDs=getSelected_dept("showTree_"+pagename)
+	var action=true;
+		if(deptIDs==""){
+		action=confirm("{%trans "没有选择单位,如果继续将清除所选用户的授权单位,继续吗？"%}")
+		
+
+		}
+		if(action){
+			$.blockUI({title:title,theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}<br /></h1>'});
+			querystr=url.ret
+			//authData=[{"deptid":1,"iscascadecheck":1},{"deptid":2,"iscascadecheck":0}]
+			var authData=[]
+			for (i in deptIDs)
+			{
+				if($("#diyBtn_"+deptIDs[i]).prop("checked"))
+					var Data={deptid:deptIDs[i],iscascadecheck:1}
+				else
+					var Data={deptid:deptIDs[i],iscascadecheck:0}
+				authData.push(Data)
+		
+			
+			}
+			
+		        querystr=url.ret+'&authdata='+JSON.stringify(authData)
+			$.ajax({type: "POST",
+				url: urlStr,
+				data:querystr,
+				dataType:"json",
+				success: function(retdata){
+							if(retdata.ret==0){
+								reloadData(tblName[g_activeTabID])
+								$.unblockUI()
+								//$("#id_error").css("display","block");
+								//$("#id_error").html(retdata.message)
+								
+							}else{
+								$.unblockUI()
+								alert(retdata.message);
+							}},
+					error: function(){ $.unblockUI();alert($.validator.format(gettext('Operating failed for {0} !'),options[g_activeTabID].title));}
+					});
+				}
+
+
+}
+
+
+//授权单位
+function deptTree(obj){
+		//getFormDept(obj)
+		var error=$('#id_AuthedDept',obj).parent().find(".errorlist",obj).html();
+		$('#id_AuthedDept',obj).parent().html((error==null?"":"<ul class='errorlist'>"+error+"</ul>")
+		+'<div>'
+		+'<span style="float:left;border-top:1 solid #5B80B2;"><input alt="department" type="text" style="width:200px !important;" readOnly="readOnly"  id="department"/></span>'
+		+'<span style="float:left;"><img  alt="{%trans 'open department tree'%}" src="/media/img/sug_down_on.gif" id="id_drop_dept"/></span>'
+		+'</div>'
+		+"<div style='display:none;'><input id='id_AuthedDept' name='AuthedDept' type='hidden' /></div>"
+		);
+		//$("#id_AuthedDept",obj).html(getOptions_html_User(selectDept));
+		//$("#department",obj).val(formatArrayEx(selectNames));
+
+		$("#id_drop_dept",obj).click(function(){
+		
+			//createQueryDlgbypage('user_auth')
+			createQueryDlgbypage('user_auth',false,true)
+			 $('#dlg_dept_title_user_auth').hide()
+		    $("#dlg_other_body_user_auth").html("{% trans '为了方便使用,在二级(含)以上单位后增加了级联下级的选项,推荐使用,有如下好处：1.不必勾选每一个单位,只需勾选上级单位和级联下级,则自动授权了所有下级单位;2.当下面的单位结构发生变化,不需要重新授权。'%}")
+		    $("#dlg_for_query_user_auth").dialog({width:460,height:460})
+
+		    $("#dlg_other_user_auth").css("height",60).show()
+			 
+			 
+			$('#dlg_for_query_user_auth').dialog({ position: { my: "left top-120", at: "right top",of:"#id_drop_dept"},buttons:[{id:"btnShowOK",text:gettext('确定'),
+									  click:function(){save_hide_Autued_Deptment(obj,'user_auth');}},
+									 {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+									}] })
+		
+		
+		});
+
+}
+//模糊查询
+function searchShowUser(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+	var url="/iclock/data/User/?username__icontains="+escape(v)
+	savecookie("search_urlstr",url);
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function doAction_user(url, action)
+{
+        if(action=='setUserAuthedDept')
+        {
+		    createDlgSetUserAuthedDept(url)
+
+
+       }else if(action=='setUserAuthedZone'){
+		    createDlgSetUserAuthedZone(url)
+       }
+	
+}
+function createDlgSetUserAuthedDept(url)
+{
+		    var title="{% trans '用户管理单位配置' %}";
+		    var urlStr=g_urls[g_activeTabID]+ '?action=setUserAuthedDept';
+
+		    createQueryDlgbypage('user_auth',false,true)
+		    $('#dlg_dept_title_user_auth').hide()
+		    $("#dlg_other_body_user_auth").html("{% trans '为了方便使用,在二级(含)以上单位后增加了级联下级的选项,推荐使用,有如下好处：1.不必勾选每一个单位,只需勾选上级单位和级联下级,则自动授权了所有下级单位;2.当下面的单位结构发生变化,不需要重新授权。'%}")
+		    $("#dlg_for_query_user_auth").dialog({dialogClass: "",width:500,height:480,title:title,
+		    buttons:[{id:"btnShowOK",text:'{%trans "save and return" %}',click:function(){SaveAuthedDept(url,urlStr,title,'user_auth');$(this).dialog("destroy");}},
+		    {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); } }]
+
+		    })
+		    $("#dlg_other_iclock_auth").css("height",60).show()
+}
+function createDlgSetUserAuthedZone(url)
+{
+		    var title="{% trans '用户授权区域配置' %}";
+		    var urlStr=g_urls[g_activeTabID]+ '?action=setUserAuthedZone';
+
+		    createQueryDlgbypage_zone('user_zone',false,false)
+		    $("#dlg_for_query_user_zone").dialog({dialogClass: "",width:500,height:480,title:title,
+		    buttons:[{id:"btnShowOK",text:'{%trans "save and return" %}',click:function(){SaveAuthedZone(url,urlStr,title,'user_zone');$(this).dialog("destroy");}},
+		    {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); } }]
+
+		    })
+		    $("#dlg_dept_title_user_zone").hide()
+		    $("#dlg_other_user_zone").css("height",60).show()
+}
+
+function SaveAuthedZone(url,urlStr,title,pagename)
+{
+        var zones=getSelected_dept("showTree_"+pagename)
+	var action=true;
+		if(zones==""){
+		action=confirm("{%trans "没有选择区域,如果继续将清除所选用户的授权区域,继续吗？"%}")
+		}
+		if(action){
+			$.blockUI({title:title,theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}<br /></h1>'});
+		        querystr=url.ret+'&authdata='+JSON.stringify(zones)
+			$.ajax({type: "POST",
+				url: urlStr,
+				data:querystr,
+				dataType:"json",
+				success: function(retdata){
+							if(retdata.ret==0){	
+								$.unblockUI()
+								alert(retdata.message);
+							}else{
+								$.unblockUI()
+								alert(retdata.message);
+							}
+							reloadData(tblName[g_activeTabID])
+						},
+					error: function(){ $.unblockUI();alert($.validator.format(gettext('Operating failed for {0} !'),options.title));}
+					});
+				}
+
+
+}
+{% endblock %}
+{% block extractButton %}
+{% if request|reqHasPerm:"add" %}
+
+		    <LI id="id_user_authe_dept" onclick='batchOp(function(url){doAction_user(url, "setUserAuthedDept")},undefined,"{%trans '设置授权单位' %}");'><SPAN class="icon iconfont icon-shezhiguishu"></SPAN>{%trans "设置授权单位"%}</LI>
+		    <LI id="id_user_authe_zone"  onclick='batchOp(function(url){doAction_user(url, "setUserAuthedZone")},undefined,"{%trans '设置授权区域' %}");'><SPAN class="icon iconfont icon-shezhiguishu"></SPAN>{%trans "设置授权区域"%}</LI>
+{% endif %}
+
+
+{% endblock %}
+
+

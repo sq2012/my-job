@@ -1,0 +1,78 @@
+{% load i18n %}
+{% load iclock_tags %}
+<script>
+
+var page_tab=""
+
+jqOptions=copyObj(jq_Options);
+jqOptions.rowNum={{limit}}
+jqOptions.pager='#id_pager';
+jqOptions.colModel=[
+			{'name':'id','sortable':false,'hidden':true},
+			{'name':'pin','sortable':false,'index':'pin','width':120,'label':'{%trans 'PIN' %}'},
+			{'name':'name','sortable':false,'index':'name','width':120,'label':'{%trans 'Emp Name' %}'},
+			{'name':'dept','sortable':false,'index':'dept','width':120,'label':'{%trans 'department' %}'},			
+			{'name':'sex','sortable':false,'index':'sex','width':100,'label':'{%trans 'sex' %}'}
+			]
+function canEdit()
+{
+
+}
+
+var user_reverse_html="<div id='toolbar' style='width:100%;'></div>"
++"<table id='changelist' border='0' style=' float: left; width: 100%;'>"
++"<tr><td>"
++"<span style='padding-left:350px;' ></span>"
+
++"</td><td width='60px'><!-- <ul id='nav' class='nav'><li id='id_search'><span class='searchlink'></span><a href='#'>{%trans 'Query'%}</a></li></ul> --></td>"
+
++"<td width='60px'><div id='toolbar' style='float:left;width:70px;margin-top: 0px;'><ul class='nav'>"
++"<li id='id_export' style='border:1px solid #77B7DE;'><span class='exportlink' ></span><a href='#'>{%trans 'Export'%}</a></li></td>"
++"</ul></div>"
+
+
++"<td width='35%'><span id='id_error'></span></td>"
++"</tr>"
++"<tr>"
++"<td colspan=4 style='vertical-align:top;'><div id='id_hrreverseitems'></div></td>"
++"</td></tr>"
+
++"</table>"
+
+$(function(){
+	var info='<p>1.人员异常查询用于查询相关人员的各类异常信息，其中包含无指纹、无面部、未考勤等信息</p>'
+        renderLeftInformation(info);
+	$("#hrreverse_tab").html(user_reverse_html)
+    $("#"+g_activeTabID+" #id_search").click(function(){
+            
+            Showreverse();
+    });
+	page_tab='id_hrreverseitems'
+	getreverselist(600);
+	
+});
+
+//显示详细的项目信息
+function showhreversedetail(event, TreeID, treeNode, clickFlag){
+			uid=treeNode.id
+			urlStr="/iclock/att/ihrreversedetail/?uid="+uid;
+			$.cookie("search_urlstr",urlStr,{ expires: 7 })
+			jqOptions.url=urlStr	;
+			jqOptions.pager='#id_pager_'+page_tab;
+			$("#id_grid_"+page_tab).jqGrid('GridUnload');
+			//$.jgrid.gridUnload("#id_grid_"+page_tab);;
+			$("#id_grid_"+page_tab).jqGrid(jqOptions);
+			
+	}
+
+
+$("#id_export").click(function(){
+if(loadcookie("search_urlstr").indexOf("uid=-10")==-1){
+clickexport(grid_disabledfields);
+}else{
+	alert("{%trans '请选择报表类型'%}")
+}
+});
+</script>
+
+<div id='hrreverse_tab' style='height:100px;'></div>

@@ -1,0 +1,42 @@
+{% extends "report_ipos.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+
+{% block search %}
+
+{% endblock %}	
+{% block date_range %}
+
+{% endblock %}
+
+{% block date_set_range %}
+        $('#'+g_activeTabID+' #id_StartDate').val(moment().startOf('month').format('YYYY-MM-DD'))
+        $('#'+g_activeTabID+' #id_EndDate').val(moment().endOf('month').format('YYYY-MM-DD'))
+	$("#"+g_activeTabID+" #id_StartDate").datepicker(datepickerOptions);
+        $("#"+g_activeTabID+" #id_EndDate").datepicker(datepickerOptions);
+        $("#"+g_activeTabID+" #id_search").click(function(){
+		//var search_user_pin=$("#search_id_user__PIN").val();
+                var isError=validate_form_ipos();
+                var urlstr="";
+                if(isError){
+         
+                        var st=$("#"+g_activeTabID+" #id_StartDate").val();
+                        var et=$("#"+g_activeTabID+" #id_EndDate").val();
+        
+                        urlstr=g_urls[g_activeTabID]+"?time__gte="+st+"&"+"time__lte="+et
+                        }
+                else
+                {
+                    alert('请检查时间格式是否正确，且最多查询100天！')
+                    return;
+                }
+		savecookie("search_urlstr",urlstr);
+		$("#id_grid_report").jqGrid('setGridParam',{url:urlstr,datatype:"json"}).trigger("reloadGrid");
+	});
+
+    function validate_form_ipos(){   //验证表单的合法性(、开始时间、结束时间)
+	var st=$("#"+g_activeTabID+" #id_StartDate").val();
+	var et=$("#"+g_activeTabID+" #id_EndDate").val();
+        return (moment(st,'YYYY-MM-DD').isValid()&&moment(et,'YYYY-MM-DD').isValid()&&(moment(et,'YYYY-MM-DD').diff(moment(st,'YYYY-MM-DD'), 'days')<=100))
+    }
+{% endblock %}

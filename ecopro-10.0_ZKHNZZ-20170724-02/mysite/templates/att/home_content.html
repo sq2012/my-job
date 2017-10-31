@@ -1,0 +1,578 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+<script>
+
+var charts="";
+{% autoescape off %}
+var iclockpolt={{ iclocks }}
+jqOptions_home=copyObj(jq_Options);
+jqOptions_home.pager='#id_pager_home'
+jqOptions_home.sortname='Workcode'
+jqOptions_home.rowNum=50
+jqOptions_home.rowList=[]
+jqOptions_home.colModel={{ colModel }}
+jqOptions_home.height=150
+jqOptions_home.caption='注意栏：'
+jqOptions_home.multiselect=false
+jqOptions_home.url='/iclock/homepage/getAttention/'
+jqOptions_home.datatype='json'
+jqOptions_home.onHeaderClick=function(){
+								var height=$('#home_div').height()
+								if(height>100){
+									$('#home_div').css('height','30px')
+								}else{
+									$('#home_div').css('height','240px')
+								}
+							}
+{% endautoescape %}
+
+//function createAnnouncementDetail(content,title,Pubdate){
+//	var block_html="<div id='simple_message'>"
+//	+"<div id='id_message_simpl'></div>"
+//	+"<div id='id_mesTitle' style='margin-left: auto;margin-right: auto;text-align:center;'><h1 style='margin-left: auto;'>"+title+"</h1></div>"
+//	+"<div id='id_Pubdate' style='font-size:10px; margin-left: auto;margin-right: auto;text-align:center;'>发布时间："+Pubdate+"</div>"
+//	+"<hr>"
+//	+"<br>"
+//	+"<div id='id_mescontent' style='margin-left: 60px;margin-right: 60px;'>"+content+"</div>"
+//	+ "</div>"
+//	var dlg=$(block_html).dialog({	modal:true,
+//						  width: 800,
+//						  height:600,
+//						  title:title,
+//						  close:function(){$(this).dialog("destroy")}
+//						})
+//	return	dlg;
+//}
+//function ShowAnnouncement(key)
+//{
+//	var Href='/iclock/homepage/showAnnouncement/'+key+'/'+"?stamp="+new Date().toUTCString();
+//	$.ajax({
+//		type:"GET",
+//		url:Href,
+//		dataType:"json",
+//		async:false,
+//		success:function(json){
+//			createAnnouncementDetail(json.Content,json.Title,json.Pubdate);
+//		}
+//	});
+//}
+
+function ShowLeaveCharts() {
+	$('#id_leave_charts').height($('#id_leave_charts').height())
+ 	
+	$('#id_leave_charts').highcharts({
+ 	credits:{enabled: false},
+        chart: {
+          //  marginRight: 120,
+                type: 'column',
+		style: {
+			 fontFamily: "SimSun,Arial,sans-serif"
+		     }
+		     
+	       ,options3d: {   enabled: true,   alpha: 10, beta: 0,   depth: 30,  viewDistance: 30		  }		
+		
+		
+        },
+ 
+	
+        legend: {
+
+		itemStyle: {
+			color: '#000000',
+			fontSize:'12px',
+			fontWeight:'lighter'
+			}
+
+
+		},
+        title: {
+		style: {  color: '#404040',  fontWeight: 'bold',fontSize:'16px'	}
+
+            ,text: {% autoescape off %}'{{ret.leaves.title}}'{%endautoescape%}
+        },
+        xAxis: {
+		labels: {
+                    style: { 	fontWeight:'400',fontSize:'12px' }
+                }
+         	,className:'highcharts-container'
+		,categories:{% autoescape off %} {{ret.leaves.categories}}{%endautoescape%}//['事假', '病假', '年假', '产假', '探亲假']
+        },
+	
+           yAxis: {
+		gridLineColor: '#e9e9e9',
+                min: 0,
+                startOnTick:true,
+		allowDecimals:false,
+		tickAmount:6,
+                labels: {
+                    formatter: function() {
+                        return this.value ;
+                    },
+                    style: {  color: '#4572A7'  }
+                },
+                title: {    text: ''  }
+            },
+	
+	
+	
+	
+        plotOptions: {
+            series: {  
+					stacking: 'normal',
+					events:{
+						legendItemClick:function(event){
+							return false
+						}
+					}   
+			}
+        },
+        //labels: {
+        //    items: [{
+        //        html: '水果消耗',
+        //        style: {
+        //            left: '100px',
+        //            top: '18px',
+        //            color: (Highcharts.theme && Highcharts.theme.textColor) || 'black'
+        //        }
+        //    }]
+        //},
+        series: [{
+            name: '{%trans "拒绝" %}',
+            data: {% autoescape off %}{{ret.leaves.jujue}}{%endautoescape%}
+       }, {
+            name: '{%trans "未批" %}',
+            data: {% autoescape off %}{{ret.leaves.weipi}}{%endautoescape%}
+        }, {
+            name: '{%trans "已批" %}',
+            data: {% autoescape off %}{{ret.leaves.yipi}}{%endautoescape%}
+ 
+
+
+         }
+//	 ,{
+//            type: 'pie',
+ //           name: '{%trans "请假占比" %}',
+ //        tooltip: {
+ //           headerFormat: '{series.name}<br>',
+ //           pointFormat: '{point.name}: <b>{point.percentage:.0f}%</b>'	},
+ //          data: {% autoescape off %}{{ret.leaves.pie_data}}{%endautoescape%},
+	   
+	   
+ //           center: [300,0],
+            //size: 60,
+ //           showInLegend: false,
+ //                dataLabels: {
+ //                   enabled: true,
+//			distance:2,		    
+ //                   format: '<b>{point.name}</b>{point.percentage:.0f} %',
+ //                   style: {
+//			fontWeight:'normal',
+   //                     color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
+				
+//				}
+//			}
+ //       }
+	]
+    });	
+	
+   
+}
+
+
+function ShowEmployeeInfo() {
+	$('#employee_change_info').height($('#employee_change_info').height())
+	$('#employee_change_info').highcharts({
+  	credits:{enabled: false},
+        chart: {
+            type: 'pie',
+		style: { fontFamily: "SimSun, Arial,sans-serif"    }
+            ,options3d: {
+                enabled: true,
+                alpha: 45,
+                beta: 0
+            }
+        },
+        title: {
+		style: {  color: '#404040',  fontWeight: 'bold',fontSize:'16px'	}
+            ,text:  {% autoescape off %}'{{ret.employee_info.title}}'{%endautoescape%}
+        },
+        tooltip: {
+            pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
+        },
+        plotOptions: {
+            pie: {
+                allowPointSelect: true,
+                cursor: 'pointer',
+                depth: 35,
+		
+		
+		
+		
+                dataLabels: {
+			
+			//style:{fontWeight:'lighter'},
+			
+			
+                    enabled: true,
+			distance:5,		    
+                   format: '{point.name}'
+                }
+            }
+        }
+ 	
+	
+	
+	
+       , series: [{
+            type: 'pie',
+            name: '占比',
+            data:{% autoescape off %}{{ret.employee_info.data}}{%endautoescape%}
+	    
+        }]
+    });
+
+
+	
+	
+	
+	
+}
+
+
+function ShowDeviceState()
+{
+	$('#device_chart').height($('#device_chart').height())
+        $('#device_chart').highcharts({
+            chart: {
+                //renderTo: 'device_chart',
+                type: 'column'
+		,style: {
+			 fontFamily: "SimSun, Arial,sans-serif"
+		     }
+		     
+	       ,options3d: {   enabled: true,   alpha: 10, beta: 0,   depth: 30,  viewDistance: 30		  }		
+            },
+            title: {
+		style: {  color: '#404040',  fontWeight: 'bold',fontSize:'16px'	}
+               , text: '{%trans "设备在线情况" %}'
+            },
+	    credits:{enabled: false},
+            xAxis: {
+		labels: {
+                    style: {  fontWeight:'100',fontSize:'12px' }
+                }
+               ,categories: ['{%trans "在线"%}','{%trans "通信中"%}','{%trans "脱机"%}','{%trans "停用"%}'],
+                gridLineWidth: 1,//设置纵向标尺宽度 
+ 	    gridLineColor: '#e9e9e9'
+               
+                
+            },
+            yAxis: {
+ 	    gridLineColor: '#e9e9e9',
+		tickAmount:6,
+               min: 0,
+                startOnTick:true,
+		allowDecimals:false,
+                labels: {
+                    formatter: function() {
+                        return this.value ;
+                    },
+                    style: {
+                        color: '#4572A7'
+                    }
+                },
+                title: {
+                    text: ''
+                }
+            },
+            legend: {
+                layout: 'vertical',
+                backgroundColor: '#FFFFFF',
+                align: 'right',
+                verticalAlign: 'top',
+                x: 0,
+                y: 0,
+                floating: true,
+                shadow: true,
+                crosschairs:true,
+                enabled:false //不显示series框
+            },
+            
+            tooltip: {
+		enabled:true,
+                formatter: function() {
+                    return ''+
+                        this.x +':'+ this.y +'{% trans "台" %}';
+                }
+            },
+            plotOptions: {
+                column: {
+                  //  width:20,                
+                    dataLabels: {
+                        enabled: true
+                    }
+                }
+            },
+                series: [{data:iclockpolt}]
+        });
+ 
+ 
+ 	$('#record_chart').height($('#record_chart').height())
+
+ $('#record_chart').highcharts({
+	credits:{enabled: false},
+	chart: {
+                type: 'spline'
+		//renderTo: 'record_chart'
+		,style: {
+			 fontFamily: "SimSun, Arial,sans-serif"
+		     }
+            },
+            title: {
+		style: {  color: '#404040',  fontWeight: 'bold',fontSize:'16px'	}
+               , text: '{%trans "最近30天记录信息" %}'
+             },
+            xAxis: {
+		categories:{% autoescape off %} {{records.categories}}{%endautoescape%}
+            ,gridLineWidth: 1,
+	    gridLineColor: '#e9e9e9'
+	    },
+            yAxis: {
+		gridLineColor: '#e9e9e9',
+		 startOnTick:true,
+		tickAmount:6,
+		 allowDecimals:false,
+                title: {
+                    text: ''
+                },
+                labels: {
+                    formatter: function() {
+                        return this.value ;
+                    },
+                    style: {
+                        color: '#4572A7'
+                    }
+                },
+                title: {
+                    text: ''
+                }
+            },
+            tooltip: {
+		enabled:true,
+                formatter: function() {
+                    return  this.y ;
+                }
+            },
+		plotOptions: {
+                spline: {
+                    lineWidth: 1,
+                    marker: {
+                        enabled: false
+                    }
+                }
+            },	    
+            legend: {
+                layout: 'vertical',
+                backgroundColor: '#FFFFFF',
+                align: 'right',
+                verticalAlign: 'top',
+                x: 0,
+                y: 0,
+                floating: true,
+                shadow: true,
+                crosschairs:true,
+                enabled:false //不显示series框
+            },
+            series: [{
+                data: [{% autoescape off %}{{records.datas}}{% endautoescape %}]
+            } ]
+        });
+ 
+ 
+ 
+     
+}
+
+function AutoResizeHome_() {
+		
+	var h=($('#id_content').height()-30)/2-5;
+	$('#id_leave_charts').height(h)
+	$('#device_chart').height(h)
+	$('#employee_change_info').height(h)
+	$('#record_chart').height(h)
+	
+	var w=$('._home_').width();
+	$('#id_grid_home').jqGrid('setGridWidth',w)
+	ShowLeaveCharts();
+	ShowEmployeeInfo();
+	ShowDeviceState();     
+		
+}
+
+$(function(){
+//	initwindow_tabs('tab_id_menu_home');
+
+	$("#id_Restore").click(function(){
+		menuClick('/iclock/homepage/showHomepage/'+'?mod_name='+mod_name);
+		initwindow_tabs('tab_id_menu_home');
+		
+		})
+	$('#id_grid_home').jqGrid(jqOptions_home)
+{% autoescape off %}
+	html="<div id='show_sys_tree_'>"
+		+"<table>"
+                  +" <tr><td> {% trans '自动添加新设备' %}</td><td>{{ret.sysset.dev_auto}}</td></tr>"
+                  +"  <tr><td>{% trans '仅接收数据库中存在的人员' %}</td><td>{{ret.sysset.new_record}}</td></tr>"
+                  +" <tr><td>{% trans '自动传输人员信息到设备' %}</td><td>{{ret.sysset.Auto_iclock}}</td></tr>"
+                  +"  <tr><td>{% trans '员工自助登录' %}</td><td>{{ret.sysset.self_login}}</td></tr>"
+                   +"  <tr><td>{% trans '照片显示' %}</td><td>{{ret.sysset.photo_show}}</td></tr>"
+                   +" <tr><td>{% trans '每月锁定上月数据的日期' %}</td><td>{{ret.sysset.lock_date}}</td></tr>"
+                  +"  <tr><td>{% trans '采集器采集指纹' %}</td><td>{{ret.sysset.enroll}}</td></tr>"
+		+"	<tr><td>{{ret.sysset.options}}</td><td></td></tr>"
+
+		+"</table>"
+
+		+"</div>"
+		
+		+"<div id='home_info_user' class='west_info' style='padding-top:20px;'>"
+		
+		+     "<p ><i class='ui-icon ui-icon-caret-1-e'></i>{% trans 'Username' %}:{{user.username}}{% if user.is_public %}{% if user.first_name %}<p>{% trans '姓名:' %}{{user.first_name}}</p>{% endif %}{% if user.Tele %}<p>{% trans '电话:' %}{{user.Tele}}</p>{% endif %}{% endif %}</p>"
+		+"    <p><i class='ui-icon ui-icon-caret-1-e'></i>{% trans '角色' %}:{% if user.is_superuser %}{% trans 'Supervisor' %}{% else %}{% trans 'General manager' %}{% endif %}</p>"
+		+"    <p><i class='ui-icon ui-icon-caret-1-e'></i>{% trans 'The last login time' %}:{{user.last_login}}</p>"
+		+"    <p><i class='ui-icon ui-icon-caret-1-e'></i>{% trans 'Authorized department' %}:{{ ret.sysset.Auth_dept}}</p>"
+		+"    <p><i class='ui-icon ui-icon-caret-1-e'></i>{% trans 'Authorized device' %}:{{ret.sysset.Auth_device}}</p>"
+		+"    <p><i class='ui-icon ui-icon-caret-1-e'></i>{% trans '授权时段' %}:{{ret.sysset.Auth_timezone}}</p>"
+		+"    <p><i class='ui-icon ui-icon-caret-1-e'></i>{% trans '登陆次数' %}:{{user.logincount}}</p>"
+		+"<p></p>"
+		+"<a class='icon iconfont icon-xiugai' onclick=menuClick('/iclock/accounts/password_change/'); style='float:left;color:#7ac143;'>{% trans 'Change password' %}</a>" 
+		+"</div>"
+		
+		
+	$("#west_content").html(html)
+	//var h=$("#"+g_activeTabID+" #west_content").height()-20
+	//$('#showTree_'+g_activeTabID).css('height',h)
+
+
+
+	
+	
+	
+//	var width=$("#"+g_activeTabID+" #id_content").width();
+//	if (width>1700) {
+//		$("._home_").css('width',1500)
+//	}
+//	else if (width>1500) {
+//		$("._home_").css('width',1200)
+//	}
+
+
+//	var twidth=width-50;
+//	var height=$("#"+g_activeTabID+" #id_content").height()-$('#titlemsg').height()-15;
+	//$(".widget-place").css("height",height).css("width",width/2-10);
+	//$(".widget-header").css("width",width/2-50);
+	//$(".contentLeft").css("float","left");
+	//alert($("strong").width());
+	//$.fn.EasyWidgets({
+	//i18n : {
+	//  closeText :'',// '<img src="../media/img/close.gif" alt="Close" width="23" style="margin-top:-1px"/>',
+	//  closeTitle :''// gettext('Close')
+	//},
+	//options : {
+	//    closeConfirm:'',
+	//    editable:'',
+	//    collapsable:''
+	//},
+	//    
+	//behaviour : {
+	//      useCookies : true
+	//    }
+	//});
+	//$(".imgc").css("margin-left",$(".widget-header").width()-$("strong").width());
+	//$(".imgc").css("margin-right","0px");
+	// speed(10)
+	//  getRecords()
+	// showcss();
+		AutoResizeHome_()	
+	//  charts=chart;
+	//charts.setSize(400)
+    
+ 		if (home_url[mod_name]) {
+			var htobj=$("<li id="+home_url[mod_name].id+">"+home_url[mod_name].caption+"</li>")
+			menuClick(home_url[mod_name].url,htobj)
+			
+		}
+{% endautoescape %}
+
+});
+
+
+
+
+function setChart(datas) {
+   // charts.series[0].setData(datas,true);
+}
+
+
+//function timeStr()
+//{
+//	var today=new Date()
+//	var h=today.getHours()
+//	var m=today.getMinutes()
+//	var s=today.getSeconds()
+//	return checkTime(h)+":"+checkTime(m)+":"+checkTime(s)
+//}
+
+//function ShowCustomInfo(){
+//    showCustom();
+//}
+
+//function showCustom() {
+//	var left = $("#id_Restore").offset().left;
+//	$("#show_Custom_selected").css({position: 'absolute',display:"block",left: left-$("#titlemsg").offset().left});
+//}
+
+//function hideCustom_define(){
+//    var left = $("#id_Restore").offset().left;
+//	$("#show_Custom_selected").css("display","none").css("left",left);
+//}
+
+
+ 
+
+</script>
+<div id="conId_home" >
+    <div id="titlemsg" align="right" style="margin: 0 auto;min-width:1000px;width: 95%;height: 20px;color: #6699CC;">
+	<span id="id_Restore">[<a  href="#" style='text-decoration:underline;'><font color=red>{% trans '刷新' %}</font></a>]|[<a onclick="load_AboutDlg('{% trans "关于系统" %}');" href="#" style='text-decoration:underline;'>{% trans '关于本系统' %}</a>]</span><span>&nbsp;&nbsp;&nbsp;&nbsp;<a>{{date}}</a>&nbsp;&nbsp;</span>
+    </div>
+	<div id="home_div" style="margin: 0 auto;min-width:1000px;width: 95%;height: 240px;">
+		<table id="id_grid_home" >	</table>
+		<div id="id_pager_home"></div>
+	</div>
+    <div class="_home_" style='margin: 0 auto;min-width:1000px;width: 95%;height: 95%;'>
+	<div class="widget-place" id="widget-place-1" style="width: 48%;height: 100%;">
+	    <div id="identifierwidget-1">
+		    <div id="id_leave_charts" class="widget-content" style="min-height: 180px;height: 185px;"></div>
+	    </div>
+		<div style="height: 10px;"></div>
+	    <div id="identifierwidget-2">
+		    <div id="device_chart" class="widget-content" style="min-height: 180px;height: 185px;"> </div>
+	    </div>
+    
+	</div>
+	<div class="widget-place" id="widget-place-2" style="width: 48%;height: 100%;">
+	    <div id="identifierwidget-4">
+    
+		    <div id="employee_change_info"  class="widget-content" style="min-height: 180px;height: 185px;">	</div>
+	    </div>
+		<div style="height: 10px;"></div>
+   
+	    <div id="identifierwidget-5">
+		    <div id="record_chart"  class="widget-content" style="min-height: 180px;height: 185px;"> </div>
+	    </div>
+    
+	</div>
+	</div>
+
+    
+</div>

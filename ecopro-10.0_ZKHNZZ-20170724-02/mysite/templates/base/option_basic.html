@@ -1,0 +1,180 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+<div id='id_option1' style='padding: 20px;'>
+        <form id='id_edit_form1_basic' method='post'>
+            <div class='ui-widget-header' style='width:700px;height: 28px;margin-left: 100px;margin-top: 10px;'><h3 style="padding-top: 8px;padding-left:10px"><a>{%trans '基本设置'%}</a></h3></div>
+            <table style="margin-left: 100px;margin-top: 20px;">
+			<tr>
+			    <td ><label for='id_sitetitle' >{%trans 'SiteTitle'%}</label>
+			    <input type='text' maxlength='100' name='sitetitle' id='id_sitetitle' style='width:250px !important;' value=''/></td>
+			    <td ></td>
+
+			</tr>
+			<tr>
+			    <td><label for='id_lock_date' >{%trans '每月锁定上月数据日期'%}</label>
+			    <input type='text' maxlength='30' name='lock_date' id='id_lock_date' style='width:100px !important;' value='0'/>0{%trans '表示不锁定'%}</td>
+
+			</tr>
+
+			<tr>
+				<td style='padding-right: 200px ;padding-bottom: 5px'><label for='id_fingerenroll' ></label><input  type='checkbox' maxlength='30'  id='id_finger' name='enroll'/>{%trans 'Fingerprint Enroll'%}</td>
+				<td><label for='id_algversion' ></label><input  type='checkbox' maxlength='30'  id='id_algversion' name='algversion' checked='checked' disabled='disabled'/>{%trans 'Fingerprint Alg Version 10.0'%}</td>
+			</tr>
+			
+			<tr>
+				<td style='padding-right: 200px ;padding-bottom: 5px'><label for='id_udisk_check' ></label><input  type='checkbox' maxlength='30'  id='id_udisk' name='udisk'/>{%trans 'U Disk Management'%}</td>
+				<td><label for='id_sms' ></label><input  type='checkbox' maxlength='30'  id='id_sms' name='sms' />{%trans 'SMS Management'%}</td>
+			</tr>
+			<tr>
+				<td style='padding-right: 200px ;padding-bottom: 5px'><label for='id_auto_add_device' ></label><input  type='checkbox' maxlength='30'  id='id_auto_add_device' name='dev_auto' />{%trans 'Add new device automatically'%}</td>
+				<td><label for='id_photo_emp_check' ></label><input  type='checkbox' maxlength='30'  id='id_photo_emp' name='emp_pic' />{%trans 'Show picture of employee'%}</td>
+			</tr>
+
+			<tr>
+				<td style='padding-right: 200px ;padding-bottom: 5px'><label for='id_new_record' ></label><input  type='checkbox' maxlength='30'  id='id_new_record' name='new_record'/>{%trans 'Save for employee existed in database'%}</td>
+				<td><label for='id_Auto_audit' ></label><input  type='checkbox' maxlength='30'  id='id_Auto_audit' name='Auto_audit'/>{%trans '支持请假自动审核'%}
+				</td>
+			</tr>
+			<tr>
+				<td style='padding-right: 200px ;padding-bottom: 5px'><label for='id_onlyshow_salemod' ></label><input  type='checkbox' maxlength='30'  id='id_onlyshow_salemod' name='onlyshow_salemod'/>{%trans '仅显示开启模块菜单'%}</td>
+				<td><label for='id_sendempphoto' ></label><input  type='checkbox' maxlength='30'  id='id_sendempphoto' name='sendempphoto'/>{%trans '支持下发人员照片到设备'%}</td>
+			</tr>
+
+			<tr>
+				<td style='padding-right: 200px ;padding-bottom: 5px'><label for='id_self_login' ></label><input  type='checkbox' maxlength='30'  id='id_self_login' name='self_login'/>{%trans 'Self Login for employee'%}</td>
+				<td><label for='id_checkinouttype' ></label><input  type='checkbox' maxlength='30'  id='id_checkinouttype' name='checkinouttype'/>{%trans '考勤记录表显示记录状态'%}</td>
+				<!--<td><label for='id_showlogin' ></label><input  type='checkbox' maxlength='30'  id='id_show_login' name='show_login'/>{%trans '登录页面显示二维码登陆信息'%}</td>-->
+			</tr>			
+			
+			<tr><td><label for='id_Auto_del_iclock' ></label><input  type='checkbox' maxlength='30'  id='id_Auto_del_iclock' name='Auto_del_iclock'/>{%trans '人员离职自动删除设备上的离职人员（需开启自动下发人员功能）'%}</td></tr>
+			
+			
+			
+			<tr>
+				<td><label for='id_Auto_iclock' ></label><input  type='checkbox' maxlength='30'  id='id_Auto_iclock' name='Auto_iclock'/>{%trans '自动下发人员信息到相应设备(对设备设置归属部门后再开启此功能)'%}</td>
+				<!--<td><label for='id_noverifypwd' ></label><input  type='checkbox' maxlength='30'  id='id_noverifypwd' name='noverifypwd'/>{%trans '禁止显示设备密码(超级管理员除外)'%}</td>-->
+				<td><label for='id_check_mins' >{%trans '自动下发检查间隔时间(分)'%}</label>
+			    <input type='text' maxlength='30' name='check_mins' id='id_check_mins' style='width:100px !important;' value='9'/></td>
+			</tr>
+			<!-- <tr> -->
+			    <!-- <td><label for='id_check_mins' >{%trans '自动下发检查间隔时间(分)'%}</label> -->
+			    <!-- <input type='text' maxlength='30' name='check_mins' id='id_check_mins' style='width:100px !important;' value='9'/></td> -->
+				<!--<td><label for='id_noeditcard' ></label><input  type='checkbox' maxlength='30'  id='id_noeditcard' name='noeditcard'/>{%trans '禁止编辑卡号(超级管理员除外)'%}</td>-->
+				
+			<!-- </tr> -->
+<!--			<tr>
+				<td><label for='id_Auto_logs' ></label><input  type='checkbox' maxlength='30'  id='id_Auto_logs' name='Auto_logs'/>{%trans '自动收集系统以前无工号人员的记录'%}</td>
+				<td>
+					
+				</td>
+
+			</tr>
+			<tr>
+				<td><label for='id_Auto_logs' ></label>{%trans '考勤机有工号系统中没有工号导致没存到数据库,待系统录入了这些人的工号后重新收集,每晚进行'%}</td>
+				<td>
+					
+				</td>
+
+			</tr>
+-->			
+        </table></form>
+	<div  ><ul class='errorlist'><li id="option_basic_id_error" style="display:none;"></li></ul></div>
+	{% if user|HasPerm:"iclock.sys_basic_setting" %}
+		<div style="margin-left: 100px;margin-top: 20px;"><input id='id_basic_save' type='button' class='m-btn  zkgreen rnd' value='{%trans "Save" %}'/></div>
+	{% endif %}
+	</div>
+	
+
+<script>
+{% autoescape off %}
+	var basic={{ basic }}
+{% endautoescape %}
+function getUrl()
+{
+    var homeurl=basic.homeurl
+    var options_html="";
+	for(i=0;i<HOME_URL.length;i++)
+        if(HOME_URL[i].url==basic.homeurl)
+            options_html+="<option value='"+i+"' selected>"+HOME_URL[i].title+"</option>";
+	
+	else
+            options_html+="<option value='"+i+"'>"+HOME_URL[i].title+"</option>";
+
+    return options_html;
+}
+var SaveOptions=function(obj,keys){
+	$("#option_basic_id_error").html('')
+	var formStr=formToRequestString(obj.get(0));
+	var url='/base/isys/options/'
+	$.post(url+'?action='+keys, 
+		formStr,
+		function (ret, textStatus) {		
+			$("#"+g_activeTabID+" #option").remove()
+				if (keys=='status')	
+				reloadData();
+				$("#option_basic_id_error").css("display","block");
+				$("#option_basic_id_error").html(ret.message);
+					
+		},
+		"json");
+	
+
+}
+	
+$(function(){
+	$("#"+g_activeTabID+" #id_page_limit").val(basic.page_limit)
+	$("#"+g_activeTabID+" #id_sitetitle").val(basic.sitetitle)
+	$("#"+g_activeTabID+" #id_backup_dir").val(basic.backup_dir)
+	$("#"+g_activeTabID+" #id_lock_date").val(basic.lock_date)
+	$("#"+g_activeTabID+" #id_check_mins").val(basic.check_mins)
+        if(basic.enroll=='1'){ $("#"+g_activeTabID+" #id_finger").attr("checked","checked");}  
+        if(basic.algversion=='1'){ $("#"+g_activeTabID+" #id_algversion").attr("checked","checked");} 
+	if(basic.enroll=='-1'){$("#"+g_activeTabID+" #id_finger").parent().parent().remove();$("#id_algversion").parent().parent().remove();} 
+        if(basic.udisk=='1'){ $("#"+g_activeTabID+" #id_udisk").attr("checked","checked");} 
+	if(basic.udisk=='-1') $("#"+g_activeTabID+" #id_udisk").parent().parent().remove();
+        if(basic.sms=='1'){ $("#"+g_activeTabID+" #id_sms").attr("checked","checked");}  
+	if(basic.sms=='-1') $("#"+g_activeTabID+" #id_sms").parent().parent().remove();
+        if(basic.dev_auto=='1'){ $("#"+g_activeTabID+" #id_auto_add_device").attr("checked","checked");}  
+        if(basic.emp_pic=='1'){ $("#"+g_activeTabID+" #id_photo_emp").attr("checked","checked");}  
+        if(basic.rec_pic=='1'){ $("#"+g_activeTabID+" #id_photo_rec").attr("checked","checked");}
+	if(basic.vis_pic=='1'){ $("#"+g_activeTabID+" #id_photo_vis").attr("checked","checked");}
+        if(basic.self_login=='1'){ $("#"+g_activeTabID+" #id_self_login").attr("checked","checked");}
+		if(basic.checkinouttype=='1'){ $("#"+g_activeTabID+" #id_checkinouttype").attr("checked","checked");} 
+        if(basic.new_record=='1'){ $("#"+g_activeTabID+" #id_new_record").attr("checked","checked");}  
+        if(basic.expanddept=='1'){ $("#"+g_activeTabID+" #id_expand").attr("checked","checked");}  
+		if(basic.Auto_audit=='1'){ $("#"+g_activeTabID+" #id_Auto_audit").attr("checked","checked");}
+		if(basic.Auto_iclock=='1'){ $("#"+g_activeTabID+" #id_Auto_iclock").attr("checked","checked");}
+		if(basic.Auto_del_iclock=='1'){ $("#"+g_activeTabID+" #id_Auto_del_iclock").attr("checked","checked");}
+		if(basic.Auto_logs=='1'){ $("#"+g_activeTabID+" #id_Auto_logs").attr("checked","checked");}
+		if(basic.Auto_del_iclock=='1'){ $("#"+g_activeTabID+" #id_Auto_del_iclock").attr("checked","checked");}
+        if(basic.show_login=='1'){ $("#"+g_activeTabID+" #id_show_login").attr("checked","checked");}
+	if(basic.sendempphoto=='1'){ $("#"+g_activeTabID+" #id_sendempphoto").attr("checked","checked");} 
+	if(basic.noverifypwd=='1'){ $("#"+g_activeTabID+" #id_noverifypwd").attr("checked","checked");} 
+	if(basic.noeditcard=='1'){ $("#"+g_activeTabID+" #id_noeditcard").attr("checked","checked");} 
+	if(basic.onlyshow_salemod=='1'){ $("#"+g_activeTabID+" #id_onlyshow_salemod").attr("checked","checked");}
+
+	//$('#id_homeurl').html(getUrl())
+	
+	$("button").button({
+            icons: {primary: "ui-icon-check"}
+       });
+	$("#"+g_activeTabID+" #id_basic_save").click(function(){
+		$("#option_basic_id_error").hide()
+		if ($("#"+g_activeTabID+" #id_page_limit").val()=='')
+		{
+			$("#option_basic_id_error").css("display","block");
+			$("#option_basic_id_error").html("{%trans '每页默认显示的记录条数不能为空'%}" );
+
+		}
+		else
+			SaveOptions($("#"+g_activeTabID+" #id_edit_form1_basic"),'basic')
+	});
+
+	
+});	
+	
+	
+	
+</script>
+

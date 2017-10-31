@@ -1,0 +1,657 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+<style>
+.door_in_img   
+{
+    position:absolute;
+    border:1px solid gray;
+    background:#ECE9D8;
+    width:40px;
+    height:40px;
+    color:red;
+    cursor:move;
+}
+.Link_blue1 a:link, .Link_blue1 a:visited {
+    color: #32598a;
+    cursor: pointer;
+    text-decoration: underline !important;
+}
+.Link_blue1 a:hover {
+    color: #ff6600;
+    cursor: pointer;
+    text-decoration: none !important;
+}
+.Link_blue1 {
+    line-height: 18px;
+    display: block;
+    float: left;
+    margin-right: 8px;
+}
+
+.div_tip {
+    background-color: #eefaff;
+    border-color: #c8edff;
+    border-style: solid;
+    border-width: 1px 2px 2px 1px;
+    padding: 6px;
+}
+.div_tip div {
+    background-color: #ffffff;
+    border-color: #c8edff #d9f2ff #d9f2ff #c8edff;
+    border-style: solid;
+    border-width: 1px;
+    color: #006799;
+    padding: 3px;
+}
+.div_tip div table td {
+    background-color: #ecf9ff;
+    border-color: #ffffff;
+    border-style: solid;
+    border-width: 0 1px 1px 0;
+    padding: 2px;
+}
+.div_tip div table th {
+    background-color: #e1f5ff;
+    border-color: #ffffff;
+    border-style: solid;
+    border-width: 0 1px 1px 0;
+    color: #000000;
+    padding: 2px;
+    text-align: left;
+}
+</style>
+
+
+<script>
+var img_path='/media/img/acc/door_'
+var savetag=false;
+var lastId=0
+var laststamp=0
+
+{% autoescape off %}
+	var map_index=[]
+	var map_ids=[]
+	var cpy=true
+	var map={{map}}
+	var door={{door}}
+	var usedoor={{usedoor}}
+{% endautoescape %}	
+	var liid=0
+function drowmap(){
+    if(map.length==0){
+	return false
+    }
+    var html='<div id="drowmap">'
+    var htmlul='<ul>'
+    var htmldiv=''    
+    for(var i=0;i<map.length;i++){
+		if (cpy) {
+			map_ids.push(map[i]['id'])
+		}
+	if (map[i]['id']!='undefined'&&map_index.indexOf(map[i]['id'])==-1){
+		map_index.push(map[i]['id'])
+	} else{
+		continue
+	}
+	
+	htmlul+='<li style="display:block"><a id="id_map_'+map[i]['id']+'" href="#id_showmap_'+map[i]['id']+'" onclick="saveli('+map[i]['id']+')"><span>'+map[i]['mapname']+'</span></a></li>'
+	htmldiv+='<div id="id_showmap_'+map[i]['id']+'" style="padding:0px">'
+	+"<div id='id_map_door_"+map[i]['id']+"' class='imgclass' >"
+	+'<img id="map_'+map[i]['id']+'" style="width:'+map[i]['mapwidth']+'px;height:'+map[i]['mapheight']+'px" src="'+map[i]['mapurl']+'"></img>'
+	+'<input type="hidden" id="id_map_hidden_'+map[i]['id']+'" value="'+map[i]['mulriple']+'">'
+	+'</div></div>'
+    }
+	cpy=false
+    html=html+htmlul+'</ul>'+htmldiv+'</div>'
+    $( "#RTlog_id" ).html(html)
+    var w1=$( "#drowmap" ).width()
+    $('.imgclass').css({position:'absolute',width:w1,height:'450px',color:'black',overflow:'auto'})
+    $( "#drowmap" ).tabs();
+    drowdoor(door)
+    drowusedoor(usedoor,map[0]['id'])
+    liid=map[0]['id']
+
+}
+function saveli(id){
+    //saveimganddoor(liid)
+    var $zoom_imgs = $("#id_map_door_"+liid).find(".door_in_img");//取到当前地图上的门
+    $zoom_imgs.each(function(){
+	$(this).remove();
+    });
+    liid=id;
+    showimganddoor(liid)
+}
+
+function doortoimg(doorid,doorname,doorimg,sn,doorno){
+    doorimg=img_path+doorimg+".png"
+    savetag=true;
+    $("#doorimg_"+doorid).remove()
+    $("#id_map_door_"+liid).append("<div id='doorimg_"+doorid+"' name='door' onclick=setmouse('doorimg_"+doorid+"') onmouseover=index_tip_info_RTlog(this) onmouseout=tip_info_exit(this) class='door_in_img' style='top:5px;left:5px;  color:red;cursor:move;background:url("+doorimg+")  no-repeat scroll center center rgba(0, 0, 0, 0)' title='"+doorname+"' >"
+				   +'<div id="id_tip_doorimg_'+doorid+'" class="div_tip" style="display:none">'
+				    +'<div><table>'
+					+'<tr><th>所属设备:</th><td>'+sn+'</td></tr>'
+					+'<tr><th>门编号:</th><td>'+doorno+'</td></tr>'
+					+'<tr><th>门名称:</th><td>'+doorname+'</td></tr>'
+					+'<tr><td colspan="2">'
+					+'<table class="Link_blue1">'
+					+'<tr><td><a id="opendoor_img" class="" href="javascript:void(0)" onclick="show_opendoor_RTlog('+doorid+')">远程开门</a></td>'
+					    +'<td><a id="closedoor_img" class="" href="javascript:void(0)" onclick="show_closedoor_RTlog('+doorid+')">远程关门</a></td>'
+					    +'<td><a id="cancelalarm" class="" href="javascript:void(0)" onclick="control_door_RTlog('+doorid+')">取消报警</a></td></tr>'
+					+'</table>'
+					+'</tr></td>'
+				    +'</table>'
+				  +'</div></div>'
+				  +"</div>")
+}
+function drowdoor(d1){
+    d1=eval(d1)
+    var html=''
+    $("#west_content_tab_acc_getRTlog").html(html)
+    for(var i=0;i<d1.length;i++){
+	html+="<div id='doorimg_"+d1[i]['doorid']+"' name='door' style='position:absolute;border:0px solid gray; background:#ECE9D8;width:100px;height:60px;"+gettopandleft(i)+"  color:#000;cursor:move;background:url("+img_path+d1[i].doorimg+".png)  no-repeat scroll bottom center rgba(0, 0, 0, 0)' title='"+d1[i]['doorname']+"'>"+d1[i]['doorname']+"<img src='/media/img/blogmarks.png' style='position:absolute;right:2px;bottom:2px;' onclick=doortoimg('"+d1[i]['doorid']+"','"+d1[i]['doorname']+"','"+d1[i]['doorimg']+"','"+d1[i]['sn']+"','"+d1[i]['doorno']+"')></div>"
+    }
+    $("#west_content_tab_acc_getRTlog").html(html)
+}
+
+function drowusedoor(d1,id){
+    d1=eval(d1)
+    var html=''
+    for(var i=0;i<d1.length;i++){
+	html+="<div id='doorimg_"+d1[i]['doorid']+"' name='door' onclick=setmouse('doorimg_"+d1[i]['doorid']+"') onmouseover=index_tip_info_RTlog(this) onmouseout=tip_info_exit(this) class='door_in_img' style='top:"+d1[i]['doortop']+"px;left:"+d1[i]['doorleft']+"px;background:url("+img_path+d1[i].doorimg+".png)  no-repeat scroll center center rgba(0, 0, 0, 0)' title='"+d1[i]['doorname']+"' >"+MoreInfo(d1[i])+"</div>"
+    }
+    var $zoom_imgs = $("#id_map_door_"+liid).find(".door_in_img");//取到当前地图上的门
+        $zoom_imgs.each(function(){
+            $(this).remove();
+        });
+    $("#id_map_door_"+id).append(html)
+}
+
+function gettopandleft(i){
+    var top=0;
+    var left=70;
+    top=i*70+40
+    return 'top:'+top+'px;left:'+left+'px;'
+}
+function setmouse(val){
+	var d = document.getElementById(val);
+	var drag=false;
+	var _x=0;
+	var _y=0;
+	d.style.position = "absolute";
+	
+	d.onmousedown = function(e){
+	drag = true;
+	savetag=true;
+	d.style.position = "absolute";
+	var e = e||window.event;
+	_x = ( e.x || e.clientX) - this.offsetLeft;
+	_y = ( e.y || e.clientY ) - this.offsetTop;
+	}
+
+	document.onmousemove = function(e){
+	var e = e||window.event;
+	if(!drag) return;
+	d.style.left =( e.x || e.clientX)-_x+ "px";
+	d.style.top =( e.y || e.clientY )-_y+ "px";
+	}
+
+	document.onmouseup = function(e){
+	drag=false;
+	}
+
+}
+$(function(){
+		
+		drowmap()
+		logtimer2=setTimeout("flashimg()", 10000);
+		$("#id_add_map").click(function(){
+		    var block_html="<div id='dlg_to_dev'><form id='frmPhotoDb' method='POST' action='/acc/applyaccmap/' enctype='multipart/form-data'>"
+		    +'<table>'
+			+    '<tbody><tr>'
+			+	'<th><label class="required" for="id_map_name">{%trans '地图名称'%}:</label></th><td><input type="text" maxlength="30" name="map_name" class="wZBaseCharField required" id="id_map_name"></td>'
+			+    '</tr>'
+			+    '<tr id="tr_upload_map">'
+			+	'<th id="th_map_path"><label for="id_map_path" class="required">{%trans '地图路径'%}:</label></th>'
+			+	'<td class="td_upload_map">'
+			+	    '<input type="file" size="22" name="fileToUpload" id="id_fileToUpload">'
+			+	'</td>'
+			+    '</tr>'
+			+    '<tr>'
+			+"<th><label class='required'  for='id_zone'>{%trans '所属区域'%}:</label></th>"
+			+"<td>"
+			+"<div id='dlg_for_query_zone' style='overflow:hidden;'>"
+			+"<div id='dlg_dept_zone' class='dlgdiv'>"
+			+"<div id='dlg_dept_body_zone' style='overflow:auto;'>"
+			+"<ul id='showTree_zone' class='ztree' style='height:123px;overflow:auto;'></ul>"
+			+"</div></div></div>"
+			+"<div style='display:none;'><input id='id_zone' name='zone' type='hidden' value=''/></div>"
+			+"</td>"
+			+    '</tr>'	    
+		    +'</tbody></table></form>'
+		    +  "<div  id='id_error'></div>"
+		    +       "</div>"
+
+		    $(block_html).dialog({modal:true,
+			resizable:false,　
+			width: 400,
+			height:320,
+			title:"{% trans '添加地图' %}",
+			buttons:[{id:"btnShowOK",text:'{%trans "Submit" %}',
+					click:subdata},
+				       {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }
+				      }],
+			close:function(){$(this).dialog("destroy"); }		
+		      })
+		    var setting = {
+			    check: {enable: true,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},          
+			    async: {
+					    enable: true,
+					    url: "/acc/getData/?func=zonetree",
+					    autoParam: ["id"]
+				    }
+			};
+			$.fn.zTree.init($("#showTree_zone"), setting,null);
+		})
+		$("#id_del_map").click(function(){
+			if (liid == 0 || liid == 'undefined') {
+				alert('没有删除对象！')
+			}
+			else
+				if(confirm("{%trans '确定删除此地图么？'%}")){
+					$.ajax({type: "POST",
+						url: "/iclock/acc/deletemap/",
+						dataType:"json",
+						data:"mapid="+liid,
+						success: function(json){
+							if(json['ret']==0){
+								alert("{%trans '移除成功'%}")
+								var selected=$("#mapids").val()
+								var mapid=$("#mapid_"+selected).val()
+								realload(mapid);
+								//$('#id_map_'+liid).parent().remove()
+								var index = map_ids.indexOf(liid)
+								map[index]['id']='undefined'
+								map_index.length=0
+								drowmap()
+								if (map_index.length>0){
+									liid=map_index[0]
+									showimganddoor()
+								}
+							}else{
+								alert("{%trans '移除失败'%}")
+							}
+					}})
+					
+				}
+		})
+		$("#id_save_doorpos").click(function(){
+		    saveimganddoor(liid)
+		})
+		$("#id_bigger").click(function(){
+		    var h=$("#id_map_hidden_"+liid).val()
+		    if(h<10){
+			zoom_img(1.25);
+			savetag=true;
+			h=parseInt(h)+1
+			$("#id_map_hidden_"+liid).val(h)
+		    }else{
+			alert("{%trans '已经到达放大最大倍数'%}")
+		    }
+		})
+		$("#id_smaller").click(function(){
+		    var h=$("#id_map_hidden_"+liid).val()
+		    if(h>0){
+			zoom_img(0.8);
+			savetag=true;
+			h=h-1
+			$("#id_map_hidden_"+liid).val(h)
+		    }else{
+			alert("{%trans '已经到达缩小最大倍数'%}")
+		    }
+		})
+	})
+function saveimganddoor(lids){
+	var h=$("#id_map_hidden_"+lids).val()
+	var $zoom_imgs = $("#id_map_door_"+lids).find(".door_in_img");//取到当前地图上的门
+	var door=''
+	    $zoom_imgs.each(function(){
+		var id=$(this).attr("id")
+		var top=$(this).css("top").replace("px", "")
+		var left=$(this).css("left").replace("px", "")
+		door+=id+"_"+top+"_"+left+","
+	    });
+	    $.ajax({type: "POST", 
+		url:"/acc/savemap/?mapid="+lids+"&mulriple="+h ,
+		data:'door='+door,
+		dataType:"json",
+		success: function(data){
+		    savetag=false;
+			if(!savetag){
+				alert("{%trans '保存成功'%}")
+		    }
+		}})
+}
+function showimganddoor(){
+    lids=liid;
+    $.ajax({type: "POST", 
+	url:"/acc/showimganddoor/?mapid="+lids,
+	dataType:"json",
+	success: function(data){
+		var door=data.door
+		var usedoor=data.usedoor
+		if(door.length>0){
+		    drowdoor(door)
+		}
+		if(usedoor.length>0){
+		    drowusedoor(usedoor,lids)
+		}
+	}})
+}
+function flashimg(){
+    clearTimeout(logtimer2);
+	if (liid == 'undefined') {
+		liid = 0
+	}
+    lids=liid;
+    var urlstr="/acc/_checktranslog_/?lasttid="+lastId+'&stamp='+laststamp
+    $.ajax({type: "POST", 
+	url:urlstr+"&mapid="+lids,
+	dataType:"json",
+	success: function(data){
+		var door=data.state
+		var state=door.data
+		laststamp=door.stamp
+		for(var k in state)
+		    {
+			    var _data=state[k]
+			    var imgName=img_path+_data.state[0]+'.png'
+                $("#doorimg_"+_data.id).css('background','url('+imgName+')  no-repeat scroll bottom center rgba(0, 0, 0, 0)')
+		    }
+		logtimer2=setTimeout("flashimg()", 10000);
+	},error: function(obj, msg, exc){
+		    logtimer2=setTimeout("flashimg()", 300000);
+	}})
+}
+function zoom_img(scale){
+	$img=$("#map_"+liid)
+        var img_width = $img.width();//当前地图宽度。不带px
+        var img_height = $img.height();
+        var box_width = scale * img_width;//放大或缩小后的地图宽度
+        var box_height = scale * img_height;
+        //门图标联动--坐标和大小
+        var $zoom_imgs = $("#id_map_door_"+liid).find(".door_in_img");//取到当前地图上的门
+        $zoom_imgs.each(function(){
+            loop_doors($(this), scale);
+        });
+        
+        $img.width(box_width);
+        $img.height(box_height);
+    }
+function loop_doors($img, scale)
+    {
+        var door_top = parseFloat($img.css("top").replace("px", ""), 10);//门的上边距
+        var door_left = parseFloat($img.css("left").replace("px", ""), 10);//当前门的左边距
+        new_door_top = door_top* scale;
+        new_door_left = door_left* scale;
+	$img.css("top", new_door_top);//上边距
+        $img.css("left", new_door_left);//左边距
+    }
+function realload(){
+    menuClick('/acc/getRTlog/',$('<a id="acc_getRTlog"></a>'))
+}
+function subdata(){
+	var treeids=getSelected_dept("showTree_zone");
+	var mapname = $('#id_map_name').val()
+	if (treeids==''||mapname==''){
+		$('#id_error').html("<ul class='errorlist'><li>地图名称或区域不能为空</li></ul>")
+		return
+	}
+	urls="zones="+treeids
+	var opts = { 
+		url:'/acc/applyaccmap/?' + urls,
+		dataType:'json',
+		success:function(data){
+			    alert(data.message)
+			    $("#dlg_to_dev").dialog("destroy");
+			    realload()
+				map_index.length=0
+				drowmap()
+		}
+	};
+	
+	$('#frmPhotoDb').ajaxSubmit(opts);
+	return false;
+}
+
+function index_tip_info_RTlog(obj)
+{
+	var index=$(obj).html();
+	var divid=$(obj).attr("id")
+	$("#id_tip_RTlog").css("background-color",'#cfcfcf').html(index);
+	$("#id_tip_RTlog #id_tip_"+divid).css('display','block')
+	var top=parseFloat($(obj).css("top").replace("px", ""), 10)+5;
+	var left=parseFloat($(obj).css("left").replace("px", ""), 10)+45;
+	if($("#id_tip_RTlog").css("visibility")=="hidden"){
+		$("#id_tip_RTlog").css({"z-index":1024,"visibility":"visible","position":"absolute","top":(top),"left":(left)})
+		$("#id_tip_RTlog").mouseover(function(){
+			$(this).css({"z-index":1024,"visibility":"visible","position":"absolute","top":(top),"left":(left)})
+		}).mouseout(function(){
+			$("#id_tip_RTlog").css("visibility","hidden");
+		});
+	}
+	else
+		$("#id_tip_RTlog").css("visibility","hidden");
+}
+
+function tip_info_exit(obj)
+{
+	$("#id_tip_RTlog").css("visibility","hidden")
+}
+
+//光标移动到门图标上时显示的信息
+        function MoreInfo(d1)
+        {
+              return  '<div id="id_tip_doorimg_'+d1['doorid']+'" class="div_tip" style="display:none">'
+                          +'<div><table>'
+                              +'<tr><th>所属设备:</th><td>'+d1['sn']+'</td></tr>'
+                              +'<tr><th>门编号:</th><td>'+d1['doorno']+'</td></tr>'
+                              +'<tr><th>门名称:</th><td>'+d1['doorname']+'</td></tr>'
+                              +'<tr><td colspan="2">'
+                              +'<table class="Link_blue1">'
+                              +'<tr><td><a id="opendoor_img" class="" href="javascript:void(0)" onclick="show_opendoor_RTlog('+d1['doorid']+')">远程开门</a></td>'
+                                  +'<td><a id="closedoor_img" class="" href="javascript:void(0)" onclick="show_closedoor_RTlog('+d1['doorid']+')">远程关门</a></td>'
+                                  +'<td><a id="cancelalarm" class="" href="javascript:void(0)" onclick="show_controldoor_RTlog('+d1['doorid']+')">取消报警</a></td></tr>'
+                              +'</table>'
+                              +'</tr></td>'
+                          +'</table>'
+                      +'</div></div>';
+        }
+        function show_opendoor_RTlog(door_id)//元素id和门id（pk)
+        {  
+            if(door_id)
+            {
+                var door_img = $("#doorimg_"+door_id).css("background-image");
+                if(door_img.indexOf('offline')!=-1 || door_img.indexOf('disabled')!=-1 || door_img.indexOf('default')!=-1)
+                {
+                    alert("{%trans "当前设备状态不支持该操作！" %}");
+                    return false;
+                }
+            }
+
+            var open_doors_form = '<div id="id_open_doors_form" class="open_doors_form div_box">'
+                                    +'<div class="div_box1"><h2>{%trans "选择开门方式" %}</h2>'
+                                        +'<table>'
+                                            +'<tr><td><input id="id_open_interval_set" type="radio" name="open_interval" checked="checked"/> {%trans "开门：" %}<input id="id_open_sec1" value="15" maxlength="3" style="width:25px"/>{%trans " 秒" %}(1-254)'
+                                                    +'</td></tr>'
+						    +'<tr><td><input id="id_reenable_open" type="radio" name="open_interval"/> {%trans "启用当天常开时间段" %}'
+                                                    +'</td></tr>'
+						    +'<tr><td><input id="id_open_no" type="radio" name="open_interval"/> {%trans "常开" %}'
+                                            +'</td></tr>'
+                                        +'</table>'
+                                    +'</div>'
+                            +'</div>';
+
+            $(open_doors_form).dialog({modal:true,
+				resizable:false,　
+			width: 400,
+			height:320,
+			title:"{% trans '远程开门' %}",
+			buttons:[{id:"btnShowOK",text:'{%trans "Submit" %}',
+					click:function(){open_door(door_id)}},
+				       {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }
+				      }],
+			close:function(){$(this).dialog("destroy"); }		
+		      })
+	    $("#id_open_interval_set").click(function(){
+                $("#id_open_sec1").attr("disabled", false);
+            });
+            $("#id_reenable_open").click(function(){
+                $("#id_open_sec1").attr("disabled", true);
+            });
+            $("#id_open_no").click(function(){
+                $("#id_open_sec1").attr("disabled", true);
+            });
+        }
+        function show_closedoor_RTlog(door_id)
+        {
+            if(door_id)//不为undefined
+            {
+                var door_img = $("#doorimg_"+door_id).css("background-image");
+                if(door_img.indexOf('offline')!=-1 || door_img.indexOf('disabled')!=-1 || door_img.indexOf('default')!=-1)
+                {
+                    alert("{%trans "当前设备状态不支持该操作！" %}");
+                    return false;
+                }
+            }
+            var close_doors_form = '<div id="id_close_doors_form" class="close_doors_form div_box">'
+                                        +'<div class="div_box1"><h2>{% trans "选择关门方式" %}</h2>'
+                                            +'<table>'
+                                                +'<tr><td><input type="radio" name="close_style" checked="checked" id="id_close_normal" /> {% trans "关门" %}'
+                                                +'</td></tr>'
+						+'<tr><td><input type="radio" name="close_style" id="id_disable_no_tzs" /> {% trans "禁用当天常开时间段" %}'
+                                                +'</td></tr>'
+                                            +'</table>'
+                                        +'</div>'
+                                    +'</div>';
+
+            $(close_doors_form).dialog({modal:true,
+				resizable:false,　
+			width: 400,
+			height:320,
+			title:"{% trans '远程关门' %}",
+			buttons:[{id:"btnShowOK",text:'{%trans "Submit" %}',
+					click:function(){close_door(door_id)}},
+				       {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }
+				      }],
+			close:function(){$(this).dialog("destroy"); }		
+		      })
+        }
+	function show_controldoor_RTlog(door_id)
+        {
+            if(door_id)//不为undefined
+            {
+                var door_img = $("#doorimg_"+door_id).css("background-image");
+                if(door_img.indexOf('offline')!=-1 || door_img.indexOf('disabled')!=-1 || door_img.indexOf('default')!=-1)
+                {
+                    alert("{%trans "当前设备状态不支持该操作！" %}");
+                    return false;
+                }
+            }
+            var control_doors_form = '<div id="id_control_doors_form" class="control_doors_form div_box">'
+                                        +'<div class="div_box1">'
+                                            +'<table>'
+                                                +'<tr><td><input type="checkbox" name="control_style" id="id_control_normal" /> {% trans "针对本区域所有设备！" %}'
+                                                +'</td></tr>'
+                                            +'</table>'
+                                        +'</div>'
+                                    +'</div>';
+
+            $(control_doors_form).dialog({modal:true,
+				resizable:false,　
+			width: 400,
+			height:320,
+			title:"{% trans '取消报警' %}",
+			buttons:[{id:"btnShowOK",text:'{%trans "Submit" %}',
+					click:function(){control_door_RTlog(door_id)}},
+				       {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }
+				      }],
+			close:function(){$(this).dialog("destroy"); }		
+		      })
+        }
+	function open_door(door_id){
+		    var stamp5 = new Date().getTime();
+		    var open_interval = 15;
+                    var enable_no_tzs = false;
+                    if($("#id_open_no").prop("checked") == true)
+                    {
+                        open_interval = 255;
+                    }
+                    else if($("#id_open_interval_set").prop("checked") == true)//正常开门
+                    {
+                        open_interval = $("#id_open_sec1").val();
+                        var reg = /^([0-9]+)$/;
+                        if(!reg.test(open_interval) || parseInt(open_interval) < 1 || parseInt(open_interval) > 254)
+                        {
+                            alert("{%trans '请输入有效的开门时长！必须为1-254间的整数！'%}");
+                            return false;
+                        }
+                    }
+                    else//先禁用常开时间段再开门
+                    {
+                        open_interval = -1;//不开门
+                        enable_no_tzs = true;
+                    }
+
+		    getUrl = "/acc/SendDoorData/?func=opendoor&type=part&data="+ door_id +"&open_interval="+open_interval+"&enable_no_tzs="+enable_no_tzs;
+                    sendurl($("#id_open_doors_form"),getUrl)
+	}
+	function close_door(door_id){
+		    var stamp5 = new Date().getTime();
+		    var disable_no_tzs = false;
+                    if($("#id_disable_no_tzs").prop("checked") == true)
+                    {
+                        disable_no_tzs = true;
+                    }
+                    getUrl = "/acc/SendDoorData/?func=closedoor&type=part&data="+ door_id +"&disable_no_tzs="+disable_no_tzs;
+                    sendurl($("#id_close_doors_form"),getUrl)
+	}
+	function control_door_RTlog(door_id)
+        {
+		    var mode = "cancelalarm"
+		    if($("#id_control_normal").prop("checked") == true)
+		    {
+			mode = "cancelall"
+		    }
+		    getUrl = "/acc/SendDoorData/?func="+ mode +"&type=part&data="+ door_id;
+		    sendurl($("#id_control_doors_form"),getUrl)
+        }
+function sendurl($div,getUrl){
+        $.ajax({type: "POST", 
+	url:getUrl,
+	dataType:"json",
+	success: function(data){
+	    alert("{%trans '操作已成功'%}")
+	    $div.dialog("destroy");
+	},error: function(obj, msg, exc){
+	    alert(msg)
+	}})
+}
+</script>
+<div id="id_top">
+	<!--<span style="font-size: 15px; padding-right: 20px;"><b><img title="{%trans '电子地图' %}" src="/media/img/blogmarks.png"></b></span>-->
+	<div style='height: 28px'></div>
+	<div id="id_toolbar">	
+		<ul id="navi" class="toolbar">
+			<li  id="id_add_map"><span  class="icon iconfont icon-tianjiaditu"></span>{%trans '添加地图' %}</li>
+			<li  id="id_del_map"><span class="icon iconfont icon-shanchuditu"></span>{%trans '删除地图' %}</li>
+			<li  id="id_save_doorpos"><span class="icon iconfont icon-baocunweizhixinxi"></span>{%trans '保存位置信息' %}</li>
+			<li  id="id_bigger"><span class="icon iconfont icon-fangda"></span>{%trans '放大' %}</li>
+			<li  id="id_smaller"><span class="icon iconfont icon-suoxiao"></span>{%trans '缩小' %}</li>
+		</ul>
+	</div>
+</div>
+<div style='background:#F2F5F7'>
+<div id="RTlog_id" style='height: 100%;width: 100%;color:#F2F5F7'>
+</div>
+<div id="id_tip_RTlog" style="visibility:hidden" class="ui-widget-content"></div>

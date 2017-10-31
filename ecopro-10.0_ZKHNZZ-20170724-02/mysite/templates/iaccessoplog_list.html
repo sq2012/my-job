@@ -1,0 +1,147 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% block tblHeader %}
+//options.disableCols=["0"];
+options[g_activeTabID].canAdd=false;
+options[g_activeTabID].canEdit=false;
+hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+jqOptions[g_activeTabID]=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{ colModel }}
+tblName[g_activeTabID]='iaccessoplog';
+jqOptions[g_activeTabID].pager='#id_pager_'+tblName[g_activeTabID];
+jqOptions[g_activeTabID].sortname='OPTime';
+jqOptions[g_activeTabID].sortorder="desc";
+//show_left=false
+currentState=-1;
+State_iaccessoplog=['{%trans "Door Close Detected"%}','{%trans "Door Open Detected"%}',
+'{%trans "Machine Been Broken"%}','{%trans "Out Door Button"%}',
+'{%trans "Door Broken Accidentally"%}','{%trans "Try Invalid Verification"%}',
+'{%trans "Force"%}','{%trans "门打开"%}','{%trans "门关闭"%}','{%trans "Alarm Cancelled"%}']
+function showState_iaccessoplog_iaccessoplog(value)
+{
+//	if(currentState==value) return;
+	currentState=value;
+	createFilter_iaccessoplog();
+	if (value==0)
+        var url=g_urls[g_activeTabID]+"?Message=50";//
+    else if (value==1)
+        var url=g_urls[g_activeTabID]+"?Message=51";//
+	else if (value==2)
+	    var url=g_urls[g_activeTabID]+"?Message=55";//
+	else if (value==3)
+		var url=g_urls[g_activeTabID]+"?Message=53";//
+	else if (value==4)
+	    var url=g_urls[g_activeTabID]+"?Message=54";//
+	else if (value==5)
+		var url=g_urls[g_activeTabID]+"?Message=58";//
+	else if (value==6)
+	    var url=g_urls[g_activeTabID]+"?Message=59";//
+	else if (value==7)
+		var url=g_urls[g_activeTabID]+"?Message=4";//
+	else if (value==8)
+		var url=g_urls[g_activeTabID]+"?Message=5";//
+	else if (value==9)
+		var url=g_urls[g_activeTabID]+"?Message=65535";//
+	else
+		var url=g_urls[g_activeTabID];
+    savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function strOfData_iaccessoplog(data)
+{
+	return data.SN+" "+data.OpName;
+}
+//function canEdit()
+//{}
+
+$(function(){
+	var info='<p>1.门禁设备操作日志用于记录服务器对门禁设备发送的指令</p>'
+	renderLeftInformation(info);
+        smenu="<ul><li  class='subnav_on' onclick=submenuClick('/iclock/data/iaccessoplog/',this);><a href='#'>门禁设备操作日志</a></li></ul>"
+        $('#'+g_activeTabID+' #menu_div').html(smenu)	
+	$("#"+g_activeTabID+" #queryButton").hide()
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowiaccessoplog();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowiaccessoplog();
+	});
+	$("#"+g_activeTabID+" #searchbar").val(gettext("设备编号,别名"))
+	$("#"+g_activeTabID+" #id_newrec").css('display','none');
+	$("#"+g_activeTabID+" #id_filtername").before("<span style='float:left; width: 450px;'>"
+			+"<span id='search_span' style='float:right;'><ul id='nav' class='nav'><li id='id_search'><span class='searchlink'></span><a href='#'>{%trans 'Query'%}</a></li></ul></span>"
+			+"<span>"
+			+"<label >{%trans 'Begin Date'%}</label>"
+			+"<input type='text' name='ComeTime' maxlength='10' id='id_ComeTime' style='width:120px !important;'>"
+			+"<label >{%trans 'End Date'%}</label>"
+			+"<input type='text' name='EndTime' maxlength='10' id='id_EndTime' style='width:120px !important;'>"
+		+"</span>"
+		+"</span>"
+	);
+
+	$('#'+g_activeTabID+' #id_ComeTime').val(moment().startOf('month').format('YYYY-MM-DD HH:mm'))
+	$('#'+g_activeTabID+' #id_EndTime').val(moment().endOf('day').format('YYYY-MM-DD HH:mm'))  
+	$("#"+g_activeTabID+" #id_ComeTime").datetimepicker(datetimepickerOptions);
+	$("#"+g_activeTabID+" #id_EndTime").datetimepicker(datetimepickerOptions);
+	$("#"+g_activeTabID+" #id_search").click(function(){
+		var ComeTime=$("#"+g_activeTabID+" #id_ComeTime").val();
+		var EndDate=$("#"+g_activeTabID+" #id_EndTime").val();
+		$.cookie("ComeTime",ComeTime, { expires: 7 });
+		$.cookie("EndDate",EndDate, { expires: 7 });
+		var isError=validate_form_iaccessoplog();
+		var urlTime="";
+		var urlTime1="";
+		if(!isError){
+			exporttag=1;
+			urlTime1="OPTime__gte="+ComeTime+"&OPTime__lt="+EndDate
+		}
+		urlTime=urlTime1
+		var url="/iclock/data/iaccessoplog/?"
+		if (urlTime!="" &&  urlTime!=null)
+			url+=urlTime;
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+		savecookie("search_urlstr",url);
+	});
+	$("#"+g_activeTabID+" #id_filtername").css("display","block")
+	   createFilter_iaccessoplog();
+	
+})
+function validate_form_iaccessoplog(){   //验证表单的合法性(、开始时间、结束时间)
+	var t_ComeTime=$("#"+g_activeTabID+" #id_ComeTime").val();
+	var cTime=t_ComeTime.split("-");
+	var t_EndDate=$("#"+g_activeTabID+" #id_EndTime").val();
+	var eTime=t_EndDate.split("-");
+	cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+	edate=new Date(parseInt(eTime[0],10),parseInt(eTime[1],10)-1,parseInt(eTime[2],10));
+	if(cdate>edate || t_ComeTime=="" || t_EndDate==""){
+		return 1;
+	}else{
+		return 0
+	}
+}
+
+function createFilter_iaccessoplog(){
+
+	html="<li style=' border: 0px solid white;'><a href='#' style='color: #000;background:white;padding-left:0;'>{% trans '事件状态' %}</a>"
+		+"<ul><li "+(currentState==-1?"class='selected'":"")+"><a href='#' onclick='showState_iaccessoplog_iaccessoplog(-1)'>{%trans "All"%}</a></li>";// "+(currentState==-1?"class='selected'":"")+"
+	for(i=0;i<=9;i++)
+		html+="<li "+(currentState==i?"class='selected'":"")+"><a href='#' onclick='showState_iaccessoplog_iaccessoplog("+i+")'>"+State_iaccessoplog[i]+"</a></li>";// "+(currentState==i?"class='selected'":"")+"
+    
+	$("#id_filterbar").html(html+'</ul></li>');
+}
+//模糊查询
+function searchShowiaccessoplog(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+	var url=g_urls[g_activeTabID]+"?q="+escape(v)
+	savecookie("search_urlstr",url);
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+{% endblock %}

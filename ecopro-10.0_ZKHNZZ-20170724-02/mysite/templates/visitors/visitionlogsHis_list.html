@@ -1,0 +1,493 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+//options.disableCols=["0","12","13"];
+
+hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+hasImport=false;
+jqOptions[g_activeTabID]=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='visitionlogsHis';
+jqOptions[g_activeTabID].pager = "id_pager_"+tblName[g_activeTabID];
+jqOptions[g_activeTabID].sortname='-EnterTime';
+options[g_activeTabID].dlg_width=740;
+options[g_activeTabID].dlg_height=600;
+options[g_activeTabID].edit_col=1;
+//dtFields = "{{ dtFields }}";
+
+var image =null;// new Array();
+var pos = 0;
+var w = 320;
+var h= 240;
+var ctx = null;
+var Reason_json=[]
+$(function(){
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+		processNewModel();
+	});
+	//$("#"+g_activeTabID+" #id_custom").remove();
+	$("#"+g_activeTabID+" #id_newrec").remove();
+	$("#"+g_activeTabID+" #aDelete").remove();
+	$("#"+g_activeTabID+" #queryButton").hide()
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	   searchShowVis_visitionlogsHis();
+	});
+	$("#"+g_activeTabID+" #searchbar").prop('value','访客姓名,证件号码')
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	   if(event.keyCode==13)
+	  searchShowVis_visitionlogsHis();
+	});
+            //根据系统设置判断是否支持人员照片显示
+	if({{"opt_users_vis_pic"|get_params:request}}!='1'){
+	    for (var i=0;i< jqOptions[g_activeTabID].colModel.length;i++){
+		if(jqOptions[g_activeTabID].colModel[i].name=="photo"){
+		    jqOptions[g_activeTabID].colModel[i].hidden=true;
+		}
+		if(jqOptions[g_activeTabID].colModel[i].name=="photoz"){
+		    jqOptions[g_activeTabID].colModel[i].hidden=true;
+		}
+	    }
+	};
+//	$.ajax({
+//	type: "POST",
+//	url:"/visitors/vis/hasReasons/",
+//	dataType:"json",
+//	success: function(json){
+//	     Reason_json=json;
+//	    }});
+        var info=''
+        renderLeftInformation(info);
+		smenu="<ul><li  class='subnav_on' onclick=submenuClick('/visitors/vis/visitionlogs_his/',this);><a href='#'>访客记录查询</a></li></ul>"
+        //$('#menu_div').html(smenu)
+	//var currDate=new Date();
+//	var dateTime1=currDate.getFullYear()
+//		+"-"
+//		+(currDate.getMonth()+1< 10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+//		+"-01"
+
+//	var dateTime2=currDate.getFullYear()
+//		+"-"
+//		+(currDate.getMonth()+1< 10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+//		+"-"
+//		+currDate.getDate()
+	var dateTime1=moment().startOf('month').format("YYYY-MM-DD")
+	var dateTime2=moment().endOf('month').format("YYYY-MM-DD")
+	$("#id_ComeTime_visitionlogsHis").val(dateTime1)
+	$("#id_EndTime_visitionlogsHis").val(dateTime2)
+	$("#id_ComeTime_visitionlogsHis").datepicker(datepickerOptions);
+	$("#id_EndTime_visitionlogsHis").datepicker(datepickerOptions);
+	$("#"+g_activeTabID+" #id_search").click(function(){
+		var ComeTime=$("#id_ComeTime_visitionlogsHis").val();
+		var EndDate=$("#id_EndTime_visitionlogsHis").val();
+		$.cookie("ComeTime",ComeTime, { expires: 7 });
+		$.cookie("EndDate",EndDate, { expires: 7 });
+		var isError=validate_form_visitionlogsHis();
+
+		var urlTime="";
+		//var urlTime1="";
+		if(!isError){
+			exporttag=1;
+			urlTime=$("#"+g_activeTabID+" #id_date").val()+"__gte="+ComeTime+"&"+$("#"+g_activeTabID+" #id_date").val()+"__lt="+EndDate
+		}
+		var url="/visitors/data/visitionlogs/?t=visitionlogsHis_list.js&"
+	
+		if (urlTime!="" &&  urlTime!=null)
+			url+=urlTime;
+		var VisState=$("#"+g_activeTabID+" #id_VisState").val()
+		if(VisState!='All')
+                url=url+"&VisState="+VisState
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+		savecookie("search_urlstr",url);
+	});
+});
+
+function validate_form_visitionlogsHis(){   //验证表单的合法性(人员(可不选，在计算项目中计算选中部门的人员，其他的就默认值0)、开始时间、结束时间)
+	var t_ComeTime=$("#id_ComeTime_visitionlogsHis").val();
+	var cTime=t_ComeTime.split("-");
+	var t_EndDate=$("#id_EndTime_visitionlogsHis").val();
+	var eTime=t_EndDate.split("-");
+	cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+	edate=new Date(parseInt(eTime[0],10),parseInt(eTime[1],10)-1,parseInt(eTime[2],10));
+	var days=(edate.valueOf()-cdate.valueOf())/(1000*3600*24)+1;
+	if(cdate>edate || t_ComeTime=="" || t_EndDate==""||!valiDate(t_ComeTime)||!valiDate(t_EndDate)){
+		return 1;
+	}else{
+		return 0
+	}
+}
+
+function searchShowVis_visitionlogsHis(){
+    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	if(v=='访客姓名,证件号码') {
+		v=''
+	}
+	var url="/visitors/data/visitionlogs/?t=visitionlogsHis_list.js&q="+escape(v);
+	savecookie("search_urlstr",url);
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+};
+
+function initWebcam(htmlObj){
+	var canvas=$("#canvas",htmlObj)[0]
+	//ctx=canvas.getContext('2d');
+	//image = ctx.getImageData(0, 0, 320, 240);
+	canvas.setAttribute('width', 320);
+	canvas.setAttribute('height', 240);
+
+	$("#webcam",htmlObj).webcam({
+	    width: 320,
+	    height: 240,
+	    mode: "callback",
+	    swffile: "{{ MEDIA_URL }}jslib/jscam_canvas_only.swf", // canvas only doesn't implement a jpeg encoder, so the file is much smaller
+	
+	    onTick: function(remain) {
+	
+		if (0 == remain) {
+		    $("#"+g_activeTabID+" #status").text("Cheese!");
+		} else {
+		    $("#"+g_activeTabID+" #status").text(remain + " seconds remaining...");
+		}
+	    },
+	
+	    onSave: function(data) {
+		try{
+		     //var vanvas=document.getElementById('canvas');
+		     
+		//ctx = $("#"+g_activeTabID+" #canvas").getContext("2d");
+	
+		
+		if (canvas.toDataURL){
+			var col = data.split(";");
+			var img = image;
+			
+			for(var i = 0; i < 320; i++) {
+				var tmp = parseInt(col[i]);
+				img.data[pos + 0] = (tmp >> 16) & 0xff;
+				img.data[pos + 1] = (tmp >> 8) & 0xff;
+				img.data[pos + 2] = tmp & 0xff;
+				img.data[pos + 3] = 0xff;
+				pos+= 4;
+			}
+			if (pos >= 4 * 320 * 240) {
+			    var currDate=new Date();
+				var td=currDate.getFullYear()+''
+				+(currDate.getMonth()+1< 10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+				+(currDate.getDate()+1< 10?"0"+(currDate.getDate()):currDate.getDate())
+				+(currDate.getHours()+1< 10?"0"+(currDate.getHours()):currDate.getHours())
+				+(currDate.getMinutes()+1< 10?"0"+(currDate.getMinutes()):currDate.getMinutes())
+				+(currDate.getSeconds()+1< 10?"0"+(currDate.getSeconds()):currDate.getSeconds())									
+			    ctx.putImageData(img, 0, 0);
+			    $("#id_Photourlz",htmlObj).val(td+'.jpg');
+			    $.post(url="att/WebcamAction_picture/", {pname:td,type: "data", image: canvas.toDataURL("image/jpeg")},function(msg) {
+				location.reload();
+			    });
+			    pos=0;
+			    
+			};
+		}
+		}catch(e){
+		    alert(e.message);
+		}
+	    // Work with the picture. Picture-data is encoded as an array of arrays... Not really nice, though =/
+	    },
+	
+	    onCapture: function () {
+		webcam.save();
+		
+	
+	      // Show a flash for example
+	    },
+	
+	    debug: function (type, string) {
+		// Write debug information to console.log() or a div, ...
+		$("#"+g_activeTabID+" #status").html(type + ": " + string);
+	    },
+	
+	    onLoad: function () {
+	    // Page load
+		var cams = webcam.getCameraList();
+		
+		$("#cams").append("<li>" +'sff'+ "</li>");
+		for(var i in cams) {
+		    $("#cams").append("<li>" + cams[i] + "</li>");
+		};
+		//webcam.setCamera(cams[0]);
+	    }
+	});
+
+};
+function showphotozdiv(obj,photourl)
+{	
+	$("#"+g_activeTabID+" #id_tip").html("<img src="+photourl+" style='width:320px;height:240px;' />");
+	var offset=$(obj).offset();
+	lefts=offset.left-520
+	if($("#"+g_activeTabID+" #id_tip").css("visibility")=="hidden"){
+		$("#"+g_activeTabID+" #id_tip").css({"z-index":1024,"visibility":"visible","position":"absolute","top":(30),"left":(lefts)})
+		$("#"+g_activeTabID+" #id_tip").mouseover(function(){
+			$(this).css({"z-index":1024,"visibility":"visible","position":"absolute","top":(30),"left":(lefts)})
+		}).mouseout(function(){
+			$("#"+g_activeTabID+" #id_tip").css("visibility","hidden");
+		});
+	}
+	else
+		$("#"+g_activeTabID+" #id_tip").css("visibility","hidden");
+}
+function dropphotozdiv()
+{
+	$("#"+g_activeTabID+" #id_tip").css("visibility","hidden")
+}
+function showphotodiv(obj,photourl)
+{	
+	$("#"+g_activeTabID+" #id_tip").html("<img src="+photourl+" style='width:300px;height:400px;' />");
+	var offset=$(obj).offset();
+	lefts=offset.left-520
+	if($("#"+g_activeTabID+" #id_tip").css("visibility")=="hidden"){
+		$("#"+g_activeTabID+" #id_tip").css({"z-index":1024,"visibility":"visible","position":"absolute","top":(30),"left":(lefts)})
+		$("#"+g_activeTabID+" #id_tip").mouseover(function(){
+			$(this).css({"z-index":1024,"visibility":"visible","position":"absolute","top":(30),"left":(lefts)})
+		}).mouseout(function(){
+			$("#"+g_activeTabID+" #id_tip").css("visibility","hidden");
+		});
+	}
+	else
+		$("#"+g_activeTabID+" #id_tip").css("visibility","hidden");
+}
+function dropphotodiv()
+{
+	$("#"+g_activeTabID+" #id_tip").css("visibility","hidden")
+}
+function take_snapshot(htmlObj){
+   
+    webcam.capture();
+    webcam.onCapture();
+};
+/*
+function ReadCard_onclick(htmlObj)
+{
+	var str;
+	//查找读卡器
+        //SynCardOcx1=$("#SynCardOcx1",htmlObj)
+  	str = SynCardOcx1.FindReader();
+        try{
+  	if (str > 0)
+  	{
+  		
+		if(str>1000)
+  		{
+  			str =document.all['S1'].value+ "读卡器连接在USB " + str+"\r\n" ;
+  		}
+  		else
+  		{
+  			str =document.all['S1'].value+ "读卡器连接在COM " + str+"\r\n" ;
+  		}
+		//设置照片格式为Base64
+		SynCardOcx1.SetPhotoType(2);
+		//document.all['S1'].value=str;
+		var nRet;
+		//设置读取格式为手动读取
+		SynCardOcx1.SetReadType(0);
+		var i=0;
+                
+		while(i<10){
+			//读卡
+			nRet = SynCardOcx1.ReadCardMsg();
+			if(nRet==0)
+			{
+				if (SynCardOcx1.Base64Photo.length>3000){
+                                        $("#id_VisempName",htmlObj).val($.trim(SynCardOcx1.NameA));
+                                        
+					if (SynCardOcx1.Sex==1){
+						$("#id_VisGender",htmlObj).val('M');
+					}else if(SynCardOcx1.Sex==2){
+						$("#id_VisGender",htmlObj).val('F');
+					}else{
+						$("#id_VisGender",htmlObj).val('');
+					}
+                                        $("#id_CertificateType",htmlObj).val('1');
+                                        $("#id_SSN",htmlObj).val($.trim(SynCardOcx1.CardNo));
+                                        $("#id_National",htmlObj).val(SynCardOcx1.Nation);
+                                        $("#id_Address",htmlObj).val($.trim(SynCardOcx1.Address));
+                                        $("#id_LicenseOrg",htmlObj).val($.trim(SynCardOcx1.Police));
+                                        var s=SynCardOcx1.Born.substring(0,4)+'-'+SynCardOcx1.Born.substring(4,6)+'-'+SynCardOcx1.Born.substring(6,8);
+                                        $("#id_Birthday",htmlObj).val(s);
+                                        queryStr="SSN="+SynCardOcx1.CardNo+"&img="+encodeURIComponent(SynCardOcx1.Base64Photo);
+                                        $.ajax({ type: "POST",
+                                                url: "/iclock/att/saveSSNPhoto/",
+                                                dataType:"json",
+                                                data:queryStr,
+                                                success: function(retdata){
+                                                        if(retdata.ret==0){
+                                                              alert(retdata)  
+                                                        }
+                                                },
+                                                error: function(request, errorMsg){
+                                                         //alert($.validator.format(gettext('Operating failed for {0} : {1}'), options[g_activeTabID].title, errorMsg));
+                                                        }
+                                        });
+                                        var path="/iclock/file/photo/"+SynCardOcx1.CardNo+'.jpg';
+                                        $("#id_Photourl",htmlObj).val(path);
+                                        //$("#id_Photourl1",htmlObj).val("data:image/png;Base64,"+SynCardOcx1.Base64Photo);
+                                        
+                                        $("#id_Photourlimg",htmlObj).attr("src","data:image/png;Base64,"+SynCardOcx1.Base64Photo);
+					break;
+				}
+				//alert(SynCardOcx1.Base64Photo)
+			}
+			i++;
+		}
+		if (i>9){
+			alert('未读到身份证信息');
+		}
+	}
+  	else
+  	{
+  		alert('没有找到身份证读卡器');
+  	}
+        }catch(e){
+            alert(e.name+' '+e.message);
+        }
+};
+*/
+
+function process_dialog_visitionlogsHis(htmlObj){
+    initWebcam(htmlObj);
+        var ti=$("#id_VisReason",htmlObj).val()
+        var htl="<option value=' '> </option>"
+        for(var i=0;i< Reason_json.length;i++){
+            if(ti==Reason_json[i]){
+                htl+="<option value='"+Reason_json[i]+"' selected>"+Reason_json[i]+"</option>"
+            }else{
+                htl+="<option value='"+Reason_json[i]+"'>"+Reason_json[i]+"</option>"
+            }
+        }
+       $("#id_VisReason",htmlObj).parent().html("<select id='id_VisReason' name='VisReason' class='valid'>"+htl+"</select>");
+
+    var currDate=new Date();
+    var td=currDate.getFullYear()
+        +"-"
+        +(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+        +"-"
+        +currDate.getDate()
+        +" "
+        +currDate.getHours()
+        +":"
+        +currDate.getMinutes()
+        +":"
+        +currDate.getSeconds()
+        var Photourl = $("#id_Photourl",htmlObj).val();
+        if (Photourl==''){
+                $("#id_Photourlimg",htmlObj).attr("src",'/media/img/transaction/noimg.jpg');
+        }
+        else{
+                $("#id_Photourlimg",htmlObj).attr("src",Photourl);
+        }
+        var EnterTime = $("#id_EnterTime",htmlObj).val();
+        if (EnterTime==''){
+                $("#id_EnterTime",htmlObj).val(td);
+        }
+        $("#id_EnterTime",htmlObj).datetimepicker(datetimepickerOptions)
+	f=$(htmlObj).find("#id_edit_form").get(0)
+	$(f).validate({
+                        rules: {
+                                "id":{"required":true,"digits":true}
+                        }
+	});	
+}
+function strOfData_visitionlogsHis(data)
+{
+	return stripHtml(data.id)+" "+data.VisempName;
+}
+
+function setExitdata(url)
+{
+	createDlgtoExit(url)
+}
+function createDlgtoExit(url)
+{
+	//设置离开
+	var block_html="<div id='dlg_to_Exit'>"
+
+                    +"<table width=100%>"
+                                        
+                                        +"<tr><td colspan='2'><div style=''>{%trans '离开时间'%}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input id='id_date_range_from_visitionlogsHis' width='19' style='width:135px !important;'/></div></td>"
+                                        +"</tr><tr><td colspan='2'><div style=''>{%trans '离开携带物品'%}&nbsp;&nbsp;<input id='id_ExitArticles' width='19' style='width:135px !important;'/></div></td>"
+                                        +"</tr>"
+                                        
+                                        +"<tr><td colspan='2'>&nbsp;</td></tr>"
+                    +"</table>"
+					+  "<span  id='id_error'></span>"
+					+       "</div>"
+
+
+	$(block_html).dialog({modal:true,
+						  width: 600,
+						  height:220,
+						  title:"{% trans '访客离开登记' %}",
+						  buttons:[{id:"btnShowOK",text:'{%trans "Submit" %}',
+								  click:subdata},
+								 {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("close"); }
+								}],
+						  close:function(){$("#"+g_activeTabID+" #dlg_to_Exit").remove();}		
+						})
+                var currDate=new Date();
+                var td=currDate.getFullYear()
+                    +"-"
+                    +(currDate.getMonth()+1< 10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+                    +"-"
+                    +currDate.getDate()
+                    +" "
+                    +currDate.getHours()
+                    +":"
+                    +currDate.getMinutes()
+                    +":"
+                    +currDate.getSeconds()
+                $("#id_date_range_from_visitionlogsHis").val(td);
+		$("#id_date_range_from_visitionlogsHis").datetimepicker(datetimepickerOptions)
+		function subdata(){
+		var ET=$("#id_date_range_from_visitionlogsHis").val();
+                var EA=$("#"+g_activeTabID+" #id_ExitArticles").val();
+		var is_all=0;
+		var urlStr=g_urls[g_activeTabID]+ '?action=setExitdata&ExitTime='+ET+'&ExitArticles='+escape(EA);
+		$.blockUI({title:"{% trans '访客离开登记' %}",theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}</br></h1>'});
+		$.ajax({type: "POST",
+			url: urlStr,
+			data:url.ret,
+			dataType:"json",
+			success: function(retdata){
+					if(retdata.ret==0)
+					{	
+                                                $.unblockUI();
+                                                $("#"+g_activeTabID+" #dlg_to_Exit").remove();
+                                                reloadData();
+
+					}else{
+							alert(retdata.message);
+						}},
+			error: function(){
+			$.unblockUI();alert($.validator.format(gettext('Operating failed for {0} !'),options[g_activeTabID].title));}
+			});
+                }
+}
+function itemIscan(aData){
+        var state=stripHtml(aData.VisState);
+	return (state!="已离开" && state!="");
+}
+
+{% endblock %}
+{% block otherQuery %}
+
+		<div class="s-info left" id="time_area">			
+                                 <span>
+                                       <label  >{%trans 'Begin Date'%}</label>
+                                        <input type='text' name='ComeTime' maxlength='10' id='id_ComeTime_visitionlogsHis' style='width:80px !important;'>
+                                        <label  >{%trans 'End Date'%}</label>
+                                        <input type='text' name='EndTime' maxlength='10' id='id_EndTime_visitionlogsHis' style='width:80px !important;'>
+                                        &nbsp;&nbsp;<select name='id_date' id='id_date'><option value='EnterTime'>进入时间</option><option value='ExitTime'>离开时间</option></select>
+					&nbsp;&nbsp;&nbsp;&nbsp;<label  >{%trans '访问状态'%}</label>&nbsp;&nbsp;<select name='id_VisState' id='id_VisState'><option value='All'>全部</option><option value='0'>已进入</option><option value='1'>已离开</option></select>
+					<span id='id_search' ><a class='m-btn  zkgreen rnd mini'>{%trans 'Query'%}</a></span>
+                                </span>
+                                
+                        </div>
+                             
+
+{% endblock %}

@@ -1,0 +1,32 @@
+{% load iclock_tags %}
+{% load i18n %}
+<script type="text/javascript">
+totalRecCnt_attEx={{ item_count }};
+item_from_attEx={{ from }}
+page_index_attEx={{ page }};
+page_limit_attEx={{ limit }};
+page_number_attEx={{ page_count }};
+$(function(){
+var page_style=4;
+$("#id_result_pages").html(getPagers("", item_from_attEx-1, totalRecCnt_attEx, page_limit_attEx, page_index_attEx, page_number_attEx,page_style,1));
+});
+</script>
+<table>
+<tr><td align="left" style="border:0px;">
+    <span id="id_result_pages"></span>
+</td></tr>
+<tr><td style="border:0px;">
+    <table id="tbl">
+        {% autoescape off %}
+        <thead><tr><th>{% trans 'department name' %}</th><th>{%trans "PIN"%}</th><th>{%trans "EName"%}</th><th>{%trans "AttDate"%}</th><th>{%trans "StartTime"%}</th><th>{%trans "EndTime"%}</th><th>{%trans "Exception"%}</th><th>{%trans "TotalTimeLong(min.)"%}</th><th>{%trans "ValidateTimeLong(min.)"%}</th></tr></thead> {% endautoescape %}
+        {% for item in latest_item_list %}
+            {%if forloop.counter|isOdd%}
+                <tr class='row1'><td>{{ item.employee.Dept.DeptName }}</td><td>{{ item.employee.PIN }}</td><td>{{ item.employee.EName }}</td><td>{{ item.AttDate|shortDate4|default:"" }}</td><td>{{ item.StartTime|onlyTime }}</td><td>{{ item.EndTime|onlyTime }}</td><td>{{ item.ExceptionID|ExceptionStr }}</td><td>{{ item.TimeLong|default:"" }}</td><td>{{ item.InScopeTime|default:"" }}</td></tr>
+            {%else%}
+                <tr class='row2'><td>{{ item.employee.Dept.DeptName }}</td><td>{{ item.employee.PIN }}</td><td>{{ item.employee.EName }}</td><td>{{ item.AttDate|shortDate4|default:"" }}</td><td>{{ item.StartTime|onlyTime }}</td><td>{{ item.EndTime|onlyTime }}</td><td>{{ item.ExceptionID|ExceptionStr }}</td><td>{{ item.TimeLong|default:"" }}</td><td>{{ item.InScopeTime|default:"" }}</td></tr>
+            {%endif%}
+        {% endfor %}
+        <tr></tr>
+    </table>
+</td></tr>
+</table>

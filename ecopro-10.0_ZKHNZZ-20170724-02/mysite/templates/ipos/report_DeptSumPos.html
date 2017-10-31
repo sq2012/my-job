@@ -1,0 +1,35 @@
+{% extends "report_ipos.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+
+
+{% block search %}
+
+{% endblock %}	
+
+{% block getDateUrl %}
+
+function getDateUrl(pos_start_date,pos_end_date)
+{
+
+	$("#id_con_error").css("display","none");
+
+	var urlStr=g_urls[g_activeTabID]
+	
+	var st=moment().startOf('month').format('YYYY-MM-DD')
+	var et=moment().endOf('month').format('YYYY-MM-DD')
+         if(pos_start_date) st=pos_start_date
+        if(pos_end_date) et=pos_end_date
+        
+	if(urlStr.indexOf("?")!=-1){
+		urlStr=urlStr+"&StartDate="+st+"&EndDate="+et;
+	}
+	else{
+		urlStr=urlStr+"?StartDate="+st+"&EndDate="+et;
+	}
+    
+	return urlStr
+
+}
+{% endblock %} 
+

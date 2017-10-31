@@ -1,0 +1,399 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+        //jqOptions=copyObj(jq_Options)
+        jqOptions[g_activeTabID].colModel={{ colModel }}
+        jqOptions[g_activeTabID].sortorder='desc'
+        jqOptions[g_activeTabID].sortname='TTime'
+        tblName[g_activeTabID]='records';
+        jqOptions[g_activeTabID].pager="id_pager_records"
+        function validate_form_records(){   //验证表单的合法性(人员(可不选，在计算项目中计算选中部门的人员，其他的就默认值0)、开始时间、结束时间)
+                var t_ComeTime=$("#id_ComeTime_records").val();
+                if(t_ComeTime==""){
+                        t_ComeTime="2014-01-01"
+                }
+                var cTime=t_ComeTime.split("-");
+                var t_EndDate=$("#id_EndTime_records").val();
+                if(t_EndDate==""){
+                        t_EndDate="2020-01-01"
+                }
+                var eTime=t_EndDate.split("-");
+                cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+                edate=new Date(parseInt(eTime[0],10),parseInt(eTime[1],10)-1,parseInt(eTime[2],10));
+                var days=(edate.valueOf()-cdate.valueOf())/(1000*3600*24)+1;
+                if(cdate>edate || t_ComeTime=="" || t_EndDate==""||!valiDate(t_ComeTime)||!valiDate(t_EndDate)){
+                        return 1;
+                }else{
+                        return 0
+                }
+        }
+
+
+        function showphotodiv(obj,photourl)
+        {	
+                $("#id_tip").html("<img src="+photourl+" />");
+                var offset=$(obj).offset();
+                lefts=offset.left-460
+                if($("#id_tip").css("visibility")=="hidden"){
+                        $("#id_tip").css({"z-index":1024,"visibility":"visible","position":"absolute","top":(100),"left":(lefts)})
+                        $("#id_tip").mouseover(function(){
+                                $(this).css({"z-index":1024,"visibility":"visible","position":"absolute","top":(100),"left":(lefts)})
+                        }).mouseout(function(){
+                                $("#id_tip").css("visibility","hidden");
+                        });
+                }
+                else
+                        $("#id_tip").css("visibility","hidden");
+        }
+        function dropphotodiv()
+        {
+                $("#id_tip").css("visibility","hidden")
+        }
+
+        $(function(){
+                $("#"+g_activeTabID+" #searchButton").click(function(){
+                        searchShowTrans();
+                });
+                $("#"+g_activeTabID+" #searchbar").keypress(function(event){
+                        if(event.keyCode==13)
+                                searchShowTrans();
+                });
+                $("#"+g_activeTabID+" #searchbar").val(gettext("工号,姓名"))
+                $("#"+g_activeTabID+" #id_toolbar").css("width",$("#"+g_activeTabID+" #id_content").width());
+				var dateTime=moment().format("YYYY-MM-DD")
+                $("#id_ComeTime_records").val(dateTime.substring(0,dateTime.length-2)+'01');
+                $("#id_EndTime_records").val(dateTime);
+                $("#id_ComeTime_records").datepicker(datepickerOptions);
+                $("#id_EndTime_records").datepicker(datepickerOptions);
+                $("#hidden_selDept").val("");
+                $("#hidden_depts").val("");
+                $("#hidden_deptsName").val("");
+                
+                
+                
+                //根据条件查询考勤记录
+                $("#"+g_activeTabID+" #id_search").click(function(){
+                        var deptIDs=getSelected_dept("showTree_")
+                        var ComeTime=$("#id_ComeTime_records").val();
+                        var EndDate=$("#id_EndTime_records").val();
+                        var search_event_no=$("#search_id_event_no").val();
+                        if(deptIDs==undefined)
+                                deptIDs=''
+                        var isError=validate_form_records();
+                        $.cookie("ComeTime",ComeTime, { expires: 7 });
+                        $.cookie("EndDate",EndDate, { expires: 7 });
+                        $("#id_con_error").css("display","none");
+                        var urlStr="";
+                        var urlTime="";
+                        var urlTime1="";
+                        var ord="asc";
+                        var sortname="";
+                        if(!isError){
+                                urlTime1="TTime__gte="+ComeTime+"&TTime__lt="+EndDate
+                        }else{
+                                $("#id_con_error").css("display","block");
+                                $("#id_con_error").html("<span class='Se_Tran_errorlist'>{%trans 'Please check that you select one or more employees or select department and the date is validate!'%}</span>");
+                                return false;
+                        }
+                                
+                        urlTime="&"+urlTime1
+                        urlStr+=urlTime
+                        if(deptIDs!=0 && deptIDs!='' && deptIDs!=undefined ){
+                               urlStr+="&SN__SN__in="+deptIDs 
+                        }
+                        if(search_event_no!=''&& search_event_no!=undefined){
+                            urlStr+="&event_no="+search_event_no
+                        }
+                        $.cookie("url",urlStr, { expires: 7 });
+                        ischecked=0;
+                        
+                        if($("#id_cascadecheck_").prop("checked"))
+                                ischecked=1;
+                        var url="/acc/data/records/?isContainChild="+ischecked
+                
+                        if (urlStr!="" &&  urlStr!=null)
+                                url+=urlStr;
+                
+                        sortname="TTime"
+                        savecookie("search_urlstr",url);
+                        $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json",sortorder:ord,sortname:sortname}).trigger("reloadGrid");
+                });
+                
+                $("#tbl").html("<thead><tr><th abbr='UserID__PIN'>{% trans 'PIN' %}</th><th abbr='UserID__EName'>{% trans 'EName' %}</th><th abbr='UserID__DeptID__DeptName'>{% trans 'department name' %}</th>{{ cl.FieldName.TTime }}{{ cl.FieldName.State }}{{ cl.FieldName.Verify }}{{ cl.FieldName.WorkCode }}{{ cl.FieldName.Reserved }}{{ cl.FieldName.SN }}<th>{%trans 'Picture'%}</th></tr></thead>"+$("#tbl").html());
+                $("#id_ComeTime_records").focus(
+                        function() { this.select(); }
+                );
+                $("#id_EndTime_records").focus(
+                        function() { this.select(); }
+                );
+                
+                $("#"+g_activeTabID+" #id_reload").click(function(){
+                        $("#id_con_error").css("display","none");
+						reloadData(tblName[g_activeTabID],'/acc/data/records/?mod_name=acc')
+                });
+                
+                $("#"+g_activeTabID+" #id_filters").click(function(){
+                        $("#id_grid_"+tblName[g_activeTabID]).jqGrid('searchGrid',{multipleSearch:true,search:{top:100,left:100}});
+                });
+        
+                if(!canDefine) $('#'+g_activeTabID+' #id_custom').remove()
+                var hcontent=$("#"+g_activeTabID+" #id_content").height();
+                var hbar=$("#"+g_activeTabID+" #id_top").length>0?$("#"+g_activeTabID+" #id_top").height():0;
+                var h=hcontent-hbar
+                $('.module').css('height',h)
+                urlStr=g_urls[g_activeTabID]
+               // savecookie("search_urlstr",urlStr);
+                
+                RenderReportGrid(urlStr) 
+ 
+ 
+ 
+ 
+        });
+        
+        function RenderReportGrid(urlStr){
+           $("#id_grid_"+tblName[g_activeTabID]).jqGrid("GridUnload")
+           //$.jgrid.gridUnload("#id_grid")
+            
+                if(urlStr.indexOf("?")!=-1){
+                        urlStr=urlStr+"&stamp="+moment().unix();
+                }
+                else{
+                        urlStr=urlStr+"?stamp="+moment().unix();
+                }
+            
+            $.ajax({
+                    type:"GET",
+                    url:urlStr+"&title=1",
+                    dataType:"json",
+                    success:function(json){
+                            jqOptions=copyObj(jq_Options)
+                            grid_disabledfields=json['disabledcols']
+                            jqOptions.colModel=json['colModel']
+                            var groupHeaders=[]
+        
+                            if (json['groupHeaders'])
+                                var groupHeaders=json['groupHeaders']
+                            
+                            get_grid_fields(jqOptions)
+                            hiddenfields(jqOptions)
+                            jqOptions.url=urlStr 
+                            var hcontent=$("#id_content").height();
+                            var hbar=$("#id_top").height();
+                            var height=hcontent-hbar-65;
+                            if (groupHeaders.length>0)
+                             height=height-30;
+                            
+                            if(typeof(Custom_Jqgrid_Height)!='undefined'&&Custom_Jqgrid_Height!=""){
+                                    jqOptions.height=Custom_Jqgrid_Height;
+                            }else{jqOptions.height=height;}
+                            
+                            jqOptions.sortname='TTime'//getSidx('original_records')
+                                jqOptions.url=urlStr 
+                                
+                            $("#id_grid").jqGrid(jqOptions);
+                            $("#id_grid").jqGrid('setFrozenColumns');
+                            $("#id_grid").jqGrid('setGroupHeaders', {useColSpanStyle: true,groupHeaders:groupHeaders})
+                 }
+            });        
+        }
+                
+        
+        
+        
+        //模糊查询
+        function searchShowTrans(){
+                var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+                if (flag!='cansearch'&&flag!='defvalue') return;
+                var ComeTime=$("#id_ComeTime_records").val();
+                var EndDate=$("#id_EndTime_records").val();
+                var search_event_no=$("#search_id_event_no").val();
+                if (flag=='cansearch')
+                    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+                else
+                    var v=""
+                var url="/acc/data/records/?q="+escape(v)+"&mod_name=acc"+"&TTime__gte="+ComeTime+"&TTime__lt="+EndDate+""
+                if(search_event_no!=''&& search_event_no!=undefined){
+                    url+="&event_no="+search_event_no
+                }
+                savecookie("search_urlstr",url);
+                $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+        }
+
+        function createQueryDlg_records(){
+                createQueryDlgbypage('transaction_search')
+                $('#dlg_for_query_transaction_search').dialog({position: { my: "right top", at: "right bottom",of:"#"+g_activeTabID+" #id_searchbar"},
+                buttons:[{id:"btnShowOK",text:gettext('搜索'),
+                        click:function(){searchbydept_records('transaction_search');}},
+                       {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+                }] })
+        }
+
+        function searchbydept_records(page){
+                var dept_ids=getSelected_dept("showTree_"+page)
+                if (dept_ids!=null){
+                        if(dept_ids==undefined||dept_ids==''){
+                                alert("{% trans "请选择部门" %}")
+                                return false;
+                        }
+                }else{
+                        alert("{% trans "请选择部门" %}")
+                        return false;
+                }
+                var ischecked=0;
+                if($("#id_cascadecheck_"+page).prop("checked"))
+                        ischecked=1;
+                urlStr="deptIDs="+dept_ids+"&isContainChild="+ischecked    
+                var url="/iclock/data/transactions/?"+urlStr
+                savecookie("search_urlstr",url);
+                $("#id_grid_"+page).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+        }
+
+
+function ShowDeviceData(page,tag,isDiy)
+{
+	var setting = {
+            check: {enable: !tag,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},          
+	    async: {
+			    enable: true,
+			    url: "/acc/getData/?func=devstree&ptype=acc",
+			    autoParam: ["id"]
+		    },
+		view:{txtSelectedEnable:true}
+	};
+	$.fn.zTree.init($("#showTree_"+page), setting,null);	
+}
+
+
+{% endblock %}
+
+{% block top %}
+	<div class="sear-box quick-sear-box" >
+		<div class="s-info left" id="time_area">			
+		
+		   <label >{%trans "Begin Date"%}</label>
+		   <input type="text" name="ComeTime" maxlength="10" id="id_ComeTime_records" size="10" />
+		
+		   <label  >{%trans "End Date"%}</label>
+		   <input type="text" name="EndTime" maxlength="10" id="id_EndTime_records"  size="10" />
+		    <label  >{%trans '事件描述'%}</label>
+			<select name='event_no' id='search_id_event_no'>
+            <option value=''>--------</option><option value='-1'>无</option><option value='0'>正常刷卡开门</option><option value='1'>常开时间段内开门</option>
+            <option value='2'>首卡开门(刷卡)</option><option value='3'>多卡开门(刷卡)</option><option value='4'>紧急状态密码开门</option><option value='5'>常开时间段开门</option>
+            <option value='6'>触发联动事件</option><option value='7'>取消报警</option><option value='8'>远程开门</option><option value='9'>远程关门</option>
+            <option value='10'>禁用当天常开时间段</option><option value='11'>启用当天常开时间段</option><option value='12'>开启辅助输出</option><option value='13'>关闭辅助输出</option>
+            <option value='20'>刷卡间隔太短</option><option value='21'>门非有效时间段(刷卡)</option><option value='22'>非法时间段</option><option value='23'>非法访问</option>
+            <option value='24'>反潜</option><option value='25'>互锁</option><option value='26'>多卡验证(刷卡)</option><option value='27'>卡未注册</option>
+            <option value='28'>门开超时</option><option value='29'>卡已过有效期</option><option value='30'>密码错误</option><option value='36'>门非有效时间段(按出门按钮)</option>
+            <option value='37'>常开时间段无法关门</option><option value='101'>胁迫密码开门</option><option value='102'>门被意外打开</option><option value='200'>门已打开</option>
+            <option value='201'>门已关闭</option><option value='202'>出门按钮开门</option><option value='204'>常开时间段结束</option><option value='205'>远程开门常开</option>
+            <option value='206'>设备启动</option><option value='220'>辅助输入点断开</option><option value='221'>辅助输入点短路</option>
+            </select>
+                <span><a id='id_search' class='m-btn  zkgreen rnd mini'>{%trans 'Query'%}</a></span>
+		</div>
+                
+                
+		<div class="s-info right" id="sear_area">			
+			<div id="id_searchbar" class='search-pu'>
+				<div class="nui-ipt nui-ipt-hasIconBtn " >
+					<input id="searchbar" class="search-input" type="text"  role='defvalue' autocomplete="off" value={{ cl.searchHint }}   />
+				</div>
+				<div class="main-search-btn" style="height:22px">
+					<span><img id="searchButton" src="{{ MEDIA_URL }}/img/s.gif" title="{%trans "Search"%}" style="cursor:hand;"></span>
+				</div>
+			</div>
+		</div>		
+	</div>
+
+{% endblock%}
+{% block toolbar %}
+        <div id="id_toolbar">
+                <UL class="toolbar" id="navi">
+                        <LI id="id_reload"><SPAN class="icon iconfont icon-shuaxin"></SPAN>{%trans "Reload"%}</LI>
+                        <!-- <LI id="id_search"><SPAN class="icon iconfont icon-chaxun"></SPAN>{%trans "查询"%}</LI>-->
+			<LI id="id_export"><SPAN  class="icon iconfont icon-shuju"></SPAN>{%trans "Export"%}
+                                <ul id="op_menu_" class="op_menu">
+                                        <li><span>{%trans "文件格式"%}</span>
+                                                <ul>
+                                                <li onclick="javascript:clickexport(tblName[g_activeTabID],0);"><a href="#">EXCEL</a></li>
+                                                <li onclick="javascript:clickexport(tblName[g_activeTabID],1);"><a href="#">TXT</a></li>
+                                                <li onclick="javascript:clickexport(tblName[g_activeTabID],2);"><a href="#">PDF</a></li>
+                                                </ul>
+                                        </li>
+                                </ul>
+                        </LI>
+                        <!--<LI id="id_print" class="button-print"> <SPAN></SPAN>{%trans "Print"%}</LI>-->
+                        {% block extractOP %}
+                        {% endblock %}
+                        <LI id="id_custom"  ><SPAN  class="icon iconfont icon-select"></SPAN>{%trans "Preferences"%}</LI>
+                        {% block extraBatchOp %}{% endblock %}
+                </UL>
+                
+<!--		<div id="show_field_selected">
+			<div class="title"><span class='close' onclick='hideFields_define();'></span></div>
+			<div id="id_fields_selected"></div>
+		</div>
+-->        </div>
+
+{% endblock %}
+
+
+
+{% block loadData %}
+	//html="<span id=id_opt_tree><input type='checkbox' id='id_cascadecheck_' checked/>{%trans '级联下级部门' %}</span>"
+	//$("#id_west .ui-widget-header").html(html)
+	html="<div id='show_dept_tree_'>"
+		+"<ul id='showTree_"+g_activeTabID+"'"
+                +" class='ztree' style='margin-left: 0px;height:100%;'></ul>"
+		+"</div>"   
+	$("#west_content_tab_acc_records").html(html)
+
+//	var h=$("#"+g_activeTabID+" #west_content").height()-20
+//	$('#showTree_'+g_activeTabID).css('height',h)
+
+        ShowDeviceData(g_activeTabID,true)
+        loadPage();
+	var zTree = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+	zTree.setting.check.enable = false;
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		var deptID=treeNode.id;
+		var deptName=treeNode.name;
+               if (deptID==0)
+                    var urlStr="/acc/data/records/"
+                else
+                    var urlStr="/acc/data/records/?SN="+deptID
+ 
+                
+                var ComeTime=$("#id_ComeTime_records").val();
+                var EndDate=$("#id_EndTime_records").val();
+                var isError=validate_form_records();
+                $.cookie("ComeTime",ComeTime, { expires: 7 });
+                $.cookie("EndDate",EndDate, { expires: 7 });
+                $("#id_con_error").css("display","none");
+                var urlTime1="";
+				
+                if(!isError){
+                        urlTime1="TTime__gte="+ComeTime+"&TTime__lt="+EndDate
+                }else{
+                        $("#id_con_error").css("display","block");
+                        $("#id_con_error").html("<span class='Se_Tran_errorlist'>{%trans 'Please check that you select one or more employees or select department and the date is validate!'%}</span>");
+                        return false;
+                }
+                if(urlStr.indexOf("?")!=-1){
+                        urlStr+="&"+urlTime1 
+                }
+                else{
+                        urlStr+="?"+urlTime1
+                }
+                          
+		savecookie("search_urlstr",urlStr);
+		 $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+	}
+
+
+{% endblock %}
+
+
+
+

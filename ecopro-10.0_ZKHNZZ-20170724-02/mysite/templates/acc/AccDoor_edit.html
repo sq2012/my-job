@@ -1,0 +1,23 @@
+{% extends "data_edit_1c.html" %}
+ 
+{% block add_contents %}
+    <span><input type='checkbox' value='1' id='id_copy_' name='_copy' /><font color="red"> 应用公用配置到其他所有的门,自动下发到设备(仅限超级管理员使用)</font></span>
+<div style="height:20px;">
+<div id='door_params' style='display: none;'>
+<table><tbody><tr><td><input type="checkbox" value="lock_delay" name="optBox" id="lock_delay" checked="checked">锁驱动时长</td>
+                                            <td><input type="checkbox" value="back_lock" name="optBox" id="back_lock" checked="checked">闭门回锁</td>
+                                            <td><input type="checkbox" value="door_sensor_status" name="optBox" id="door_sensor_status" checked="checked">门磁类型</td>
+                                            <td><input type="checkbox" value="sensor_delay" name="optBox" id="sensor_delay"  checked="checked">门磁延时</td>
+                                            <td ><input type="checkbox" value="opendoor_type" name="optBox" id="opendoor_type"  checked="checked">验证方式</td>
+                                            <td ><input type="checkbox" value="lock_active" name="optBox" id="lock_active"  checked="checked">门有效时间段</td>
+                                            <td ><input type="checkbox" value="long_open" name="optBox" id="long_open"  checked="checked">门常开时间段</td>
+                                            <td ><input type="checkbox" value="wiegand_fmt" name="optBox" id="wiegand_fmt"  checked="checked">韦根卡格式</td>
+                                            <td ><input type="checkbox" value="card_intervaltime" name="optBox" id="card_intervaltime"  checked="checked">刷卡间隔</td>
+                                            <td ><input type="checkbox" value="force_pwd" name="optBox" id="force_pwd"  checked="checked">胁迫密码</td>
+                                            <td ><input type="checkbox" value="supper_pwd" name="optBox" id="supper_pwd"  checked="checked">紧急状态密码</td>
+                                </tbody></table>
+    
+ </div>   
+</div>
+
+{% endblock %}

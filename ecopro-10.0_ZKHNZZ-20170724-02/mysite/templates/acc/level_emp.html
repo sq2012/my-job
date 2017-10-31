@@ -1,0 +1,214 @@
+{% load iclock_tags %}
+{% load i18n %}
+
+
+<script>
+pageQueryString=location.search; //当前 页面 的查询字符串，页面
+options[g_activeTabID]={pagerId:"pages", tblId:"tbl", showSelect: true, canSelectRow:false,showStyle:false,
+	canEdit: {% if request|reqHasPerm:"change" %}true{% else %}false{% endif %},
+	canAdd: {% if request|reqHasPerm:"add" %}true{% else %}false{% endif %},
+	canDelete: {% if request|reqHasPerm:"delete" %}true{% else %}false{% endif %},
+	canSearch: true, keyFieldIndex:"0", title:'{{ dataOpt.verbose_name|cap }}',
+
+	tblHeader:'{%trans "Please set a template file"%}options.tblHeader',
+	dlg_width:810,
+	dlg_height:'auto',
+	edit_col:1,
+	canHome:false
+	
+};
+    
+tblName[g_activeTabID]='level_emp'    
+    
+jqOptions[g_activeTabID]=copyObj(jq_Options);
+var jqOptions_east=copyObj(jq_Options);
+
+{% autoescape off %}
+jqOptions[g_activeTabID].rowNum={{ limit }}
+jqOptions[g_activeTabID].colModel={{colModel}}
+jqOptions[g_activeTabID].pager='id_pager_level_emp'
+jqOptions[g_activeTabID].onSelectRow=function(ids){show_detail_level(ids);}
+
+
+jqOptions_east.rowNum={{ limit }}
+jqOptions_east.colModel={{colModel_level}}
+jqOptions_east.pager='id_pager_level_emp_east'
+
+{% endautoescape %} 
+ 
+ 
+ 
+    
+var layoutSettings_center = {
+    
+ 					east__paneSelector:		".inner-east"
+                                ,       east__size:'400'
+				,	spacing_open:			6  // ALL panes
+				,	spacing_closed:			6  // ALL panes
+				,	east__spacing_closed:	10
+
+   
+    
+}
+
+function show_detail_level(ids)
+{
+        $("#id_grid_level_emp_east").jqGrid('setGridParam',{url:"/acc/get_level_emp/?id="+ids,datatype: "json"}).trigger('reloadGrid');			
+
+}
+ 
+function actionAddLevel(url,ss)
+{
+        $.ajax({type: "POST",
+                        url: '/acc/employeelevel/?id='+url,//getQueryStr(window.location.href, ["action"],a),
+                        data: "K="+ss,
+                        dataType:"json",
+                        success: actionSuccess,
+                        error: function(request){
+                                alert($.validator.format(gettext('{0} failed!\n\n{1}'), opName, request.statusText)); $.unblockUI(); 
+                                //$('body').html(request.responseText);
+                                }
+                        });
+ 
+}
+function addLevel(id)
+{
+    	
+        createDialog(id, actionAddLevel, '/acc/data/level/', "{%trans "为人员添加权限组"%}", "{%trans "权限组"%}", 600,true,'level');
+
+    
+    
+    
+}
+
+function searchShowEmp(){
+    var v=$("#"+g_activeTabID+" #searchbar").val();
+    //if (v=='') return;
+	if(v=='工号,姓名,卡号'){
+		v=''
+	}
+    var url="/acc/data/employee/?t=level_emp.js&q="+escape(v)
+    savecookie("search_urlstr",url);
+    $("#id_grid_level_emp").jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+    
+}
+
+function strOfData_level_emp(data)
+{
+	return stripHtml(data.name)
+}
+
+$(function(){
+    $('#id_inner_center').layout(layoutSettings_center)
+  
+
+    var hcontent=$("#id_inner_center").height();
+    var hbar=$("#id_inner_center"+" #id_top").length>0?$("#id_inner_center"+" #id_top").height():0;
+    var h=hcontent-hbar-43
+    $('.level_emp_module').css('height',h)
+
+    g_urls[g_activeTabID]='/acc/data/employee/?t=level_emp.js'
+    loadPageData();
+    
+    
+		jqOptions_east.data=[]
+		jqOptions_east.datatype='local'
+		jqOptions_east.height=h
+		$("#id_grid_level_emp_east").jqGrid(jqOptions_east);
+    
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+		searchShowEmp();
+	})
+
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+		if(event.keyCode==13){
+			searchShowEmp();
+		}	
+	})
+	var input_searchbar =$("#"+g_activeTabID+" #searchbar").val();
+	$("#"+g_activeTabID+" #searchbar").bind({
+   			focus:function(){
+				if($(this).val() == input_searchbar)
+					$(this).val('')},
+    		blur:function(){
+				if($(this).val() == '')
+					$(this).val(input_searchbar)}
+	})
+    $("#"+g_activeTabID+" #queryButton").hide()
+    
+
+});
+
+
+</script>
+
+
+<div id='id_inner_center' style="width: 100%;height: 100%;">
+
+<div class="ui-layout-center">
+    <div id="id_top">
+	<div class="sear-box quick-sear-box" >
+		
+		
+		<div class="s-info right" id="sear_area">			
+			<div class="nui-ipt nui-ipt-hasIconBtn " >
+				<input id="searchbar" class="search-input" type="text"  value="工号,姓名,卡号" role='defvalue' autocomplete="off" />
+				<span id ="queryButton" class="nui-ipt-iconBtn">
+					<b id="_icon_2_28" class="nui-ico nui-ico-dArr "></b>
+				</span>
+				
+			</div>
+			
+			<div class="main-search-btn">
+			
+				<span id="searchButton" class="chaxun icon iconfont icon-chaxun" ></span>
+			</div>
+		</div>
+		
+				
+	</div>
+                    
+        <div id="id_toolbar">	
+            <UL class="toolbar" id="navi" style='z-index: 1 !important;'></UL>
+        </div>            
+    </div>               
+
+    <div class="level_emp_module" style="width: 99%;padding-top: 3px;">
+	
+	<table id="id_grid_level_emp" >	</table>
+	<div id="id_pager_level_emp"></div>
+    </div>
+</div>
+		
+                
+<div class="inner-east">
+
+    <div id="id_top">
+	<div class="sear-box quick-sear-box" >
+		
+		
+		
+				
+	</div>
+                    
+        <div id="id_toolbar" >	
+            <UL class="toolbar" id="navi" style='z-index: 1 !important;'>
+				{% if request|reqHasPerm:"delete" %}
+				<LI id="aDelete"  onclick="batchOp('?action=del',itemCanBeDelete,'{%trans "Delete"%}','level_emp_east','/acc/data/level_emp/');"><SPAN class="icon iconfont icon-shanchu"></SPAN>{%trans "Delete"%}</LI>
+				{% endif %}
+                
+                
+                
+            </UL>
+        </div>            
+    </div>               
+
+
+
+    <div class="east_module" style="width: 99%;padding-top: 3px;">
+	<table id="id_grid_level_emp_east" >	</table>
+	<!-- <div id="id_pager_level_emp_east"></div> -->
+    </div>
+
+
+</div>

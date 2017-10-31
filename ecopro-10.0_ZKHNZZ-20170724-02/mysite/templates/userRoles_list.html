@@ -1,0 +1,80 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+<script>
+{% block tblHeader %}
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='userRoles';
+jqOptions[g_activeTabID].sortname='roleid';
+jqOptions[g_activeTabID].pager="id_pager_userRoles"
+options[g_activeTabID].dlg_width=525;
+options[g_activeTabID].dlg_height=300;
+options[g_activeTabID].edit_col=1;
+dtFields = "{{ dtFields }}";
+$(function(){
+        var info='<div class=west_info><p>1.所设置的职务将被用于人员信息维护中，人员职务的分配</p><p>2.职务信息还将被用于用户设置中，用户的职务分配</p><p>3.所分配的职务最终将用于多级审批功能</p></div>'
+        renderLeftInformation(info);
+        smenu="<ul><li  class='subnav_on' onclick=submenuClick('/iclock/data/userRoles/',this);><a href='#'>职务维护</a></li></ul>"
+       // $('#menu_div').html(smenu)
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+		processNewModel();
+	});
+	$("#"+g_activeTabID+" #id_custom").remove()
+	$("#"+g_activeTabID+" #queryButton").hide()
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowRoles();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowRoles();
+	});
+	$("#"+g_activeTabID+" #searchbar").val(gettext("职务编号,职务名称"))	
+});
+function process_dialog_userRoles(htmlObj){
+	$('#id_roleid',htmlObj).css('width','150px')
+	if ((navigator.userAgent.indexOf('MSIE') >= 0) && (navigator.userAgent.indexOf('Opera') < 0)){
+		$('#id_roleName',htmlObj).css('width','150px')
+	} else{
+		$('#id_roleName',htmlObj).css('width','152px')
+	}
+	$('#id_roleLevel',htmlObj).css('width','150px')
+	f=$(htmlObj).find("#id_edit_form").get(0)
+	$(f).validate({
+				rules: {
+					"roleid":{"required":true,"digits":true,maxlength:9},
+					"roleName":{"required":true},
+					"roleLevel":{maxlength:9}
+				}
+	});	
+}
+function strOfData_userRoles(data)
+{
+	return stripHtml(data.roleid)+" "+data.roleName;
+}
+//function canEdit()
+//{
+//	if(!options[g_activeTabID].canEdit) return 0;
+//	var rows=$("#id_grid_"+tblName[g_activeTabID]).jqGrid("getCol",options[g_activeTabID].edit_col+1,true)
+//	for(var i=0;i<rows.length;i++)
+//	{
+//		var id=rows[i].id;
+//		var r=$("#id_grid_"+tblName[g_activeTabID]).jqGrid("getRowData",id)
+//		var colData=rows[i].value;
+//		var apage="<a class='can_edit' href='#' onclick='editclick("+id+")'>"+colData+"  "+"</a>"
+//		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setRowData',id,{roleid:apage})
+//	}
+//}
+//模糊查询
+function searchShowRoles(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+	var url=g_urls[g_activeTabID]+"?q="+escape(v)
+	savecookie("search_urlstr",url);
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+{% endblock %}
+</script>

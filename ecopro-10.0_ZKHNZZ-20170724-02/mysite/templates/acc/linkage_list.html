@@ -1,0 +1,381 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+<script>
+{% block tblHeader %}
+//options[g_activeTabID].disableCols=[0];
+
+//jqOptions=copyObj(jq_Options)
+jqOptions[g_activeTabID].sortname='id';
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='linkage';
+jqOptions[g_activeTabID].pager="#id_pager_"+tblName[g_activeTabID];
+options[g_activeTabID].dlg_width=1050;
+options[g_activeTabID].dlg_height=550;
+var select_index_event=0
+$(function(){
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+		processNewModel();
+	});
+	$("#"+g_activeTabID+" #queryButton").hide()
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowHolidays();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowHolidays();
+	});
+	$("#"+g_activeTabID+" #id_export").css('display','none');
+	$("#"+g_activeTabID+" #id_clearrec").css('display','none')
+	$("#"+g_activeTabID+" #id_third").html("");
+	
+	
+});
+//function beforePost(obj,actionName){
+//	var flag=true;
+//	var tmp =$("#id_StartTime",obj).val()
+//    var tempdate= new Date()
+//    var birth =tmp.split("-");
+//	if(tmp.length<1){
+//		$("#id_error",obj).css("display","block");
+//		$("#id_error",obj).html("<ul class='errorlist'><li>{%trans 'Please enter a date' %}</li></ul>");					
+//		flag=false;
+//	}else if(birth[0]!=parseInt(birth[0])||birth[1]!=parseInt(birth[1])||birth[2]!=parseInt(birth[2])||parseInt(birth[0])<1900||parseInt(birth[1])>12||parseInt(birth[1])<1||parseInt(birth[2])<1||parseInt(birth[2])>31){
+//		$("#id_error",obj).css("display","block");
+//		$("#id_error",obj).html("<ul class='errorlist'><li>{%trans 'Invalid date' %}</li></ul>");					
+//		flag=false;
+//	}
+//	return flag
+//}
+//模糊查询
+function searchShowHolidays(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+	var url=g_urls[g_activeTabID]+"?q="+escape(v)
+	savecookie("search_urlstr",url);
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function strOfData_linkage(data)
+{
+	return stripHtml(data.name)
+}
+
+
+function process_actiontime(obj)
+{
+	
+	action_type=$(obj).val()
+	$('#id_action_th').hide()
+	$('#id_action_td').hide()
+	$('#id_action_time').val(0)
+	if(action_type==1)
+	{
+		$('#id_action_th').show()
+		$('#id_action_td').show()
+		$('#id_action_time').val(20)
+	}
+	else if(action_type==2)
+	{
+	$('#id_action_time').val(255)
+	}
+	
+}
+
+
+function beforePost_linkage(obj,actionName)
+{
+	if($("#id_name",obj).val()=="")
+	{
+		$("#id_error",obj).html('联动名称不能为空，保存失败').css('color','red').show()
+		return false
+	}
+	$("#id_tab_index",obj).val(select_index_event);
+	if(select_index_event==0)
+	{
+		events=getSelected_dept('door_events')
+		if (events.toString().indexOf('-')!=-1) {
+			events = events.slice(1)
+		}
+		/*
+		if(events.length==0)
+		{
+			$("#id_error",obj).html('没有选择事件，保存失败').show()
+			return false
+		}
+		*/
+		inputs=getSelected_dept('door_input')
+		//if(inputs.length==0) return false
+		outputs=getSelected_dept('door_out')
+		//if(outputs.length==0) return false
+		$("#id_events_h",obj).val(events);
+		$("#id_inputs_h",obj).val(inputs);
+		$("#id_outputs_h",obj).val(outputs);
+	}
+	else if (select_index_event==1) {
+		
+		events=getSelected_dept('reader_events')
+		if (events.toString().indexOf('-')!=-1) {
+			events = events.slice(1)
+		}
+		
+		inputs=getSelected_dept('reader_input')
+		//if(inputs.length==0) return false
+		outputs=getSelected_dept('reader_out')
+		//if(outputs.length==0) return false
+	
+		$("#id_events_h",obj).val(events);
+		$("#id_inputs_h",obj).val(inputs);
+		$("#id_outputs_h",obj).val(outputs);
+	
+	}
+	else if (select_index_event==2) {
+		
+		events=getSelected_dept('door_events_in')
+		if (events.toString().indexOf('-')!=-1) {
+			events = events.slice(1)
+		}
+		
+		inputs=getSelected_dept('door_input_in')
+		//if(inputs.length==0) return false
+		outputs=getSelected_dept('door_out_in')
+		//if(outputs.length==0) return false
+	
+		$("#id_events_h",obj).val(events);
+		$("#id_inputs_h",obj).val(inputs);
+		$("#id_outputs_h",obj).val(outputs);
+	
+	}
+	
+	if($('#id_action_type',obj).val()==0) {
+		$('#id_action_time',obj).val(0)
+	} else if ($('#id_action_type',obj).val()==2) {
+		$('#id_action_time',obj).val(255)
+	}
+}
+
+
+function FetchLinkageInfo(SN,flag,linkId)
+{
+/*
+	var setting = {
+            check: {enable: true,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},          
+	    async: {
+			    enable: true,
+			    url: "/acc/getData/?func=door_events&flag="+flag,
+			    autoParam: ["id"]
+		    }
+	};
+*/
+
+        var setting = {
+                check: {enable: true,chkboxType:{ "Y": "s", "N": "s" },chkStyle: "checkbox"},
+
+                data: {simpleData: {enable: true,idKey: "id", pIdKey: "pid",  rootPId: 0}
+                }
+        };
+	urlStr="/acc/getData/?func=door_events&flag="+flag+'&keys='+SN
+	if(linkId!=undefined)
+	urlStr+='&id='+linkId
+	$.post(urlStr,null,
+		function (ret, textStatus) {
+			if(ret.ret>0)
+			{
+				if(ret.action_time==0)
+				$('#id_action_type').val(0)
+				else if(ret.action_time==255)
+				{
+				$('#id_action_type').val(2)
+				}
+				else
+				{
+					$('#id_action_type').val(1)
+					$('#id_action_th').show()
+					$('#id_action_td').show()
+					$('#id_action_time').val(ret.action_time)
+					
+				}
+				
+				
+				$.fn.zTree.init($("#door_events"), setting,ret.events);		
+				$.fn.zTree.init($("#door_out"), setting,ret.outputs);
+				$.fn.zTree.init($("#door_input"), setting,ret.inputs);
+
+				$.fn.zTree.init($("#reader_events"), setting,ret.reader_events);		
+				$.fn.zTree.init($("#reader_out"), setting,ret.reader_outputs);
+				$.fn.zTree.init($("#reader_input"), setting,ret.reader_inputs);
+				
+				$.fn.zTree.init($("#door_events_in"), setting,ret.in_events);		
+				$.fn.zTree.init($("#door_input_in"), setting,ret.in_inputs);		
+				$.fn.zTree.init($("#door_out_in"), setting,ret.in_outputs);
+
+
+
+				var zTree = $.fn.zTree.getZTreeObj('door_input')
+				zTree.setting.callback.beforeCheck = function beforeCheck(treeId, treeNode){
+					
+				if(treeNode.id==0)//处理任意
+				{
+					
+					var nodes = zTree.getCheckedNodes(true)
+					for (var i=0, l=nodes.length; i < l; i++) {
+						zTree.checkNode(nodes[i], false, true);
+					}					
+				}
+				else
+				{
+					var nodes = zTree.getCheckedNodes(true)
+					for (var i=0, l=nodes.length; i < l; i++) {
+						if (nodes[i].id==0)
+						zTree.checkNode(nodes[i], false, true);
+					}					
+					
+					
+				}
+				
+					
+					
+					return true
+				
+				}
+				
+				
+				
+			}
+		},
+		"json");
+	
+	
+	//$.fn.zTree.init($("#door_events"), setting,null);	
+	//setting['async']['url']="/acc/getData/?func=door_input&flag="+flag
+	//$.fn.zTree.init($("#door_input"), setting,null);	
+	
+	
+	
+}
+
+
+function ShowDeviceData(page,tag,isDiy)
+{
+	
+	var setting = {
+            check: {enable: !tag,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},          
+	    async: {
+			    enable: true,
+			    url: "/acc/getData/?func=devs_tree&ptype=acc",
+			    autoParam: ["id"]
+		    }
+	};
+	$.fn.zTree.init($("#showTree_"+page), setting,null);	
+	if(tag){
+		var zTree = $.fn.zTree.getZTreeObj("showTree_"+page);
+		zTree.setting.check.enable = false;
+		$("#searchbydept_"+page).hide()
+		zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+				$("#id_device").val(treeNode.value);
+				$("input[alt='Authed_device']").val(treeNode.value);
+
+				dlgdestroy(page)
+				FetchLinkageInfo(treeNode.id,'add')
+
+		}
+	}
+}
+
+
+function createQueryDlgbypage_linkage(page,tag,isDiy)//生成部门框
+{
+
+	if(page==undefined){
+		page=''
+	}
+   var html="<div id='dlg_for_query_"+page+"' style='overflow:hidden;'>"
+		+"<div id='dlg_dept_"+page+"' class='dlgdiv'>"
+   			+"<div id='dlg_dept_body_"+page+"' style='overflow:hidden;'>"
+				+"<ul id='showTree_"+page+"' class='ztree' style='height:300px;overflow:auto;'></ul>"
+			+"</div>"
+		+"</div>"
+   +"</div>"
+
+	$(html).dialog({modal:true,resizable:false,
+			//dialogClass: "no-close",
+			width: 410,
+			height:430,
+                        position:  { my: "left top-150", at: "right top",of:"#id_drop_Authed_device"},
+                                                  open:function(){ShowDeviceData(page,tag,isDiy);},
+						  close:function(){$(this).dialog("destroy"); } 		
+						})
+}
+
+
+
+function iclock_Authed_deptTree_linkage(obj)
+{
+	$("#id_device",obj).parent().html("<div>"
+		+"<span style='float:left;border-top:1 solid #5B80B2;'><input alt='Authed_device' type='text' style='width:200px !important;' readOnly='readOnly'  id='Authed_device'/></span>"
+		+"<span style='float:left;'><img  alt='{%trans 'open department tree'%}' src='/media/img/sug_down_on.gif' id='id_drop_Authed_device'/></span>"
+		+"</div>"
+		+"<div style='display:none;'><input id='id_device' name='device' type='hidden' /></div>"
+		);
+
+		$("#id_drop_Authed_device",obj).click(function(){
+				    createQueryDlgbypage_linkage('auth_device',true,false)
+	
+			
+			
+			
+		})
+	
+	
+	
+}
+
+function process_dialog_linkage(obj,flag,urlAddr)
+{
+	 $(obj).dialog({resizable:false,modal:true})
+	if (flag=='add') iclock_Authed_deptTree_linkage(obj);
+	else
+	{
+		$("#id_device",obj).prop('readonly',true).css('width',200)
+		SN=$("input[name='device']:hidden",obj).val()
+		id=$('#id_span_param',obj).val()
+		FetchLinkageInfo(SN,'edit',id)
+	}
+	
+	
+	
+	f=$(obj).find("#id_edit_form").get(0)
+	$(f).validate({
+			rules: {
+				}
+			});
+	
+
+}
+
+
+function process_dialog_again_linkage(obj)
+{
+	//$("#door_input").position({my: "left top", at: "right top",of:"#door_events"})
+
+    $("#tabs_event").tabs()
+	$( "#tabs_event" ).on( "tabsactivate", function( event, ui ) {
+            select_index_event = $( "#tabs_event" ).tabs('option', 'active');
+		} );	
+
+	$('.ui-dialog-buttonset').before("<font color='red'>每页配置后需要点击保存！</font>" )
+}
+
+
+
+
+{% endblock %}
+</script>
+{% block newrec %}
+	{% if user|HasPerm:"acc.add_linkage" %}
+	 <LI id="id_newrec" ><SPAN class="icon iconfont icon-xinzeng"></SPAN>{%trans "Append"%}</LI>
+	{% endif %}
+{% endblock %}

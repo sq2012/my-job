@@ -1,0 +1,92 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+
+<div id='id_option' style='padding: 20px;'>
+	<form id='id_edit_form' method='post'>
+        <div class='ui-widget-header' style='width: 500px; height: 28px;margin-left: 100px;margin-top: 10px;'><h3 style="padding-top: 8px;padding-left: 10px"><a>{%trans '数据对接设置'%}</a></h3></div>
+		<table style="margin-left: 100px;margin-top: 20px;">
+			<tr><th>{% trans "FTP 地址:" %}</th><td><input type="text" name="SAPhost"  value="{{SAPhost}}"></td></tr>
+			<tr><th>{% trans "FTP 用户名:" %}</th><td><input type="text" name="SAPuser"  value="{{SAPuser}}"></td></tr>
+			<tr><th>{% trans "FTP 密码:" %}</th><td><input type="password" name="SAPpassword"  value="{{SAPpassword}}"></td></tr>
+			<tr><th>{% trans "人员表路径:" %}</th><td><input type="text" name="SAPemp_path" value="{{SAPemp_path}}">{% if user|HasPerm:"iclock.sys_sap_setting" %}<input id='id_download_emp' type='button' class='m-btn  mini zkgreen rnd' value='{%trans "下载人员" %}'/>{% endif %}</td></tr>
+			<tr><th>{% trans "排班表路径:" %}</th><td><input type="text" name="SAPsch_path"  value="{{SAPsch_path}}">{% if user|HasPerm:"iclock.sys_sap_setting" %}<input id='id_download_sch' type='button' class='m-btn  mini zkgreen rnd' value='{%trans "下载排班数据" %}'/>{% endif %}</td></tr>
+			<tr><th>{% trans "考勤记录路径:" %}</th><td><input type="text" name="SAPtrans_path"  value="{{SAPtrans_path}}"></td></tr>
+			<tr><th>{% trans "人员表下传时间:" %}</th><td ><input type="text"  id ="id_hour" name="hour"  value="{{hour}}">24 Hour，Ex. 21:00。</td></tr>
+			<tr><th>{% trans "排班表下传时间:" %}</th><td><input type="text" id ="week_hour" name="week_hour"  value="{{week_hour}}">24 Hour，Ex. 21:00。</td></tr>
+			<tr><th>{% trans "检查设备脱机频率:" %}</th><td><input type="text" id ="interval" name="interval"  value="{{interval}}">(Min)。<30 disabled。</td></tr>
+			<tr><th>{% trans "接收邮件地址:" %}</th><td><input type="text" id ="emails" name="emails"  value="{{emails}}">example: 123@qq.com,456@qq.com。</td></tr>
+
+
+			<tr ><th>&nbsp;&nbsp;</th>
+		</table>
+	</form>
+	{% if user|HasPerm:"iclock.sys_sap_setting" %}
+	<div style="margin-left: 100px;margin-top: 20px;"><input id='id_submit' type='button' class='m-btn  zkgreen rnd' value='{%trans "Save" %}'/></div>
+	{% endif %}
+</div>
+<div id='id_error_option_sap_ftp'style="margin-left: 170px; width: 500px"></div>
+
+
+<script>
+{% autoescape off %}
+var _data={{ params }}
+{% endautoescape %}
+
+
+
+
+
+
+
+$(function(){
+        //if(_data.is_=='1'){ $("#id_auto_").prop("checked","checked");}  
+	//$('#id_start_date').val(_data.st)
+	//$('#id_user').val(_data.user)
+	//$('#id_pass').val(_data.pass)
+	
+
+            $("#id_submit").click(function(){
+         			var queryStr=$("#id_edit_form").formSerialize();
+        			$.ajax({ 
+        				type: "POST",
+        				url:"/base/isys/option_sap_ftp/",
+        				data:queryStr,
+        				dataType:"json",
+        				success:function(retdata){
+                                                        var message=retdata.message
+        						$("#id_error_option_sap_ftp").html("<ul class='errorlist'><li>"+message+"</li></ul>").show();
+        					}
+        				});
+        		});
+
+            $("#id_download_emp").click(function(){
+        			$.ajax({ 
+        				type: "POST",
+        				url:"/iclock/tasks/sap_ftp/?action=download_emp",
+        				data:'',
+        				dataType:"json",
+        				success:function(retdata){
+                                                        var message=retdata.message
+        						$("#id_error_option_sap_ftp").html("<ul class='errorlist'><li>"+message+"</li></ul>").show();
+        					}
+        				});
+        		});
+	
+            $("#id_download_sch").click(function(){
+        			$.ajax({ 
+        				type: "POST",
+        				url:"/iclock/tasks/sap_ftp/?action=download_sch",
+        				data:'',
+        				dataType:"json",
+        				success:function(retdata){
+                                                        var message=retdata.message
+        						$("#id_error_option_sap_ftp").html("<ul class='errorlist'><li>"+message+"</li></ul>").show();
+        					}
+        				});
+        		});
+	
+});
+
+</script>
+

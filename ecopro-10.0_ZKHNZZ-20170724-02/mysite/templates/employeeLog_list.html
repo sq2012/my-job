@@ -1,0 +1,109 @@
+{% extends "data_list.html" %}
+{% load iclock_tags %}
+{% load i18n %}
+
+{% block tblHeader %}
+options[g_activeTabID].disableCols=["0"];
+options[g_activeTabID].canDelete=false;
+options[g_activeTabID].canEdit=false;
+options[g_activeTabID].canAdd=false;
+hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+hasImport={% if user|HasPerm:"iclock.import_employeeLog" %}true{% else %}false{% endif %}
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='employeeLog';
+jqOptions[g_activeTabID].pager = "id_pager_"+tblName[g_activeTabID];
+jqOptions[g_activeTabID].sortname='LTime';
+jqOptions[g_activeTabID].sortorder="desc";
+
+
+//function canEdit()
+//{
+//}
+function searchShowEmployeeLog(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+    var url="/iclock/data/employeeLog/?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+    
+}
+
+$(function(){
+	var info='<p>1.查看员工自助登陆的操作信息</p>'
+        renderLeftInformation(info);
+        smenu="<ul><li  class='subnav_on' onclick=submenuClick('/iclock/data/employeeLog/',this);><a href='#'>个人登录操作</a></li></ul>"
+        //$('#menu_div').html(smenu)
+	//savecookie("search_urlstr",g_urls[g_activeTabID])
+	
+	
+	if(!options.canAdd)$("#"+g_activeTabID+" #id_newrec").css('display','none');
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+			searchShowEmployeeLog();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+		if(event.keyCode==13)
+		searchShowEmployeeLog();
+	});
+	$("#"+g_activeTabID+" #queryButton").hide()
+        $("#id_ComeTime_emploeeLog").val(moment().startOf('month').format('YYYY-MM-DD'))
+        $("#id_EndTime_emploeeLog").val(moment().endOf('day').format('YYYY-MM-DD'))
+	$("#id_ComeTime_emploeeLog").datepicker(datepickerOptions);
+	$("#id_EndTime_emploeeLog").datepicker(datepickerOptions);
+	$("#"+g_activeTabID+" #id_search").click(function(){
+		var ComeTime=$("#id_ComeTime_emploeeLog").val();
+		var EndDate=$("#id_EndTime_emploeeLog").val();
+		$.cookie("ComeTime",ComeTime, { expires: 7 });
+		$.cookie("EndDate",EndDate, { expires: 7 });
+		var isError=validate_form_employeeLog();
+		var urlTime="";
+		var urlTime1="";
+		if(!isError){
+			exporttag=1;
+			urlTime1="LTime__gte="+ComeTime+"&LTime__lt="+EndDate
+		}
+		urlTime=urlTime1
+		var url="/iclock/data/employeeLog/?"
+		if (urlTime!="" &&  urlTime!=null)
+			url+=urlTime;
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+		savecookie("search_urlstr",url);
+	});
+	
+})
+function validate_form_employeeLog(){   //验证表单的合法性(、开始时间、结束时间)
+	var t_ComeTime=$("#id_ComeTime_emploeeLog").val();
+	var cTime=t_ComeTime.split("-");
+	var t_EndDate=$("#id_EndTime_emploeeLog").val();
+	var eTime=t_EndDate.split("-");
+	cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+	edate=new Date(parseInt(eTime[0],10),parseInt(eTime[1],10)-1,parseInt(eTime[2],10));
+	if(cdate>edate || t_ComeTime=="" || t_EndDate==""){
+		return 1;
+	}else{
+		return 0
+	}
+}
+
+{% endblock %}
+{% block otherQuery %}
+	<span style='display: inline-block;'>
+					<span>
+						<label >{%trans 'Begin Date'%}</label>
+						<input type='text' name='ComeTime' maxlength='10' id='id_ComeTime_emploeeLog' style='width:120px !important;'>
+						<label  >{%trans 'End Date'%}</label>
+						<input type='text' name='EndTime' maxlength='10' id='id_EndTime_emploeeLog' style='width:120px !important;'>
+					</span>
+				        <span id='id_search' ><a class='m-btn  zkgreen rnd mini'>{%trans 'Query'%}</a></span>
+					
+				</span>
+	
+				
+				
+				
+				
+{% endblock %}
+

@@ -1,0 +1,407 @@
+{% load i18n %}
+{% load iclock_tags %}
+<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}css/dlogcheck.css" />
+<script>
+	outerLayout.hide('west')
+     //$("#west_content").html("<div  id='menu_div' style='margin:4px;' ></div>")
+     //$("#menu_div").datepicker()
+	var jqOptions=copyObj(jq_Options);
+	jqOptions.colModel=[
+		{'name':'id','hidden':true},
+		{'name':'SN','width':80,'label':'{%trans 'serial number' %}'},
+		{'name':'Alias','width':120,'label':'{%trans 'Device Alias name' %}'},
+		{'name':'DeptID','width':120,'label':'{%trans 'department name' %}'},
+		{'name':'State','index':'State','width':60,'label':'{%trans 'State' %}'},
+		{'name':'IPAddress','width':100,'label':'{%trans 'IPAddress' %}'}
+	]
+	maxLine=50;
+	maxLineopp=50;
+	function formatLine(data){
+		var line="<td>"+data.TTime+"</td>"
+			+"<td>"+data.PIN+"</td>"
+			+"<td>"+data.EName+"</td>"
+			+"<td>"+data.DeptName+"</td>"
+			+"<td>"+data.Device+"</td>"
+	
+		if(data.id==1){
+			line="<td id=\"tds1\">"+data.TTime+"</td>"
+			+"<td>"+data.PIN+"</td>"
+			+"<td>"+data.EName+"</td>"
+			+"<td>"+data.DeptName+"</td>"
+			+"<td>"+data.Device+"</td>"
+
+		}
+		return line;
+	}
+	
+	function formatLineopp(data){   
+		var line="<td>"+data.TTime+"</td>"
+			+"<td>"+data.Device+"</td>"
+			+"<td>"+data.Verify
+			+"</td>";
+		return line;
+	}
+	
+	line=0;
+	lineopp=0;
+	lineadd=0;
+	lineaddop=0;
+	function dataClass(data){
+		line++;
+		if(line%2==0) return 'row1';
+		if(line%2==1) return 'row2';
+		return 'op';
+	}
+	
+	function dataClassopp(data){
+		lineopp++;
+		if(lineopp%2==0) return 'row1';
+		if(lineopp%2==1) return 'row2';
+		return 'op';
+	}
+	
+	function dataClassadd(data){
+		lineadd++;
+		if(lineadd%2==0) return 'row2';
+		if(lineadd%2==1) return 'row1';
+		return 'op';
+	}
+	
+	function dataClassaddop(data){
+		lineaddop++;
+		if(lineaddop%2==0) return 'row2';
+		if(lineaddop%2==1) return 'row1';
+		return 'op';
+	}
+	
+	function refreshLines(data){
+		var tbl=document.getElementById("tblLogList");
+		var tblLen=tbl.rows.length;
+		var remove=tblLen+data.length-maxLine;
+		
+		for(var i=0; i<remove; i++) tbl.deleteRow(tblLen-i-1);
+		if(remove>0) tblLen-=remove;
+		if(tblLen<=0)
+		{
+			var lines=[]
+			for(var i=0; i<data.length && i<maxLine; i++)lines.push("<tr class='"+dataClass(data[i])+"'>"+formatLine(data[i])+"</tr>");
+			lines.push("<div></div>");
+			$(tbl).html(lines.join("\n"));
+			return;
+		}
+		
+		for(var i=0; i<data.length; i++)
+			$(tbl.insertRow(0)).html(formatLine(data[i])).addClass(dataClassadd(data[i]));
+	}
+	function refreshLinesopp(data){
+		var tbl=document.getElementById("tblLogLists");
+		var tblLen=tbl.rows.length;
+		var remove=tblLen+data.length-maxLineopp;
+		
+		for(var i=0; i<remove; i++) tbl.deleteRow(tblLen-i-1);
+		if(remove>0) tblLen-=remove;
+		if(tblLen<=0){
+			var lines=[]
+			for(var i=0; i<data.length && i<maxLineopp; i++) lines.push("<tr class='"+dataClassopp(data[i])+"'>"+formatLineopp(data[i])+"</tr>");
+			lines.push("<div></div>");
+			$(tbl).html(lines.join("\n"));
+			return;
+		}
+		
+		for(var i=0; i<data.length; i++)
+			$(tbl.insertRow(0)).html(formatLineopp(data[i])).addClass(dataClassaddop(data[i]));
+	}
+
+	lastId=0;
+	lastdid=0;
+	begin=0;
+	lastIdopp=0;
+	lastdidopp=0;
+	beginopp=0;
+
+	function checkTime(i){
+		if (i<10) 
+			{i="0" + i}
+		return i
+	}
+	
+	function timeStr(){
+		var today=new Date()
+		var h=today.getHours()
+		var m=today.getMinutes()
+		var s=today.getSeconds()
+		return checkTime(h)+":"+checkTime(m)+":"+checkTime(s)
+	}
+	function showDatas_info(datas,urls,urls1){
+		var html="<div id='id_edit_form' class=\"emplyee\">"
+			+"<h3 class='footer-title'>{%trans '实时考勤人员信息'%}</h3>"
+			+"<table><tbody>"
+			+"<tr><td><div class='frame'><div><img width='100' height='100' src='"+urls+"' /></div><div style='text-align:center;font-weight:bold;'>考勤现场照</div></div></td><td style='padding-left: 14px;'><div class='frame'><div><img width='100' height='100' src='"+urls1+"' /></div><div style='text-align:center;font-weight:bold;'>人员登记照</div></div></td></tr>"
+			+"<tr><th>{%trans 'PIN'%}:</th><th style='text-align: left;'>"+datas["PIN"]+"</th></tr>"
+			+"<th>{%trans 'Name'%}:</th><th style='text-align: left;'>"+(datas["EName"]==null?"":datas["EName"])+"</th></tr>"
+			+"<th>{%trans 'Sex'%}:</th><th style='text-align: left;'>"+(datas["Sex"]==null?"":datas["Sex"])+"</th></tr>"
+			+"<tr><th>{%trans 'department'%}:</th><th style='width:170px;text-align: left;'>"+(datas["DeptName"]==null?"":datas["DeptName"])+"</th></tr>"
+			+"<th>{%trans 'Title'%}:</th><th style='text-align: left;'>"+(datas["Title"]==null?"":datas["Title"])+"</th></tr>"
+			+"<th>{%trans 'Id card'%}:</th><th style='text-align: left;'>"+(datas["Card"]==null?"":datas["Card"])+"</th></tr>"
+			+"</tbody></table>"
+			+"</div>"
+			+"<div style='display:inline'></div></form>"
+		var choicedevice='<input type="button" value="选择要监控的设备" class="m-btn blue rnd" id="id_devtran" style="float:left;margin-bottom: 5px;font-size: 15px;font-weight:bold;padding:10px 15px 10px;box-shadow: 5px 5px 3px #888888;" />'
+		$("#id_Info").html(html);
+		$("#checkdevice").html(choicedevice);
+		$("#id_devtran").click(function(){getDevs()})
+	}
+	
+	Uid=0;
+	class_name="";
+
+	function createSubmitButton(){
+		str = "<div style='text-align:right; margin-top: 50px; margin-right: 20px;margin-bottom:10px;'>"
+		str += '<input type="button" value="'+gettext('Submit')+'" id="btnShowOK"  class="btnOKClass">&nbsp;&nbsp;&nbsp;'
+		str += '<input type="button" value="'+gettext('Cancel')+'" id="btnShowCancel" onclick="javascript:$(\'#id_form\').remove();$(\'#dept_emp_dialog\').dialog(\'destroy\');" class="btnCancelClass">&nbsp;&nbsp;&nbsp;'
+		str += "</div>"
+		return str
+	}
+	
+	
+	function getNewTrans(){   
+		clearTimeout(logtimer1);
+		$.ajax({type: "POST", 
+			url: "/iclock/data/_checktranslog_?lasttid="+lastId+"&lastdid="+lastdid+"&SN="+$("#id_sns").val(),//+"&"+getKeyQuery("SN"), 
+			dataType:"json",
+			success: function(data){
+				if(data.ret>0){	
+					if(begin)
+						$("#net_info").html(timeStr()+"| {%trans "get"%} "+(data.ret)+" {%trans " new transaction"%}")
+					else{
+						begin=1;
+					}
+					lastId=data.lasttId;
+					lastdid=data.lastDId;
+					first_tr.attr("class",class_name);
+					refreshLines(data.data);
+					Uid=data.data[0].PIN;
+					urls=data.data[0].urls;
+					urls1=data.data[0].urls1;
+					$.ajax({
+						type: "POST",
+						url:"/iclock/att/getData/?func=employee&pin="+Uid,
+						dataType:"json",
+						success:function(json){
+							showDatas_info(json,urls,urls1);
+						}
+					});
+				}
+				else{
+					$("#net_info").html(timeStr()+"|{%trans "no new records"%}");
+				}
+				logtimer1=setTimeout("getNewTrans()", 2000);
+			},
+			error: function(obj, msg, exc){
+				$("#net_info").html(timeStr()+"{%trans "access to the latest data errors"%}");
+				logtimer1=setTimeout("getNewTrans()", 10000);
+			}
+		});
+		if(!$("#tblLogList tr:first").hasClass("first")){
+			class_name=$("#tblLogList tr:first").attr("class");
+			$("#tblLogList tr:first").attr("class","first");
+		}else{
+			$("#tblLogList tr:first").attr("class",class_name);
+		}
+		first_tr=$("#tblLogList tr:first");
+	}
+	
+	function getKeyQuery(key){
+		var q=window.location.href;
+		if(q.indexOf('?')<0) return "";
+		var qry=q.split("?")[1].split("&");
+		for(var i in qry)
+			if(qry[i].split("=")[0]==key) return qry[i];
+		return "";
+	}
+
+	function getNewTransOpp(){	
+		clearTimeout(logtimer2);
+		$.ajax({type: "POST", 
+			url: "/iclock/data/_checkoplog_?lasttid="+lastIdopp+"&lastdid="+lastdidopp+"&SN="+$("#id_sns").val(),//+"&"+getKeyQuery("SN"), 
+			dataType:"json",
+			success: function(data){
+				if(data.ret>0)
+				{	
+					if(begin)
+						$("#net_info").html(timeStr()+"| {%trans "get"%} "+(data.ret)+" {%trans " new transaction"%}")
+					else{
+						begin=1;
+					}
+					lastIdopp=data.lasttId;
+					lastdidopp=data.lastDId;
+					refreshLinesopp(data.data);				
+				}
+				else
+					$("#net_info").html(timeStr()+"|{%trans "no new records"%}")
+				logtimer2=setTimeout("getNewTransOpp()", 10000);
+			},
+			error: function(obj, msg, exc){
+				$("#net_info").html(timeStr()+"{%trans "access to the latest data errors"%}");
+				logtimer2=setTimeout("getNewTransOpp()",30000);
+			}
+		});
+				
+	}
+	function getDevs(){
+		var block_html="<div id='dev_dialog' style='width:500px;'>"
+			+"<div class='dcontent' style='height:320px;overflow:auto;'>"
+			+"<table width=100%>"
+			+'<tr id="id_toolbar_emp"><td id="divPage_emp" colspan="3">'
+			+'<form id="id_changelist-search" action="" method="get" style="text-align: right;">'
+			+"<div id='line'>"
+			+"<input id='id_searchbar_emp' style='width:150px'  type='text' title='可查询字段:设备编号,设备别名'>"
+			+"<input type='button' value='查询' id='id_search_emp'>"
+			+"</div>"	
+			+'</form>'
+			+'</td></tr><tr><td><table id="id_grid_dlogcheck" style="width:100%">'
+			+"</table><div id='id_pager_dlogcheck'></div></td></tr></table>"
+			+"</div>"
+			+"</div>";
+		$(block_html).dialog({modal:true,
+			width: 570,
+			height:435,
+			title:gettext("选择监控设备"),
+			buttons:[{id:"btnShowOK",text:gettext("Submit"),click:function (){getEmpData()}},
+				{id:"btnShowCancel",text:gettext("Return"),click:function(){$(this).dialog("destroy"); }
+			       }],
+			close:function(){$(this).dialog("destroy"); }		
+
+			});
+		$('#id_devtran').focus();
+		jqOptions.height=230
+		jqOptions.url="/iclock/data/iclock/"
+		jqOptions.pager="#id_pager_dlogcheck";
+		renderGridData("dlogcheck",jqOptions)
+		
+		$("#id_search_emp").click(function(){
+			var v=$("#id_searchbar_emp").val();
+			var url="/iclock/data/iclock/?q="+escape(v)
+			savecookie("search_urlstr",url);
+			$("#id_grid_dlogcheck").jqGrid('setGridParam',{url:url}).trigger("reloadGrid");
+		});
+		
+	}
+	function getEmpData(){
+		var sns=getSelected_emp_ex("dlogcheck")
+		$("#id_sns").val(sns)
+		$("#dev_dialog").remove();
+		
+		$("#tblLogList").html('')
+	}
+	function getDevHtml(devs){
+		var retHtml="<tr><th><input type='checkbox' id='is_select_all_emp' onclick='check_all_for_row_emp(this.checked);' /></th><th>设备序列号</th><th>设备名称</th></tr>"
+	
+		for(var i=0;i<devs.length;i++){
+			retHtml+="<tr><td><input type='checkbox' class='class_select_emp' onclick='showSelected_emp();'  name='"+devs[i].SN+"' id='"+devs[i].SN+"' alt='' /></td><td>"+devs[i].SN+"</td><td>"+devs[i].Alias+"</td></tr>"
+		}
+		retHtml+="<tr><td><input type='checkbox' class='class_select_emp' onclick='showSelected_emp();'  name='add' id='add' alt='' /></td><td> </td><td>{% trans '补记录'%}</td></tr>"
+		return retHtml;
+	}
+
+	$(function(){
+		$("#dlogcheck_id").css("height",$("#id_content").height()).css("width",$("#id_content").width());
+		var html="<div id='id_edit_form' class=\"emplyee\">"
+			+"<h3 class='footer-title'>{%trans '实时考勤人员信息'%}</h3>"
+			+"<table><tbody>"
+			+"<tr><td><div class='frame'><div><img width='100' height='100' src='/media/img/transaction/noimg.jpg' /></div><div style='text-align:center;font-weight:bold;'>考勤现场照</div></div></td><td style='padding-left: 14px;'><div class='frame'><div><img width='100' height='100' src='/media/img/transaction/noimg.jpg' /></div><div style='text-align:center;font-weight:bold;'>人员登记照</div></div></td></tr>"
+			+"<tr><th>{%trans 'PIN'%}:</th><th style='text-align: left;'></th></tr>"
+			+"<tr><th>{%trans 'Name'%}:</th><th style='text-align: left;'></th></tr>"
+			+"<tr><th>{%trans 'Sex'%}:</th><th style='text-align: left;'></th></tr>"
+			+"<tr><th>{%trans 'department'%}:</th><th style='width:170px;text-align: left;'></th></tr>"
+			+"<tr><th>{%trans 'Title'%}:</th><th style='text-align: left;'></th></tr>"
+			+"<tr><th>{%trans 'Id card'%}:</th><th style='text-align: left;'></th></tr>"
+			+"</tbody></table>"
+			+"</div>"
+		var choicedevice='<input type="button" value="选择要监控的设备" class="m-btn blue rnd" id="id_devtran" style="float:left;margin-bottom: 5px;font-size: 15px;font-weight:bold;padding:10px 15px 10px;;box-shadow: 5px 5px 3px #888888;" />'
+		$("#id_Info").html(html);
+		$("#checkdevice").html(choicedevice);
+
+		getNewTrans();
+		getNewTransOpp();
+		$("#id_devtran").click(function(){getDevs()})
+		
+	})
+</script>
+<span style="float:right;padding-right: 30px;"><img src="../media/img/home.png" title="{% trans 'Add to home page' %}" onclick="javascript:saveHome();" /> </span>
+<div id="dlogcheck_id">
+	<table style='margin-left: 50px;'>
+		<tr>
+			<td id="titleId">
+			<div>
+				<table>
+					<tr>
+						<th style="width: 260">
+							<a  id="returnhome" class="m-btn blue rnd" onclick="menuClick('/iclock/homepage/showHomepage/',this)"><b>{%trans '返回首页'%}</b></a>
+							<td id='checkdevice'  style="padding-left: 5px;"></td>
+						</th>
+						<td>
+							<td style='width:440px;'>
+							<h1 style="float:left;" id="net_info">Starting ... </h1>
+							<!--<iframe style="float: right" scrolling="No" width="130" height="25" frameborder="0"   src="../../media/img/flash2005.swf"></iframe>-->
+							<img src="../../media/img/load.gif">
+							</td>
+						</td>
+					</tr>
+					<tr><td colspan="5">
+						<div id="titleTranDevId">
+							<table style="margin-top: -2px;height:100px;">
+								<tr>
+									<td id="id_Info" height="200px"></td>
+									<td style='width: 10px;'></td>
+									<td id="id_check" rowspan="2">
+					<div id="dlogcheckId" style="margin-top: -10px;">
+						<table>
+							<tr>
+								<th><h3>{%trans '实时考勤记录'%}</h3></th>
+								<th></th>
+								<th><h3>{%trans '实时设备操作日志'%}</h3></th>
+							</tr>
+							<tr>
+							<td style="vertical-align:text-top">
+								<div id="TransactionId"  style="height:280px;overflow-y:auto;">
+									<table id="tbl" cellspacing="0px" style="width:550px;border-collapse:collapse"><thead><tr height="30"><th width="80px">{%trans 'time'%}</th><th width="30px">{%trans 'PIN'%}</th><th  width="30px">{%trans 'Name'%}</th><th width="100px">{%trans 'Department'%}</th><th width="100px">{%trans 'Device name'%}</th></tr></thead>
+										<tbody id="tblLogList">
+										</tbody>
+									</table>
+								</div>
+							</td>
+							<td style='width: 30px;'></td>
+							<td style="vertical-align:text-top">
+								<div id="DeviceId" style="width:350px;height:330px;overflow-y:auto;">
+									<table  id="tbl" cellspacing="0px" style="width: 330px;border-collapse:collapse"><thead><tr height="30"><th width="120px">{%trans 'time'%}</th><th width="120px">{%trans 'Device name'%}</th><th width="100px">{%trans 'Event'%}</th></tr></thead>
+										<tbody id="tblLogLists">
+										</tbody>
+									</table>
+								</div>
+							</td>
+							</tr>
+						</table>
+						<input type="hidden" id="id_sns" value="all"/>
+					</div>
+									</td>
+								</tr>
+							</table>
+						</div>
+					</td></tr>
+				</table>
+			</div>
+			</td>
+		</tr>
+		<tr>
+			<td>
+				<div>
+				</div>
+			</td>
+		</tr>
+	</table>
+<br />
+</div>
+
+
+

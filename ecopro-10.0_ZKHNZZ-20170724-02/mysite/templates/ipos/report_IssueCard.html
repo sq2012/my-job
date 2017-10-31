@@ -1,0 +1,188 @@
+{% extends "report_ipos.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+
+{% block getDateUrl %}
+
+function getDateUrl(pos_start_date,pos_end_date)
+{
+
+	$("#id_con_error").css("display","none");
+
+	var urlStr=g_urls[g_activeTabID]
+	
+	var st=moment().startOf('month').format('YYYY-MM-DD')
+	var et=moment().endOf('month').format('YYYY-MM-DD')
+
+        if(pos_start_date) st=pos_start_date
+        if(pos_end_date) et=pos_end_date+ " 23:59:59"
+
+	if(urlStr.indexOf("?")!=-1){
+		urlStr=urlStr+"&issuedate__gte="+st+"&issuedate__lte="+et;
+	}
+	else{
+		urlStr=urlStr+"?issuedate__gte="+st+"&issuedate__lte="+et;
+	}
+    
+	return urlStr
+
+}
+{% endblock %}
+
+
+{% block queryButton %}
+	
+$("#"+g_activeTabID+" #queryButton").click(function(){
+	createQueryDlg();
+});
+
+
+function searchbydept_IssueCard(page) {
+
+	var dept_ids = getSelected_dept("showTree_" + page)
+	if (dept_ids != null) {
+		if (dept_ids == undefined || dept_ids == '') {
+			alert("{% trans "请选择部门" %}")
+			return false;
+		}
+	} else {
+		alert("{% trans "请选择部门" %}")
+		return false;
+	}
+	//var ischecked = 0;
+	//if ($("#id_cascadecheck_" + page).prop("checked")) ischecked = 1;
+	//urlStr = "deptIDs=" + dept_ids + "&isContainChild=" + ischecked
+	var emp = getSelected_emp_ex("sel_employee_search_IssueCard");
+	if (emp.length > 0) {
+		urlStr = "&UserID__id__in=" + emp
+	}
+	else{
+		alert("{% trans "请选择人员" %}")
+	}
+
+        var isError=validate_form_ipos();
+	if(isError){
+ 
+		var st=$("#"+g_activeTabID+" #id_StartDate").val();
+		var et=$("#"+g_activeTabID+" #id_EndDate").val()+" 23:59:59";
+		var url = "/ipos/report/IssueCard/?" + "issuedate__gte=" + st + "&issuedate__lte=" + et + urlStr
+		}
+	else
+	{
+	    alert('请检查时间格式是否正确，且最多查询100天！')
+	    return;
+	}	
+
+
+	savecookie("search_urlstr", url);
+	$("#id_grid_report").jqGrid('setGridParam', {
+		url: url,
+		datatype: 'json'
+	}).trigger("reloadGrid");
+}
+
+
+function createQueryDlg(){
+	createDlgdeptfor10('employee_search_IssueCard',1)
+	$('#dlg_for_query_employee_search_IssueCard').dialog(
+	{
+		buttons:
+		[
+			{id:"btnShowOK",text:gettext('搜索'),click:function(){searchbydept_IssueCard('employee_search_IssueCard');$(this).dialog("destroy"); }},
+			{id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }}
+		]
+	})
+}
+
+
+{% endblock %}
+
+{% block date_set_range %}
+    if (pos_start_date)
+        $('#'+g_activeTabID+' #id_StartDate').val(pos_start_date)
+    else
+        $('#'+g_activeTabID+' #id_StartDate').val(moment().startOf('month').format('YYYY-MM-DD'))
+     if(pos_end_date)    
+        $('#'+g_activeTabID+' #id_EndDate').val(pos_end_date)
+    else
+        $('#'+g_activeTabID+' #id_EndDate').val(moment().endOf('month').format('YYYY-MM-DD'))
+	$("#"+g_activeTabID+" #id_StartDate").datepicker(datepickerOptions);
+        $("#"+g_activeTabID+" #id_EndDate").datepicker(datepickerOptions);
+        $("#"+g_activeTabID+" #id_search").click(function(){
+		//var search_user_pin=$("#search_id_user__PIN").val();
+                var isError=validate_form_ipos();
+                var urlstr="";
+                if(isError){
+         
+                        var st=$("#"+g_activeTabID+" #id_StartDate").val();
+                        var et=$("#"+g_activeTabID+" #id_EndDate").val();
+        
+                        urlstr=g_urls[g_activeTabID]+"?issuedate__gte="+st+"&"+"issuedate__lte="+et+" 23:59:59"
+                        }
+                else
+                {
+                    alert('请检查时间格式是否正确，且最多查询100天！')
+                    return;
+                }
+ 			pos_start_date=st
+			pos_end_date=et
+               
+		savecookie("search_urlstr",urlstr);
+		$("#id_grid_report").jqGrid('setGridParam',{url:urlstr,datatype:"json"}).trigger("reloadGrid");
+	});
+
+    function validate_form_ipos(){   //验证表单的合法性(、开始时间、结束时间)
+	var st=$("#"+g_activeTabID+" #id_StartDate").val();
+	var et=$("#"+g_activeTabID+" #id_EndDate").val();
+        return (moment(st,'YYYY-MM-DD').isValid()&&moment(et,'YYYY-MM-DD').isValid()&&(moment(et,'YYYY-MM-DD').diff(moment(st,'YYYY-MM-DD'), 'days')<=100))
+    }
+{% endblock %}
+
+{% block RenderReportGrid %}
+
+function RenderReportGrid(urlStr){
+    $("#id_grid_report").jqGrid("GridUnload")
+    //$.jgrid.gridUnload("#id_grid_report")
+	if(urlStr.indexOf("?")!=-1){
+		url=urlStr+"&title=1&stamp="+moment().unix();
+	}
+	else{
+		url=urlStr+"?title=1&stamp="+moment().unix();
+	}
+    $.ajax({
+	    type:"GET",
+	    url:url,
+	    dataType:"json",
+	    success:function(json){
+//		    jqOptions[g_activeTabID][g_activeTabID]=copyObj(jq_Options)
+		    grid_disabledfields[g_activeTabID]=json['disabledcols']
+		    jqOptions[g_activeTabID].colModel=json['colModel']
+		    var groupHeaders=[]
+
+		    if (json['groupHeaders'])
+			var groupHeaders=json['groupHeaders']
+		    
+		    get_grid_fields(jqOptions[g_activeTabID])
+		    hiddenfields(jqOptions[g_activeTabID])
+		    
+		    jqOptions[g_activeTabID].url=urlStr
+		    var hcontent=$("#"+g_activeTabID+" #id_content").height();
+		    var hbar=$("#"+g_activeTabID+" #id_top").height();
+		    var height=hcontent-hbar-100;
+		    if (groupHeaders.length>0)
+		     height=height-30;
+		    
+		    if(typeof(Custom_Jqgrid_Height)!='undefined'&&Custom_Jqgrid_Height!=""){
+			    jqOptions[g_activeTabID].height=Custom_Jqgrid_Height;
+		    }else{jqOptions[g_activeTabID].height=height;}
+		    
+		    //jqOptions[g_activeTabID].sortname=''//getSidx('original_records')
+			jqOptions[g_activeTabID].url=urlStr 
+			
+		    $("#id_grid_report").jqGrid(jqOptions[g_activeTabID]);
+		    $("#id_grid_report").jqGrid('setFrozenColumns');
+		    $("#id_grid_report").jqGrid('setGroupHeaders', {useColSpanStyle: true,groupHeaders:groupHeaders})
+	 }
+    });        
+}
+{% endblock %} 

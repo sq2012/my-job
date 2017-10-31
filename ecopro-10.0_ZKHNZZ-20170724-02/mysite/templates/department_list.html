@@ -1,0 +1,325 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+jqOptions[g_activeTabID].colModel={{ colModel }}
+dtFields = "{{ dtFields }}"
+tblName[g_activeTabID]='department';
+jqOptions[g_activeTabID].sortname='parent,DeptNumber';
+jqOptions[g_activeTabID].pager='#id_pager_department';
+
+options[g_activeTabID].dlg_height=470;
+options[g_activeTabID].dlg_width=700;
+
+function afterPost_department(flag,obj)
+{
+	ShowDeptData(g_activeTabID,true)
+	$('#id_DeptNumber',obj).val('')
+	$('#id_DeptName',obj).val('')
+	$('#id_DeptAddr',obj).val('')
+	$('#id_DeptPerson',obj).val('')
+	$('#id_DeptPhone',obj).val('')
+        reloadData()
+	var zTree = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+	zTree.setting.check.enable = false;
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		var deptID=treeNode.id;
+		var deptName=treeNode.name;
+		$.cookie("dept_ids",deptID, { expires: 7 });
+		var ischecked=0;
+		if($("#id_cascadecheck_"+g_activeTabID).prop("checked"))
+		    ischecked=1;
+                var urlStr="/iclock/data/department/?deptIDs="+deptID+"&isContainChild="+ischecked
+		savecookie("search_urlstr",urlStr);
+		 $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+	}
+        
+        
+        
+}
+
+function beforePost_department(obj,actionName){
+	var flag=true;
+	if($("#id_span_param",obj).val()!=1){
+//	if($("#id_parent").val()!=0){
+        
+		var dept =$("#department",obj).val()
+		if(dept==""){
+			$("#id_error",obj).css("display","block");
+			$("#id_error",obj).html("<ul class='errorlist'><li>{%trans 'Please select a department' %}</li></ul>");					
+			flag=false;
+		}
+                else
+                {
+               
+                }
+		
+	}
+	return flag
+	
+}
+
+
+/*
+function getLogLink(data)
+{
+	return "<a title='{% trans "Show the use of employee of the department" %}' href='../employee/?DeptID__DeptID__exact="+data+"'>{% trans "employee" %}</a>";
+}
+*/
+function ShowDeptTree(page,tag,obj)
+{
+	var d_url="/iclock/att/getDeptData/?func=department"
+	var did=''
+	did=$("#id_span_param",obj).val();
+	d_url+="&m=department&deptid="+did
+	
+	var setting = {
+            check: {enable: true,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},          
+	    async: {
+			    enable: true,
+			    url: d_url,
+			    autoParam: ["id"]
+		    }
+	};
+	$.fn.zTree.init($("#showTree_"+page), setting,null);	
+	if(tag){
+		var zTree = $.fn.zTree.getZTreeObj("showTree_"+page);
+		zTree.setting.check.enable = false;
+		zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+				var id=treeNode.id;
+				$("#department",obj).val(treeNode.name);
+				$("#id_parent",obj).val(id);
+				hideDeptment();
+			
+		}
+	}
+}
+
+
+//处理单位维护时对话框
+function process_dialog_department(obj,flag){
+
+		var leng=arguments.length;
+		var depName=''
+                if (flag=='edit')
+		{
+        		var depName=$("#id_span_parent",obj).html();
+			
+			did=$("#id_span_param",obj).val();
+                        pid=$('#id_parent',obj).val()
+                        
+                        $('#id_DeptNumber',obj).after("<input name='DeptID' value="+did+" type=hidden />")
+                        if(pid>0){
+                            $('#id_parent',obj).after('<div>'
+                            +'<span style="float:left;border-top:1 solid #5B80B2;"><input alt="department" type="text" style="width:140px !important;" readOnly="readOnly"  id="department"  value="'+depName+'"></span>'
+                            +'<span style="float:left;"><img  alt="{%trans 'open department tree'%}" src="/media/img/sug_down_on.gif" id="id_drop_dept"/></span>'
+                            +'</div>'
+                            +'<div id="show_deptment">'
+                            +'<div class="title"><span class="close" style="margin-top:1px;" onclick="hideDeptment()"></span></div>'
+                            +"<div id='show_dept_tree_dept'>"
+                            +"<ul id='showTree_dept' class='ztree' style='margin-left: 0px;overflow:auto;height:250px;'></ul>"
+                            +"</div>"
+                            
+                            
+                            
+                            
+                            +'</div>'
+                            );
+                            
+                            $("#id_drop_dept",obj).click(function(){
+                            
+                                ShowDeptTree('dept',true,obj)
+                                showDeptment(obj);
+                            
+                            
+                            });
+			}
+			
+			
+			
+		}	
+                else
+                {
+        		//depName=$("#show_dept_tree_").find("#hidden_deptsName").val();
+                        //var pid=$("#show_dept_tree_").find("#hidden_selDept").val();
+                        //$('#id_parent',obj).val(pid)
+			
+			var treeObj = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+			var nodes = treeObj.getSelectedNodes();
+			var pid=0;
+			if (nodes.length>0)
+			{
+			   var pid=nodes[0].id;
+			   depName=nodes[0].name;
+			   $('#id_parent',obj).val(pid)
+			}
+			
+			$('#id_parent',obj).after('<div>'
+			+'<span style="float:left;border-top:1 solid #5B80B2;"><input alt="department" type="text" style="width:140px !important;" readOnly="readOnly"  id="department"  value="'+depName+'"></span>'
+			+'</div>'
+			);
+	
+                 }
+                depName=$.trim(depName)
+		$("#id_parent",obj).css("display","none");
+		f=$(obj).find("#id_edit_form").get(0)
+		$(f).validate({
+				rules: {
+						DeptNumber: {required:true,'alnum':true,"maxlength":40},
+						DeptName: {required:true,string:true,"maxlength":40}
+					}
+				});
+
+}
+//单位维护里列表样式和树形样式之间的切换
+//function process_style(){
+//}
+
+
+function strOfData_department(data)
+{
+	return stripHtml(data.DeptNumber)+" "+data.DeptName;
+}
+
+function ActionHint(action, aName)
+{
+	if(aName=="{% trans "delete" %}")
+		return ", \n{% trans "The operation will also remove these department-affiliated employee data" %}"
+	return ""
+}
+
+function delAllHint_dept()
+{
+	return "{% trans "Convinced that you want to delete all units" %}?\n{% trans "The operation will also remove these department-affiliated personnel data" %}!";
+}
+//单位模糊查询
+function searchShowDep_department(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+    var url="/iclock/data/department/?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+/*
+function deptShowEmp(data){
+		var url="/iclock/data/employee/?DeptID__DeptID__exact="+data
+	 	menuClick(url);
+}
+
+*/
+{% endblock %}
+</script>
+<script>
+{% block loadData %}
+	html="<div id='id_opt_tree' ><input type='checkbox' id='id_cascadecheck_"+g_activeTabID+"'"
+        +" checked/>{%trans '级联下级单位' %}<span id='refresh_tree_department' style='float:right;padding-right:10px;' class='icon iconfont icon-shuaxin'></span></div>"
+	$("#"+g_activeTabID+" #id_west").html(html)
+	html="<div id='show_dept_tree_'>"
+		+"<ul id='showTree_"+g_activeTabID+"'"
+                +" class='ztree' style='margin-left: 0px;height:100%;'></ul>"
+		+"</div>"
+	$("#west_content_tab_iclock_department").html(html)
+
+	//var h=$("#"+g_activeTabID+" #west_content").height()-20
+	//$('#showTree_'+g_activeTabID).css('height',h)
+
+        ShowDeptData(g_activeTabID,true)
+        loadNULLPage('#id_grid_'+tblName[g_activeTabID]);
+	var zTree = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+	zTree.setting.check.enable = false;
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		var deptID=treeNode.id;
+		var deptName=treeNode.name;
+		$.cookie("dept_ids",deptID, { expires: 7 });
+		var ischecked=0;
+		if($("#id_cascadecheck_"+g_activeTabID).prop("checked"))
+		    ischecked=1;
+                var urlStr="/iclock/data/department/?deptIDs="+deptID+"&isContainChild="+ischecked
+		savecookie("search_urlstr",urlStr);
+		 $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+	}
+
+
+{% endblock %}
+{% block importOp %}
+{% if request|reqHasPerm:"add" %}
+	<LI id="id_import" ><SPAN class="icon iconfont icon-daoru"></SPAN>{%trans "Import"%}</LI>
+{% endif %}
+{% endblock %}
+
+
+
+
+{% block allDelete %}
+{% endblock %}
+
+
+{% block $function %}
+	$("#"+g_activeTabID+" #id_reload").unbind('click').click(function(){
+		reloadData(tblName[g_activeTabID],"/iclock/data/department/?deptIDs=1&isContainChild=1");
+	});
+	
+	
+	$("#"+g_activeTabID+" #id_import").click(function(){
+	  importDepartment();
+	});
+/*
+        $("#id_print").click(function(){
+        var urlstr=$.cookie("search_urlstr");
+        if(urlstr.indexOf("/data/")!=-1){
+            urlstr=urlstr.replace("/data/","/att/print/");
+        }else if(urlstr.indexOf("/att/")!=-1){
+            urlstr=urlstr.replace("/att/","/att/print/")
+        }
+        window.open(urlstr);
+	});
+*/
+	$("#"+g_activeTabID+" #id_third").html("");
+	$("#"+g_activeTabID+" #id_clearrec").css('display','none')
+	
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+            
+            var treeObj = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+            var nodes = treeObj.getSelectedNodes();
+            if(nodes.length==0){alert("{%trans '请首先选择上级单位' %}");return;}
+            processNewModel();
+	});
+
+	$("#"+g_activeTabID+" #aDelete").click(function(){
+            var treeObj = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+            var nodes = treeObj.getSelectedNodes();
+            if (nodes.length>0) {
+                  treeObj.reAsyncChildNodes(nodes[0], "refresh");
+                }   
+	});
+
+	$("#"+g_activeTabID+" #queryButton").hide()
+
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowDep_department();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowDep_department();
+	});	
+	$('#refresh_tree_department').click(function () {
+        refresh_tree("showTree_"+g_activeTabID);
+    })
+
+/*
+	$("#id_change").click(function(event){
+            var treeObj = $.fn.zTree.getZTreeObj("showTree_");
+            var nodes = treeObj.getSelectedNodes();
+            if(nodes.length==0){alert('请首先选择单位');return;}
+            editclick(nodes[0].id);
+            
+	});
+*/
+
+
+{% endblock %}
+

@@ -1,0 +1,264 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+{% autoescape off %}
+	//options.disableCols=["0"]
+	options[g_activeTabID].canEdit=false
+	options[g_activeTabID].canAdd=false;
+	var page_tab=''
+	//hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+	//jqOptions=copyObj(jq_Options)
+	jqOptions[g_activeTabID].colModel={{ colModel }}
+	tblName[g_activeTabID]='bio_data';
+	jqOptions[g_activeTabID].sortname='UserID__DeptID';
+	jqOptions[g_activeTabID].pager="id_pager_bio_data"
+{% endautoescape %}
+function strOfData_bio_data(data)
+{
+	return stripHtml(data.PIN+' '+data.EName);
+}
+
+$(function(){
+       // $("#id_export").hide()	
+	$("#"+g_activeTabID+" #id_newrec").hide()
+	$("#"+g_activeTabID+" #id_custom").hide()
+	$("#"+g_activeTabID+" #searchbar").val(gettext("考勤编号,身份证号,姓名"))
+	$("#"+g_activeTabID+" #queryButton").hide()
+	
+	$("#"+g_activeTabID+" #id_import").click(function(){
+	  importFptemp();
+	});
+	
+	
+	
+})
+
+//模糊查询
+$("#"+g_activeTabID+" #searchButton").click(function(){
+   searchShowFptemp();
+});
+$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	if(event.keyCode==13)
+	searchShowFptemp();
+});
+
+
+function importFptemp(){
+	var html="<form id='frmComebackDb' name='frmComebackDb' method='POST' action='/iclock/tasks/import_fptemp/' enctype='multipart/form-data'>"
+	           +"<table>"
+					+'<tr><td cols="3">&nbsp;</td></tr>'
+					+'<tr><td>'+gettext("特征模板类型：")+'</td>'
+						+'<td>&nbsp;<select id="id_BioType" name="BioType">'
+					    	+'<option value="1">'+gettext("指纹")+'</option>'
+					    	+'<option value="2">'+gettext("面部")+'</option>'
+					    	+'<option value="8">'+gettext("手掌")+'</option>'
+					    	+'<option value="7">'+gettext("指静脉")+'</option>'
+					    	+'<option value="4">'+gettext("虹膜")+'</option>'
+					    +'</select></td>'
+					+'</tr>'
+					+'<tr><th>'+gettext("Support Upload Fields" )+'</th><th>&nbsp;'+gettext("Index in File" )+'</th></tr>'
+					+'</tr>'
+					+'<tr><td><input id="id_badgenumber" name="badgenumber" type="checkbox" checked disabled/>'+gettext("BadgeNumber")+'</td>'
+					+'<td>&nbsp;<input name="badgenumber2file" id="id_badgenumber2file" type="text"   style="width:100px !important;"/></td>'
+					+'</tr>'			
+					+'<tr><td><input id="id_FingerID" name="FingerID" type="checkbox" checked disabled/>'+gettext("序号")+'</td>'
+					+'<td>&nbsp;<input name="bio_index2file" id="id_bio_index2file" type="text"  style="width:100px !important;"/></td>'
+					+'</tr>'	
+					+'<tr><td><input id="id_Template" name="Template" type="checkbox" checked disabled/>'+gettext("模板数据")+'</td>'
+					+'<td>&nbsp;<input name="bio_tmp2file" id="id_bio_tmp2file" type="text"   style="width:100px !important;"/></td>'
+					+'</tr>'
+					+'<tr><td><input id="id_majorver" name="majorver" type="checkbox" checked disabled/>'+gettext("模板版本")+'</td>'
+					+'<td>&nbsp;<input name="majorver2file" id="id_majorver2file" type="text"   style="width:100px !important;"/></td>'
+					+'</tr>'
+					+'<tr><td><input id="id_whatrowid" name="whatrowid" type="checkbox" checked disabled/>'+gettext("whatrowid")+'</td>'
+					+'<td>&nbsp;<input name="whatrowid2file" id="id_whatrowid2file" type="text" value="1"  style="width:100px !important;"/>'+gettext("行开始导入")+'</td>'
+					+'</tr>'
+					+'<tr><td cospan="2"><input  type="hidden" name="fields" id="id_fields"/></td></tr>'		
+					+'</table>'
+					+'<div style="float:left;">'
+					+gettext("Upload file location")
+					+'<div>'
+					+"<input type='file' class='text' value='' name='fileUpload' id='fileUpload'/><br />"
+					+'<br /><div><input class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only"  type="submit" value='+gettext("Submit")+' >'
+					+'&nbsp;<input id="btnCancel" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" type="button" value='+gettext("Return")+' ></div>'
+					+'<div id="id_message"></div>'
+					+'</div></div></form>'
+
+	$(html).dialog({modal:true,
+				  resizable:false,
+				  width: 420,
+				  height:410,
+				  title:gettext("导入特征模板数据"),
+				  close:function(){$(this).dialog("destroy");}		
+				});
+	$("#btnCancel").click(function(){$("#frmComebackDb").remove();});
+	var opts = { 
+			url:'/iclock/tasks/import_biodata/',
+			dataType:'json',
+			success: showResponse
+	};	
+	var fields=["badgenumber","bio_index","bio_tmp","majorver"];
+	for(var i=0;i<fields.length;i++){
+	    isChecked=$.cookie("fptemp"+fields[i]+"_checked");
+	    value=$.cookie("fptemp"+fields[i]+"_value");
+	    if(value){
+			$("#id_"+fields[i]+"2file").val(value)
+		}
+	    else{
+			if(fields[i]=='badgenumber'){
+				$("#id_badgenumber2file").val(1)
+			}
+		}
+		
+	}
+	$("#frmComebackDb").submit(function(){
+			$("#id_fields").val(fields);
+			for(var i=0;i<fields.length;i++){
+				 isChecked=($("#id_"+fields[i]).prop("checked"))?true:false
+				 value=$("#id_"+fields[i]+"2file").val();
+				 value1=$("#id_whatrowid2file").val();
+				 if(isChecked && value==""||value.match(/^[1-9]\d*$/)==null){
+					//$("#id_"+fields[i]+"2file").after("<ul class='errorlist'><li>Please input selected field index in file</li></ul>");
+					$("#id_"+fields[i]+"2file").after("<ul class='errorlist'><li>请输入文件中该字段所在的列</li></ul>");
+					return false;
+				 }
+				 if(value1==""||value1.match(/^[1-9]\d*$/)==null){
+					//$("#id_whatrowid2file").after("<ul class='errorlist'><li>Please input selected field index in file</li></ul>");
+					$("#id_whatrowid2file").after("<ul class='errorlist'><li>请输入文件中该字段所在的列</li></ul>");
+					return false;
+				 }
+				 $.cookie("fptemp"+fields[i]+"_checked",isChecked, { expires: 7 });
+				 $.cookie("fptemp"+fields[i]+"_value",value, { expires: 7 });
+			}
+			var flag=true//checkForm();
+			if(flag){
+				$(this).ajaxSubmit(opts); 
+			}
+			return false;
+	});
+	
+
+}
+
+
+
+
+function searchShowFptemp(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+	bio_type = $("input[name='ISFINGER']:checked").val();
+	if (bio_type==0) {
+		var url="/iclock/data/BioData/?UserID__OffDuty__lt=1&UserID__DelTag__lt=1&bio_type__gte="+bio_type+"&q="+escape(v)
+	}else{
+		var url="/iclock/data/BioData/?UserID__OffDuty__lt=1&UserID__DelTag__lt=1&bio_type="+bio_type+"&q="+escape(v)
+	}
+	savecookie("search_urlstr",url);
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function createQueryDlg_bio_data(){
+	createQueryDlgbypage('fptemp_search')
+	$('#dlg_for_query_fptemp_search').dialog({position: { my: "right top", at: "right bottom",of:"#"+g_activeTabID+" #id_searchbar"},
+	buttons:[{id:"btnShowOK",text:gettext('搜索'),
+		click:function(){searchbydept_BioData('fptemp_search');}},
+	       {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+	}] })
+}
+
+function searchbydept_BioData(page){
+	var dept_ids=getSelected_dept("showTree_"+page)
+	if (dept_ids!=null){
+		if(dept_ids==undefined||dept_ids==''){
+			alert("{% trans "请选择单位" %}")
+			return false;
+		}
+	}else{
+		alert("{% trans "请选择单位" %}")
+		return false;
+	}
+	var ischecked=0;
+	if($("#id_cascadecheck_"+page).prop("checked"))
+		ischecked=1;
+	urlStr="UserID__OffDuty__lt=1&UserID__DelTag__lt=1&deptIDs="+dept_ids+"&isContainChild="+ischecked
+	var url="/iclock/data/BioData/?"+urlStr
+	savecookie("search_urlstr",url);
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url}).trigger("reloadGrid");
+}
+{% endblock %}
+
+{% block loadData %}
+	html="<span id=id_opt_tree><input type='checkbox' id='id_cascadecheck_"+g_activeTabID+"'"+" checked />{%trans '级联下级单位' %}</span>"
+	$("#"+g_activeTabID+" #id_west").html(html)
+	html="<div id='show_dept_tree_'>"
+		+"<ul id='showTree_"+g_activeTabID+"'"
+		+" class='ztree' style='margin-left: 0px;height:100%;'></ul>"
+		+"</div>"   
+	$("#west_content_tab_iclock_BioData").html(html)
+
+//var h=$("#"+g_activeTabID+" #west_content").height()-20
+//	$('#showTree_'+g_activeTabID).css('height',h)
+
+        ShowDeptData(g_activeTabID,true)
+        loadNULLPage('#id_grid_'+tblName[g_activeTabID]);
+	var zTree = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+	zTree.setting.check.enable = false;
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		      var deptID=treeNode.id;
+		      var deptName=treeNode.name;
+		      $.cookie("dept_ids",deptID, { expires: 7 });
+		      var ischecked=0;
+		      if($("#id_cascadecheck_"+g_activeTabID).prop("checked"))
+			      ischecked=1;
+		      var urlStr="/iclock/data/BioData/?UserID__OffDuty__lt=1&UserID__DelTag__lt=1&deptIDs="+deptID+"&isContainChild="+ischecked
+
+		      var val=$('input:radio[name="ISFINGER"]:checked').val();
+		      if (val!=0)
+			      urlStr+="&bio_type="+val
+
+
+		      savecookie("search_urlstr",urlStr);
+		      $("#id_grid_bio_data").jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+	}
+{% endblock %}
+
+
+
+{% block importOp %}
+{% if request|reqHasPerm:"add" %}
+		    <LI id="id_import" ><SPAN class="icon iconfont icon-daoru"></SPAN>{%trans "Import"%}</LI>
+{% endif %}
+
+{% endblock %}
+
+
+{% block exportOp %}
+<LI id="id_export"><SPAN  class="icon iconfont icon-shuju"></SPAN>{%trans "Export"%}
+	<ul id="op_menu_export" class="op_menu">
+		<li><span>{%trans "文件格式"%}</span>
+			<ul>
+			<li onclick="javascript:clickexport(tblName[g_activeTabID],0);"><a href="#">EXCEL</a></li>
+			<li onclick="javascript:clickexport(tblName[g_activeTabID],1);"><a href="#">TXT</a></li>
+			<li onclick="javascript:clickexport(tblName[g_activeTabID],2);"><a href="#">PDF</a></li>
+			</ul>
+		</li>
+	</ul>
+</LI>
+{% endblock %}
+
+		{% block otherQuery %}
+    <div id="id_finger" class='left' style='width:650px'><label >{%trans "过滤"%}</label>
+            <input type="radio" name="ISFINGER" checked value='0' id="r_ALL" />{%trans "全部"%}
+            <input type="radio" name="ISFINGER" value='1' id="r_1" />{%trans "指纹"%}
+            <input type="radio" name="ISFINGER" value='2' id="r_2" />{%trans "面部"%}
+            <input type="radio" name="ISFINGER" value='8' id="r_8" />{%trans "手掌"%}
+            <input type="radio" name="ISFINGER" value='7' id="r_7" />{%trans "指静脉"%}
+            <input type="radio" name="ISFINGER" value='4' id="r_4" />{%trans "虹膜"%}
+    </div>
+{% endblock %}
+
+

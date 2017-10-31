@@ -1,0 +1,249 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+<script>
+{% block tblHeader %}
+options.disableCols=[0];
+
+//jqOptions=copyObj(jq_Options)
+jqOptions[g_activeTabID].sortname='';
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='AntiPassBack';
+jqOptions[g_activeTabID].pager="#id_pager_"+tblName[g_activeTabID];
+options[g_activeTabID].dlg_width=800;
+options[g_activeTabID].dlg_height=470;
+var combs=[]
+$(function(){
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+		processNewModel();
+	});
+	$("#"+g_activeTabID+" #queryButton").hide()
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowHolidays();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowHolidays();
+	});
+	$("#"+g_activeTabID+" #id_export").css('display','none');
+	$("#"+g_activeTabID+" #id_clearrec").css('display','none')
+	$("#"+g_activeTabID+" #id_third").html("");
+});
+function beforePost_AntiPassBack(obj,actionName){
+	var flag=true;
+}
+//模糊查询
+function searchShowHolidays(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+	var url=g_urls[g_activeTabID]+"?q="+escape(v)
+	savecookie("search_urlstr",url);
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function strOfData_AntiPassBack(data)
+{
+	return stripHtml(data.device)
+}
+
+function getItems(Data,id)
+{
+        var options_html="";
+	for(i=0;i<Data.length;i++)
+		if(Data[i].rule==id)
+            options_html+="<option value='"+Data[i].rule+"' selected>"+(Data[i].name)+"</option>";
+        else
+		options_html+="<option value='"+Data[i].rule+"'>"+(Data[i].name)+"</option>";
+	
+    return options_html;
+} 
+
+
+
+function FetchAntiPassBackInfo(SN,flag,Id)
+{
+
+        var setting = {
+                check: {enable: true,chkboxType:{ "Y": "s", "N": "s" },chkStyle: "checkbox"},
+
+                data: {simpleData: {enable: true,idKey: "id", pIdKey: "pid",  rootPId: 0}
+                }
+        };
+	urlStr="/acc/getData/?func=antipassback&flag="+flag+'&keys='+SN
+	urlStr+='&id='+Id
+	$.post(urlStr,null,
+		function (ret, textStatus) {
+			var html=getItems(ret,Id)
+			$('#apb_rule').html(html)
+		},
+		"json");
+
+}
+
+
+
+
+function ShowDeviceData(page,tag,isDiy)
+{
+	
+	var setting = {
+            check: {enable: !tag,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},          
+	    async: {
+			    enable: true,
+			    url: "/acc/getData/?func=devs_tree&ptype=AntiPassBack",
+			    autoParam: ["id"]
+		    }
+	};
+	$.fn.zTree.init($("#showTree_"+page), setting,null);	
+	if(tag){
+		var zTree = $.fn.zTree.getZTreeObj("showTree_"+page);
+		zTree.setting.check.enable = false;
+		$("#searchbydept_"+page).hide()
+		zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+				$("#id_device").val(treeNode.value);
+				$("input[alt='Authed_device']").val(treeNode.value);
+
+				dlgdestroy(page)
+				FetchAntiPassBackInfo(treeNode.id,'add',-1)
+
+		}
+	}
+}
+
+function iclock_Authed_deptTree_AntiPassBack(obj)
+{
+	$("#id_device",obj).parent().html("<div>"
+		+"<span style='float:left;border-top:1 solid #5B80B2;'><input alt='Authed_device' type='text' style='width:200px !important;' readOnly='readOnly'  id='Authed_device'/></span>"
+		+"<span style='float:left;'><img  src='/media/img/sug_down_on.gif' id='id_drop_Authed_device'/></span>"
+		+"</div>"
+		+"<div style='display:none;'><input id='id_device' name='device' type='hidden' /></div>"
+		);
+
+		$("#id_drop_Authed_device",obj).click(function(){
+				    createQueryDlgbypage('auth_device',true,false)
+	
+			
+			
+			
+		})
+	
+	
+	
+}
+
+function createQueryDlgbypage(page,tag,isDiy)
+{
+
+	if(page==undefined){
+		page=''
+	}
+	var html="<div id='dlg_for_query_"+page+"' style='overflow:hidden;'>"
+		+"<div id='dlg_dept_"+page+"' class='dlgdiv'>"
+   			+"<div id='dlg_dept_body_"+page+"' style='overflow:hidden;'>"
+				+"<ul id='showTree_"+page+"' class='ztree' style='height:300px;overflow:auto;'></ul>"
+			+"</div>"
+		+"</div>"
+   +"</div>"
+
+	$(html).dialog({modal:true,resizable:false,
+			//dialogClass: "no-close",
+			width: 410,
+			height:430,
+                        position:  { my: "left top-150", at: "right top",of:"#id_drop_Authed_device"},
+                                                  open:function(){ShowDeviceData(page,tag,isDiy);},
+						  close:function(){$(this).dialog("destroy"); } 		
+						})
+
+}
+
+
+function process_dialog_AntiPassBack(obj,flag,urlAddr)
+{
+	 $(obj).dialog({resizable:false,modal:true})
+	var apb_rule=$("#id_apb_rule",obj).val();
+	$("#id_apb_rule",obj).parent().html(""
+	                    +"<td><select id='apb_rule' style='width:300px;'></select></td>"
+	                     +"<input type='hidden' id='id_apb_rule' value='"+apb_rule+"' name='apb_rule' />"
+	                    );
+
+	$("#apb_rule",obj).click(function(){
+		$("#id_apb_rule",obj).val($(this).val());
+	});
+	if (flag=='add')
+		iclock_Authed_deptTree_AntiPassBack(obj);
+	else
+	{
+		$("#id_device",obj).prop('readonly',true)
+		SN=$("input[name='device']:hidden",obj).val()
+		id=$('#id_apb_rule',obj).val()
+		FetchAntiPassBackInfo(SN,'edit',id)
+	}
+	
+	
+	
+
+
+
+
+
+
+	
+	f=$(obj).find("#id_edit_form").get(0)
+	$(f).validate({
+			rules: {
+				}
+			});
+	
+
+}
+
+
+
+
+function process_dialog_again_AntiPassBack(obj,flag,key)
+{
+//	$("#id_door",obj).prop('readonly',true)
+//	$("#id_door",obj).css('width',250)
+//	FetchAccDoorInfo(obj)
+//	FectchCombInfo(obj,flag,key)
+}
+
+
+
+
+
+
+{% endblock %}
+</script>
+
+{% block newrec %}
+	{% if user|HasPerm:"acc.add_antipassback" %}
+	 <LI id="id_newrec"><SPAN class="icon iconfont icon-xinzeng"></SPAN>{%trans "Append"%}</LI>
+	{% endif %}
+{% endblock %}
+
+		{% block sear_area %}
+
+
+
+
+		<div class="s-info right" id="sear_area">
+			<div class="nui-ipt nui-ipt-hasIconBtn " >
+				<input id="searchbar" class="search-input" type="text"  value="设备" role='defvalue' autocomplete="off" style="width: 154px;"/>
+				<span id ="queryButton" class="nui-ipt-iconBtn">
+					<b id="_icon_2_28" class="nui-ico nui-ico-dArr "></b>
+				</span>
+
+			</div>
+
+			<div class="main-search-btn">
+
+				<span id="searchButton" class="chaxun icon iconfont icon-chaxun"></span>
+			</div>
+
+
+		</div>
+		{% endblock %}

@@ -1,0 +1,115 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+
+{% block tblHeader %}
+//options.disableCols=["0"];
+options[g_activeTabID].canAdd=false;
+options[g_activeTabID].canEdit=false;
+hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+hasImport={% if user|HasPerm:"iclock.import_oplog" %}true{% else %}false{% endif %}
+//jqOptions=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{ colModel }}
+tblName[g_activeTabID]='oplog';
+jqOptions[g_activeTabID].pager = "id_pager_"+tblName[g_activeTabID];
+jqOptions[g_activeTabID].sortname='OPTime';
+jqOptions[g_activeTabID].sortorder="desc";
+//show_left=false
+
+
+function strOfData_oplog(data)
+{
+	return data.SN+" "+data.OpName;
+}
+//function canEdit() 
+//{ 
+// } 
+
+$(function(){
+	var info='<p>1.设备操作日志记录的是人员对设备进行的操作记录，例如开机、关机、报警、进入菜单等</p>'
+        renderLeftInformation(info);
+//        smenu="<ul><li  class='subnav_on' onclick=submenuClick('/iclock/data/oplog/',this);><a href='#'>设备操作</a></li></ul>"
+//        $("#"+g_activeTabID+" #menu_div").html(smenu)
+
+	//savecookie("search_urlstr",g_urls[g_activeTabID])
+
+	$("#"+g_activeTabID+" #queryButton").hide()
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowoplog();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowoplog();
+	});
+	$("#"+g_activeTabID+" #searchbar").val(gettext("设备序列号,别名"))
+	$("#"+g_activeTabID+" #id_newrec").css('display','none');
+	$("#id_ComeTime_oplog").val(moment().startOf('month').format('YYYY-MM-DD HH:mm'))
+	$("#id_EndTime_oplog").val(moment().endOf('day').format('YYYY-MM-DD HH:mm'))   
+	$("#id_ComeTime_oplog").datetimepicker(datetimepickerOptions);
+	$("#id_EndTime_oplog").datetimepicker(datetimepickerOptions);
+	$("#"+g_activeTabID+" #id_search").click(function(){
+		var ComeTime=$("#id_ComeTime_oplog").val();
+		var EndDate=$("#id_EndTime_oplog").val();
+		//$.cookie("ComeTime",ComeTime, { expires: 7 });
+		//$.cookie("EndDate",EndDate, { expires: 7 });
+		var isError=validate_form_oplog();
+		var urlTime="";
+		var urlTime1="";
+		if(!isError){
+			exporttag=1;
+			urlTime1="OPTime__gte="+ComeTime+"&OPTime__lt="+EndDate
+		}
+		urlTime=urlTime1
+		var url="/iclock/data/oplog/?"
+		if (urlTime!="" &&  urlTime!=null)
+			url+=urlTime;
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+		savecookie("search_urlstr",url);
+	});
+	
+})
+function validate_form_oplog(){   //验证表单的合法性(、开始时间、结束时间)
+	var t_ComeTime=$("#id_ComeTime_oplog").val();
+	var cTime=t_ComeTime.split("-");
+	var t_EndDate=$("#id_EndTime_oplog").val();
+	var eTime=t_EndDate.split("-");
+	cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+	edate=new Date(parseInt(eTime[0],10),parseInt(eTime[1],10)-1,parseInt(eTime[2],10));
+	if(cdate>edate || t_ComeTime=="" || t_EndDate==""){
+		return 1;
+	}else{
+		return 0
+	}
+}
+//模糊查询
+function searchShowoplog(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+	var url=g_urls[g_activeTabID]+"?q="+escape(v)
+	savecookie("search_urlstr",url);
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+{% endblock %}
+{% block otherQuery %}
+	<span style='float:left;'>
+				<span>
+					<label  >{%trans 'Begin Date'%}</label>
+					<input type='text' name='ComeTime' maxlength='10' id='id_ComeTime_oplog' style='width:120px !important;'/>
+					<label  >{%trans 'End Date'%}</label>
+					<input type='text' name='EndTime' maxlength='10' id='id_EndTime_oplog' style='width:120px !important;'/>
+				</span>
+				<span id='id_search' ><a class='m-btn  zkgreen rnd mini'>{%trans 'Query'%}</a></span>
+				</span>
+	
+				
+				
+				
+				
+{% endblock %}
+
+
+

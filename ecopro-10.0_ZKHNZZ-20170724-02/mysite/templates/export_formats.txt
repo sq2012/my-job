@@ -1,0 +1,13 @@
+#format description
+#dataModel_exportFormatName.fileName:Temlate
+employee_PIN&Name.pin.txt:{{ item.PIN }}	{{ item.EName }}	{{ item.Dept.DeptID }}	{{ item.Dept.DeptName }}	{{ item.fpCount }}
+employee_Employee Registration.employeeEnroll.txt:{{ item.PIN }}	{{ item.EName }}	{{ item.Dept.DeptID }}	{{ item.Dept.DeptName }}	{{ item.Device }}	{{ item.fpCount }}
+department_department CSV.department.csv:{% load iclock_tags %}{{ item.DeptID }}, {{ item.DeptName }}, {{ item.parent }}, {{ item.Parent }}, {{ item.empCount }}
+department_department TXT.department.txt:{% load iclock_tags %}{{ item.DeptID }}	{{ item.DeptName }}	{{ item.parent }}	{{ item.Parent }}	{{ item.empCount }}
+transaction_Transactions.logs.csv:{% load iclock_tags %}{{ item.employee.Dept.DeptName }}, {{ item.employee.PIN }}, {{ item.employee.EName }}, {{ item.TTime }}, {{ item.Device.SN }}, {{ item.Device.Alias }}
+transaction_Simple Transactions.attlogs.txt:{% load iclock_tags %}{{ item.employee.Dept.DeptName }}	{{ item.employee.PIN }}	{{ item.TTime|shortTime }}
+devcmds_List(Comma Separated).devcmds.csv:{% load iclock_tags %}{{ item.Device.SN }}, {{ item.Device.Alias }}, {{ item.CmdContent|cmdName }}, {{ item.CmdCommitTime|isoTime }}, {{ item.CmdTransTime|isoTime }}, {{ item.CmdOverTime|isoTime }}, {{ item.CmdReturn|isoTime }}
+devcmds_List(Tab Separated).devcmds.txt:{% load iclock_tags %}{{ item.Device.SN }}	{{ item.Device.Alias }}	{{ item.CmdContent|cmdName }}	{{ item.CmdCommitTime|isoTime }}	{{ item.CmdTransTime|isoTime }}	{{ item.CmdOverTime|isoTime }}	{{ item.CmdReturn|isoTime }}
+devlog_List(Comma Separated).devlog.csv:{% load iclock_tags %}{{ item.Device }}, {{ item.OpTime|isoTime }}, {{ item.OP }}, {{ item.Cnt }}, {{ item.ECnt }}
+devlog_List(Tab Separated).devlog.txt:{% load iclock_tags %}{{ item.Device }}	{{ item.OpTime|isoTime }}	{{ item.OP }}	{{ item.Cnt }}	{{ item.ECnt }}
+

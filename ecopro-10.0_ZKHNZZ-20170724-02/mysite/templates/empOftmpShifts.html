@@ -1,0 +1,31 @@
+{% load iclock_tags %}
+{% load i18n %}
+<script type="text/javascript">
+totalRecCnt_tmpshifts={{ item_count }};
+item_from_tmpshifts={{ from }}
+page_index_tmpshifts={{ page }};
+page_limit_tmpshifts={{ limit }};
+page_number_tmpshifts={{ page_count }};
+$(function(){
+var page_style=6;
+$("#id_result_pages").html(getPagers("", item_from_tmpshifts-1, totalRecCnt_tmpshifts, page_limit_tmpshifts, page_index_tmpshifts, page_number_tmpshifts,page_style,1));
+});
+</script>
+<table>
+<tr><td align="left" style="border:0px;">
+    <div id="id_result_pages" style="float:left;"></div>
+</td></tr>
+<tr id="id_second"><td style="border:0px;">
+    <table id="tbl">
+        {% autoescape off %}
+        <thead><tr><th>{% trans 'department name' %}</th><th>{% trans 'PIN' %}</th><th>{% trans 'EName' %}</th><th>{% trans 'Beginning time' %}</th><th>{% trans 'Ending time' %}</th><th>{% trans 'Schclass' %}</th></tr></thead> {% endautoescape %}
+        {% for item in latest_item_list %}
+            {%if forloop.counter|isOdd%}
+                <tr class='row1'><td>{{ item.employee.Dept.DeptName }}</td><td>{{ item.employee.PIN }}</td><td>{{ item.employee.EName }}</td><td>{{ item.ComeTime }}</td><td>{{ item.LeaveTime }}</td><td>{{ item.SchclassID|schName }}</td></tr>
+            {%else%}
+                <tr class='row2'><td>{{ item.employee.Dept.DeptName }}</td><td>{{ item.employee.PIN }}</td><td>{{ item.employee.EName }}</td><td>{{ item.ComeTime }}</td><td>{{ item.LeaveTime }}</td><td>{{ item.SchclassID|schName }}</td></tr>
+            {%endif%}
+        {% endfor %}
+    </table>
+</td></tr>
+</table>

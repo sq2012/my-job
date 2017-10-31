@@ -1,0 +1,157 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+hasImport={% if user|HasPerm:"ipos.import_batchtime" %}true{% else %}false{% endif %}
+//jqOptions=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='BatchTime';
+jqOptions[g_activeTabID].pager = "id_pager_"+tblName[g_activeTabID];
+jqOptions[g_activeTabID].sortname='code,name';
+options[g_activeTabID].dlg_width=400;
+options[g_activeTabID].dlg_height=380;
+var all_batchtimes={'固定时间段':1,'第2批':2,'第3批':3,'第4批':4,'第5批':5,'第6批':6,'第7批':7,'第8批':8,'第9批':9}
+$(function(){
+	$("#"+g_activeTabID+" #queryButton").hide()
+    $("#"+g_activeTabID+" #aDelete").hide()
+
+        var info='<div class="west_info"><p>1.系统默认具有1个固定时间段和8个（第2批-第9批）批次时间段，每个时间段分别可以设置8个时间段</p>' +
+                '<p>2.单击消费时间段的“时间段名称”，进入编辑消费时间段页面</p>'+
+                '<p>3.“时间段名称”：不可修改</p>'+
+                '<p>4.“开始时间”、“结束时间”：设置该消费时间段的开始和结束时间</p>'+
+                '<p>5.“是否有效”：选择为“是”或“否”，选择为“是”该消费时间段才有效，否则，为无效</p></div>'
+
+        renderLeftInformation(info);
+        smenu="<ul><li  class='subnav_on' onclick=submenuClick('/ipos/data/batchtime/',this);><a href='#'>消费时间段设置</a></li></ul>"
+        //$("#menu_div").html(smenu)	
+        $("#"+g_activeTabID+" #id_newrec").click(function(event){
+                processNewModel();
+	});
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowDep_BatchTime();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowDep_BatchTime();
+	});
+	$("#"+g_activeTabID+" #id_export").css('display','none');
+	$("#"+g_activeTabID+" #id_third").html("");
+
+     $("#"+g_activeTabID+" #id_search").click(function(){
+		//var search_name=$("#"+g_activeTabID+" #search_id_name").val();
+		var search_isvalid=$("#search_id_isvalid").val();
+        var urlnew="";
+        //if (search_name||search_isvalid)
+          //{urlnew="name="+escape(search_name)+"&"+"isvalid="+search_isvalid}
+		  if(search_isvalid)
+		  {urlnew="isvalid="+search_isvalid}
+		var url="/ipos/data/batchtime/?"
+		if (urlnew!="" &&  urlnew!=null)
+			url+=urlnew;
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+		savecookie("search_urlstr",url);
+	});
+    $("#"+g_activeTabID+" #id_search_clean").click(function(){
+        $("#"+g_activeTabID+" #search_id_name").val('');
+        $("#"+g_activeTabID+" #search_id_isvalid").val('');
+        var url="/ipos/data/batchtime/"
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+		savecookie("search_urlstr",url);
+    });
+});
+
+function searchShowDep_BatchTime(){
+    var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+    var url="/ipos/data/batchtime/?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function editDefineclick(key)
+{
+	var Href=g_urls[g_activeTabID].split("?")[0]+key+'/'+"?stamp="+new Date().toUTCString();
+	$.ajax({
+		type:"GET",
+		url:Href,
+		dataType:"html",
+		async:false,
+		success:function(msg){
+                        msg=$.trim(msg)
+			processDefineEdit(msg, Href,key);
+		}
+	});
+}
+
+function strOfData_BatchTime(data)
+{
+	return data[1];
+}
+
+function process_dialog_BatchTime(obj,flag)
+{
+	$(obj).dialog({resizable:false,modal:true})
+	$("#id_endtime",obj).timepicker(timepickerOptions);
+	$("#id_starttime",obj).timepicker(timepickerOptions);
+    if(flag=='edit')
+    {$("#id_name",obj).attr('readonly','True')}
+}
+function process_dialog_again_BatchTime(obj,flag){
+	name = $("#id_name",obj).val()
+	var value = all_batchtimes[name]
+	$("#id_pos_time",obj).find('option').attr("selected",false);
+	$("#id_pos_time",obj).find("option[value='"+value+"']").attr("selected",true);
+}
+function isDate(str)
+{
+    var k=/^(\d{2})\:(\d{2})$/
+    var reg = str.match(/^(\d{2})\:(\d{2})$/);  
+    if(!k.test(str) || reg[1]>23 || reg[2]>59){
+        return false
+    }else{
+        return true;
+    }
+}
+
+function beforePost_BatchTime(obj,actionName)
+{
+	st=$('#id_starttime',obj).val()
+	et=$('#id_endtime',obj).val()
+    name=$("#id_name",obj).val()
+	if(name == 'undefined' || name==''){
+    $("#id_error",obj).html('时间段名称不能为空!').css('color','red').show();
+    return false
+}
+	if(!isDate(st)||!isDate(et)){
+		$("#id_error",obj).html('时间格式不正确！正确格式：00:00').css('color','red').show();
+		return false
+	}
+    if(st>et){
+    $("#id_error",obj).html('开始时间大于结束时间，保存失败').css('color','red').show();
+    return false;
+    }
+    else
+    return true
+
+}
+{% endblock %}
+
+{% block otherQuery %}
+	<span style='float:left;'>
+        <span>
+			<!-- <label class='required' >{%trans '时间段名称'%}</label>
+			<input type='text' name=''  id='search_id_name' style='width:120px;'> 
+            &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; --><label  >{%trans '是否有效'%}</label>
+			<select name='' id='search_id_isvalid'><option value=''>--------</option><option value='1'>有效</option><option value='0'>无效</option></select>
+		 </span>
+          &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;<span id='id_search' ><a class='m-btn  zkgreen rnd mini'>{%trans 'Query'%}</a></span>
+          <!--<span id='id_search_clean' ><a class='m-btn  zkgreen rnd mini'>{%trans '清除'%}</a></span>-->
+	</span>
+
+
+{% endblock %}

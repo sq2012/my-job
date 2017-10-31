@@ -1,0 +1,234 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+
+<script>
+function setSN() {
+	var ss=getSelected_emp_ex("mini")
+	$("#txtSN").val(ss[0]);
+	$("#emp_to_dev").remove();
+}
+
+
+
+
+$(function(){
+	$("#content").html('<table id="changelist" style="margin-bottom: 2px; float: left; width: 100%;">'
+					+	'<tr>'
+					+	'<td><span style="font-size: 15px; padding-right: 20px;"><b>'
+					+	'<img src="/media/img/blogmarks.png"></img>{%trans "U_Disk Data Manager"%}</b></span></td>'
+					+	'</tr>'
+					+	'<tr><td>'
+					+	'<div id="RightPane"  valign="top">'<!-- Tabs pane -->
+					+	'<div id="tabs">'
+					+	'<ul class="ul_tags">'
+					+	'<li><a href="#tabs-1" alt="1"><span>{% trans "Import Udisk Data"%}</span></a></li>'
+					//+	'<li><a href="#tabs-2" alt="2"><span>{% trans "Report Udisk Data"%}</span></a></li>'
+					+	'</ul><div id="tabs-1"  style="position:relative;left:40;padding:2px 0 0 0">'
+					//+	'<!-- <iframe height="200px" width="100%" frameborder="0" name="import-ifrm"></iframe> -->'
+					+	'<form id="id_edit_form" method="POST" action="/iclock/isys/upload/" enctype="multipart/form-data">'
+					+	'<table width="900px" border="1" style="position: relative;left: 1px;border:1px solid #7bc4ff;"><tr height="48px">'
+					+	'<td  align="left" border="1" style="border:1px solid #7bc4ff;">{%trans "Device"%}</td><td align="left" width="120px" border="1" style="border:1px solid #7bc4ff;">{%trans "File type"%}</td><td width="350px" align="left" border="1" style="border:1px solid #7bc4ff;">{%trans "Select file"%}</td><td align="left" border="1" style="border:1px solid #7bc4ff;">'+'{%trans "Operate" %}'+'</td>'
+					+	'</tr><tr class="row1"><td height="180px" align="left" width="300px" rowspan="3" border="1" style="border:1px solid #7bc4ff;">	<input type="text" name="SN" id="txtSN" value="" readonly style="height:18px"/> <span id="aGetSN" align="center" style="color:green">[{%trans "select device"%}]</span>'
+					+	'<br><div>&nbsp</div>{%trans "Here set to upload data files from the downloaded to the device which transaction was the U-disk"%}'
+					+	'</td><td height="55px" border="1" style="border:1px solid #7bc4ff;">{%trans "users File"%}</td><td border="1" style="border:1px solid #7bc4ff;"><input type="file" name="file_user" id="fileUser" style="height:24px"/>&nbsp;&nbsp;user.dat</td>'
+					+	'<td align="center" border="1" style="border:1px solid #7bc4ff;"><!--<button id="butUser" >{%trans "upload file"%}</button><input type="submit" id="butUser" name="butUser" value="{%trans "upload file"%}"/></td>-->'
+					+	'</tr><tr class="row1"><td height="55px" border="1" style="border:1px solid #7bc4ff;">{%trans "transaction file"%}</td>'
+					+	'<td border="1" style="border:1px solid #7bc4ff;"><input type="file" name="file_transaction"" id="fileTransaction" style="height:24px"/>&nbsp;&nbsp;1_attlog.dat</td>'
+					+	'<td align="center" border="1" style="border:1px solid #7bc4ff;"><!--<button id="butTrans">{%trans "upload file"%}</button>-->'
+					
+					+	'</tr>'
+					+'<tr class="row1"><td border="1" style="border:1px solid #7bc4ff;">{%trans "fingerprint template file"%}</td><td border="1" style="border:1px solid #7bc4ff;">'
+					+	'<input type="file" name="file_fptemp" id="fileFptemp" style="height:24px" />&nbsp;&nbsp;template.fp10.1<br />'
+					
+					+	'<div>&nbsp</div>{%trans "If upload fingerprint template must also upload file related to the user's information"%}'
+					+	'</td><td align="center" border="1" style="border:1px solid #7bc4ff;"><!--<button id="butFinger">{%trans "upload file"%}</button>-->'
+					+	'</td>'
+					+'<tr><td colspan=4 align="right"><input type="submit" id="butFinger" value="{%trans "upload file"%}"></td></tr>'
+					+   '</table></form><span id="id_error"></span>'
+					+	'</div>'
+					+	'<div id="tabs-2">'
+					+	'</div>'
+					+	'</div></div></div></td></tr></table>');
+	
+	
+	$("#RightPane").css("height",$("#id_content").height()-$("#RightPane").position().top)
+				   .css("width",$("#id_content").width()-$("#RightPane").position().left)
+	$("#tabs-1").css("height",$("#id_content").height()-$("#tabs-1").position().top-25)
+				.css("width",$("#id_edit_form table").width()+60)
+	$("#tabs").css("height",$("#id_content").height()-$("#tabs").position().top-25)
+			  .css("width",$("#id_content").width()-$("#tabs").position().left-30)
+			  .css("overflow","scroll");
+//	$(".ul_tags").css("width",$("#tabs-1").width()-55)
+	$("#usbExport").click(function(){
+		var emp=getSelected_emp();
+		var deptIDs=$("#hidden_selDept").val();
+		var ischecked=0;
+		if($("#id_contain_chl").prop("checked"))
+			ischecked=1;
+		//var empNames=getSelected_empNames();
+		//var empPin=getSelected_empPin();
+		if (emp=="" && deptIDs=="")
+		{
+			alert("{%trans 'employee or Department choice'%}");
+			return false;
+			
+		}
+		//var formStr=formToRequestString($("#form1").get(0))+"&DeptIDs="+deptIDs+"&UserIDs="+emp+"&isContainChild="+ischecked;
+		download("&DeptIDs="+deptIDs+"&UserIDs="+emp+"&isContainChild="+ischecked);
+	});
+	
+//	$("BUTTON").button();		
+    $("#tabs").tabs();
+	
+	$("#aGetSN").click(function(){
+		createDialog(setSN, setSN, "/iclock/data/iclock/", "{%trans "device choice"%}", "{%trans 'device'%}", 350);
+	});
+	$("#butFinger").click(function() {
+		var sn=$("#txtSN").val();
+		var user=$("#fileUser").val();
+		var trans=$("#fileTransaction").val();
+		var fpTemp=$("#fileFptemp").val();
+		$("#id_error").html("")
+		if (sn=="")
+		{
+			alert("{%trans 'device choice'%}");
+			return false;
+		}
+		if (user=="" && trans=="" && fpTemp=="")
+		{
+			alert("{%trans 'You upload a filex no choice'%}");
+			return false;
+		}
+		if (user=="" && fpTemp=="")
+		{
+			alert("{%trans 'If you plan to upload fingerprint template, users upload information at the same time'%}");
+
+			return false;
+		}
+		upload();
+		
+	
+	});
+/*
+	$("#butUser").click(function() {
+		var sn=$("#txtSN").val();
+		var user=$("#fileUser").val();
+		var filename=$("#fileUser").val().split("\\")[$("#fileUser").val().split("\\").length-1]
+		if (sn=="")
+		{
+			alert('{%trans "Please select device"%}');
+			return false;
+		}
+		if (user=="")
+		{
+			alert("{%trans 'Please select user file choice'%}");
+			return false;
+		}
+		if (filename!="user.dat")
+		{
+			alert('{%trans "Filename is wrong"%}');
+			return false;
+		}		
+		upload();
+	});
+	$("#butTrans").click(function() {
+		var filename=$("#fileTransaction").val().split("\\")[$("#fileTransaction").val().split("\\").length-1]
+		var sn=$("#txtSN").val();
+		var trans=$("#fileTransaction").val();
+		if (sn=="")
+		{
+			alert('{%trans "Please select device"%}');
+			return false;
+		}
+		if (trans=="")
+		{
+			alert("{%trans 'Please select transaction file'%}");
+			return false;
+		}
+		if (filename!="1_attlog.dat")
+		{
+			alert('{%trans "Filename is wrong"%}');
+			return false;
+		}
+		upload();
+	 
+	});
+	$("#butFinger").click(function() { 
+		var filename=$("#fileFptemp").val().split("\\")[$("#fileFptemp").val().split("\\").length-1]
+		var sn=$("#txtSN").val();
+		var fpTemp=$("#fileFptemp").val();
+		if (sn=="")
+		{
+			alert('{%trans "Please select device"%}');
+			return false;
+		}
+		if (fpTemp=="")
+		{
+			alert("{%trans 'Please select fptemp file'%}");
+			return false;
+		}
+		if (filename!="template.fp10.1")
+		{
+			alert('{%trans "Filename is wrong"%}');
+			return false;
+		}
+		upload();
+	});
+*/
+});
+
+function download(action)
+{
+	var formStr=formToRequestString($("#form1").get(0))+action;
+	$.post(g_urls[g_activeTabID], 
+		formStr,
+		function(ret, textStatus) {
+			if(ret.ret==0)
+			{
+				$("#id_error1").css("display","block");
+				$("#id_error1").html("<div style='background:red;font-size:18px;margin-top:10px;width:550px;'>"+ ret.message +"</div>");
+			}
+			else
+			{
+				$("#id_error1").css("display","block");
+				$("#id_error1").html("<div style='background:red;font-size:18px;margin-top:10px;width:550px;'><img src='../media/img/icon_alert.gif'/>"+ ret.message +"</div>");
+			}
+		},
+		"json");
+}
+
+function showResponses(ret){
+	$("#id_error").css("display","block");
+	msg=unescapeHTML(ret.message)
+	$("#id_error").html("<div style='margin-top:10px;width:550px;'>"+ msg +"</div>");
+	$("#fileFptemp").val("");
+	$("#fileTransaction").val("");
+	$("#fileUser").val("");
+	$.unblockUI()
+}
+function upload() {
+	var opts = { 
+	        url:"/iclock/isys/upload/",
+	        dataType:'json',
+		iframe:true,
+	        success: showResponses
+	    };
+	
+	$.blockUI({title:'{%trans "Import Udisk Data"%}',theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}</br></h1>'});
+
+	$('#id_edit_form').submit(function() {
+			$(this).ajaxSubmit(opts); 	                
+	        return false;
+	});  
+}
+ 
+</script>
+
+<div id="content">
+</div>
+
+
+
+
+

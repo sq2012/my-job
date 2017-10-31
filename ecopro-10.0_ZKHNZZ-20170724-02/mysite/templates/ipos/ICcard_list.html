@@ -1,0 +1,125 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+hasImport={% if user|HasPerm:"ipos.import_ICcard" %}true{% else %}false{% endif %}
+//jqOptions=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='ICcard';
+jqOptions[g_activeTabID].pager = "id_pager_"+tblName[g_activeTabID];
+jqOptions[g_activeTabID].sortname='code,name';
+options[g_activeTabID].dlg_width=880;
+options[g_activeTabID].dlg_height=480;
+
+function strOfData_ICcard(data)
+{
+	return stripHtml(data.code)+" "+stripHtml(data.name);
+}
+
+$(function(){
+        var info='<div><p>1.卡类资料用于发卡时对卡片进行消费限制</p><p>2.系统默认在发卡时使用默认存在的“员工卡”卡类，该卡类默认没有添加消费限制，可以修改但不能删除。用户可以自己新增卡类，新增的卡类可以修改和删除</p></div>'
+        renderLeftInformation(info);
+        smenu="<ul><li  class='subnav_on' onclick=submenuClick('/ipos/data/ICcard/',this);><a href='#'>卡类资料</a></li></ul>"
+        //$("#menu_div").html(smenu)
+
+	$("#"+g_activeTabID+" #queryButton").hide()
+        $("#"+g_activeTabID+" #id_newrec").click(function(event){
+                processNewModel();
+	});
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowDep_ICcard();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowDep_ICcard();
+	});
+	$("#"+g_activeTabID+" #id_export").css('display','none');
+	$("#"+g_activeTabID+" #id_third").html("");
+
+});
+
+
+function process_dialog_ICcard(obj,flag)
+{
+        $(obj).dialog({resizable:false,modal:true})
+       if(flag=='edit')
+        {$("#id_code",obj).attr('readonly','True')}
+        var value=$("#id_"+flag,obj).val()
+        $("#id_remark",obj).parent().parent().after(
+        "<th><label for='id_posmeal'>{%trans '可用餐类'%}:</label></th>"
+        +"<td>"
+        +"<div id='dlg_for_query_posmeal' style='overflow:hidden;'>"
+	+"<div id='dlg_dept_posmeal' class='dlgdiv'>"
+   	+"<div id='dlg_dept_body_posmeal' style='overflow:auto;'>"
+	+"<ul id='showTree_posmeal' class='ztree' style='height:123px;overflow:auto;'></ul>"
+	+"</div></div></div>"
+        +"<div style='display:none;'><input id='id_posmeal' name='posmeal' type='hidden' value=''/></div>"
+        +"</td>"
+        +"<th><label for='id_use_mechine'>{%trans '可用设备'%}:</label></th>"
+        +"<td>"
+        +"<div id='dlg_for_query_use_mechine' style='overflow:hidden;'>"
+	+"<div id='dlg_dept_use_mechine' class='dlgdiv'>"
+   	+"<div id='dlg_dept_body_use_mechine' style='overflow:auto;'>"
+	+"<ul id='showTree_use_mechine' class='ztree' style='height:123px;overflow:auto;'></ul>"
+	+"</div></div></div>"
+        +"<div style='display:none;'><input id='id_use_mechine' name='use_mechine' type='hidden' value=''/></div>"
+        +"</td>"
+        );
+        
+            
+}
+function process_dialog_again_ICcard(obj){
+        var code=$("#id_code",obj).val()
+        ShowTreeData("posmeal",code)
+        ShowTreeData("use_mechine",code)
+}
+
+function ShowTreeData(page,code){
+        var setting = {
+            check: {enable: true,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},          
+	    async: {
+			    enable: true,
+			    url: "/ipos/getData/?func="+page+"&code="+code,
+			    autoParam: ["id"]
+		    }
+	};
+	$.fn.zTree.init($("#showTree_"+page), setting,null);	
+}
+
+function searchShowDep_ICcard(){
+    var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+    var url="/ipos/data/ICcard/?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+
+function beforePost_ICcard(obj,actionName)
+{
+        var treeids=getSelected_dept("showTree_posmeal");
+        if(treeids.length>0)
+        {
+                $("#id_posmeal",obj).val(treeids);
+        }
+        else
+        {
+                $("#id_posmeal",obj).val('');
+        }
+        var treeids=getSelected_dept("showTree_use_mechine");
+        if(treeids.length>0)
+        {
+                $("#id_use_mechine",obj).val(treeids);
+        }
+        else
+        {
+                $("#id_use_mechine",obj).val('');
+        }
+}
+
+{% endblock %}

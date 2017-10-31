@@ -1,0 +1,413 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+<div class='alert' style='height: 20px;margin-left: 20px;margin-top: 15px;'>修改卡资料:需要连接发卡器</div>
+<div style='height: 350px;'>
+	<div class='left' style='width: 800px;margin-left: 50px;height: 270px;'>
+			<table width='90%' id='tbl'><tbody>
+				<tr><td>
+					<div class='ui-widget-header' style='height: 28px;margin-top: 5px;margin-bottom: 10px;'><h3 style="padding-top: 8px;padding-left: 10px;"><a>{%trans '人员信息'%}</a></h3></div>
+					<table id="id_emp_info_tbl" border="0" cellspacing="0" cellpadding="3">
+						<tr>
+							<th><label for="id_sys_card_no">卡账号:</label></th>
+						       <td>
+							  <input id="id_sys_card_no" type="text" maxlength="10" value="" name="sys_card_no" readonly="" style="background-color: scrollbar;">
+						       </td>
+					 
+						    <th><label for="id_PIN">工号:</label></th>
+						      <td>
+							 <input id="id_PIN"  type="text" maxlength="10" value="" name="PIN" readonly="" style="background-color: scrollbar;">
+						      </td>
+						</tr>
+						<tr>
+							<th><label for="id_name">姓名:</label></th>
+						       <td>
+							  <input id="id_name" type="text" maxlength="10" value="" name="name" readonly="" style="background-color: scrollbar;">
+						       </td>
+					 
+							<th><label for="id_deptname">部门:</label></th>
+						      <td>
+							 <input id="id_deptname"  type="text" maxlength="10" value="" name="deptname" readonly="" style="background-color: scrollbar;">
+						      </td>
+						</tr>
+						
+						
+						
+					</table>
+
+
+			
+			</td></tr>
+			<tr id="tr_pwd">
+				<td>
+					<div class='ui-widget-header' style='height: 28px;margin-top: 5px;margin-bottom: 10px;'><h3 style="padding-top: 8px;padding-left: 10px;"><a>{%trans '卡信息'%}</a></h3></div>
+                       <table id="id_pos_info_tbl" border="0" cellspacing="0" cellpadding="3">
+                       <tr>
+                           <th><label for="c_sys_no">卡账号:</label></th>
+                              <td>
+                                 <input id="c_sys_no"  type="text" maxlength="10" value="" name="c_sys_no" readonly="" style="background-color: scrollbar;">
+                              </td>
+                
+                           <th><label for="id_card_no">物理卡号:</label></th>
+                             <td>
+                                <input id="id_card_no"  type="text" maxlength="10" value="" name="card_no" readonly="" style="background-color: scrollbar;">
+                             </td>
+                             <th><label for="id_card_blances">卡余额（元）:</label></th>
+                               <td>
+                                  <input id="id_card_blances"  type="text" maxlength="10" value="" name="card_blances" readonly="" style="background-color: scrollbar;">
+                               </td>
+                       </tr>
+                       
+                       <tr>
+                
+                            <th><label for="c_serial_no">卡流水号:</label></th>
+                              <td>
+                                 <input id="c_serial_no" type="text" maxlength="10" value="" name="c_serial_no" readonly="" style="background-color: scrollbar;">
+                              </td>
+                            <th><label for="id_card_allow_serial_no">补贴流水号:</label></th>
+                              <td>
+                                 <input id="id_card_allow_serial_no" type="text" maxlength="10" value="" name="card_allow_serial_no" readonly="" style="background-color: scrollbar;">
+                              </td>
+                            <th><label for="id_card_password">超额密码:</label></th>
+                         <td>
+                            <input id="id_card_password"  type="text" maxlength="10" value="" name="card_password" readonly="" style="background-color: scrollbar;">
+                         </td>
+                            
+                        </tr>
+                        <tr>
+                                <th><label for="id_card_issue_date">发卡日期:</label></th>
+                                <td>
+                                   <input id="id_card_issue_date"  type="text" maxlength="10" value="" name="card_issue_date" readonly="" style="background-color: scrollbar;">
+                                </td>
+                                
+                                <th><label for="c_type">卡类:</label></th>
+                                <td>
+                                   <input id="c_type"  type="text" maxlength="100" value="" name="ctype" readonly="" style="background-color: scrollbar;">
+                                </td>
+                       </tr>
+                            
+                       
+                       </table>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					
+					<div class='ui-widget-header' style='height: 28px;margin-top: 5px;margin-bottom: 10px;'><h3 style="padding-top: 8px;padding-left: 10px;"><a>{%trans '数据库资料'%}</a></h3></div>
+					<form id='id_edit_form_consume' method='post'>
+						<table id="id_db_info_tbl" border="0" cellspacing="0" cellpadding="0">
+							<tr>
+							    <th><label for="id_blance">卡余额(元):</label></th>
+							       <td>
+								  <input id="id_blance" type="text" maxlength="10" value="" name="blance" readonly="" style="background-color: scrollbar;">
+							       </td>
+							</tr>
+							<tr>
+							    <th><label for="id_Password">超额密码:</label></th>
+								<td>
+									<input id="id_Password" type="text" maxlength="10" value="" name="Password">
+								</td>
+								<th><label for="id_issue_date">发卡日期:</label></th>
+								<td>
+									<input id="id_issue_date" type="text" maxlength="10" value="" name="issue_date" >
+								</td>
+								<th><label for="id_itype">卡类:</label></th>
+								<td>
+									{{ form.itype.as_widget}}
+								</td>
+									      
+							      
+							</tr>
+							<tr>
+							    <td><input type="hidden" id="operate_type" name="operate_type"   value="8"/>
+								 <input id="s_card_no" type="hidden" maxlength="10" value="" name="sys_card_no">
+								</td>
+							</tr>
+							
+						</table>
+					</form>
+					
+				</td>
+			</tr>
+			
+			
+		</td></tr></table>
+	</div>
+<!--	<div class='left' style='width:  400px;'>
+		<table id="id_grid" >	</table>
+		<div id="id_pager"></div>
+	</div>-->
+</div>
+<input type="hidden" id="id_card_no"  value=""/>
+
+<div id='id_error_uc'></div>
+{% if user|HasPerm:"iclock.user_temp_sch_modify" %}
+<div style='margin-left: 100px;'>
+
+		   <button type="button" disabled="disabled" class='m-btn  zkgreen rnd' id="read_card">读卡</button>
+	<button type="button" disabled="disabled" class='m-btn  zkgreen rnd'  id="write_card">写卡</button>
+
+</div>
+{% endif %}
+
+
+<script>
+
+var id_card_setinterval;
+var curi = 0;
+var re_val = "";
+var read_tag = 0
+
+{% autoescape off %}
+var _data={{params}}
+{% endautoescape %}
+var card_type=_data.itype
+var sys_pwd = _data.pwd
+var main_fan = _data.main
+var minor_fan = parseInt(main_fan)+1;
+var zk_key=_data.pass_key
+
+
+
+
+
+function write_card()
+{
+         if ($('#id_edit_form_consume').valid())
+        {
+            
+            if ($("#id_card_no").val() == reval )//验证卡号是否一致
+            {
+                if(funValidCard())
+                {
+                    var pwdbyte = sys_pwd;//系统密码
+                    var cardno = $("#id_sys_card_no").val();//卡编号
+                    var money = Number($("#id_blance").val());//写卡金额
+                    var overpwd = Number($("#id_Password").val());
+                    var issueDate = $("#id_issue_date").val();
+                    var cardType = Number($('#id_itype option:selected').text().split("---")[1]);//卡类型编号
+                    var is_d=$("#id_issue_date").val()
+                    
+					if ($("#id_issue_date").val()=='')
+						$("#id_error_uc").html('<ul class="errorlist"><li>发卡日期不能为空</li></ul>').show();
+					
+					else if(is_d<=moment().format('YYYY-MM-DD'))
+                    {
+						var rval = ZK_PosUpdateParam(0,pwdbyte,overpwd,issueDate,cardType,main_fan,minor_fan);
+						if (rval.toString() == '0')//写卡成功
+                        {
+                           if(funChangeCardInfo())//保存数据
+                            {
+                               $("#id_error_uc").html('<ul class="errorlist"><li>卡资料修改成功</li></ul>').show();                             
+                            }
+                            else
+                            {
+                                var overpwd = Number($("#id_card_password").val());
+                                var issueDate = $("#id_card_issue_date").val();
+                                var cardType = Number($("#c_type").val());
+                                var return_val = ZK_PosUpdateParam(0,pwdbyte,overpwd,issueDate,cardType,main_fan,minor_fan);
+                                $("#id_error_uc").html('<ul class="errorlist"><li>卡资料修改失败，操作已经回滚</li></ul>');                             
+                                $("#write_card").prop("disabled","disabled");
+                            }
+                        }
+                        else
+                        {
+                            check_card(rval);
+                        }
+                    }
+                    else
+                    {
+                        $("#id_error_uc").html('<ul class="errorlist"><li>发卡日期不能大于今天</li></ul>').show();                             
+                    }
+                }
+                else
+                {
+                    $("#write_card").prop("disabled","disabled");
+                }
+                
+            }
+            else
+            {
+                 $("#id_error_uc").html('<ul class="errorlist"><li>卡号不一致，写卡失败！</li></ul>').show();                
+                 $("#write_card").prop("disabled","disabled");
+            }
+        }
+
+}
+
+
+
+
+
+
+		
+
+function get_card_number(sys_card_no,cardInfo){
+	$.ajax({
+		url:"/ipos/getData/?func=IssueCard&sys_card_no="+sys_card_no,
+		dataType:"json",
+	    async: false,
+		type:"POST",
+		success:function(data){
+			if(data.length>0)
+			{
+				if (cardInfo[4].split('=')[1] != '255')//管理卡
+				{
+					$("#id_sys_card_no").val(cardInfo[1].split('=')[1]);
+					$("#c_serial_no").val(cardInfo[7].split('=')[1]);
+					$("#id_card_blances").val(Number(cardInfo[6].split('=')[1]) / 100);
+					$("#id_card_password").val(cardInfo[2].split('=')[1]);
+					$("#id_Password").val(cardInfo[2].split('=')[1]);
+					$("#id_card_issue_date").val(cardInfo[3].split('=')[1]);
+					$("#id_issue_date").val(cardInfo[3].split('=')[1]);
+					card_type = cardInfo[4].split('=')[1]
+					var count=$("#id_itype option").length;
+					
+					for(var i=0;i<count;i++)  
+					 {           
+					    if($("#id_itype").get(0).options[i].text.split('---')[1] == card_type)  
+						{  
+						    $("#id_itype").get(0).options[i].selected = true;  
+						    break;  
+						}  
+					 }
+					
+					$("#c_type").val($('#id_itype option:selected').text());
+
+
+					
+					$("#id_deptname").val(data[0].Dept);
+					$("#id_PIN").val(data[0].PIN);
+					$("#id_name").val(data[0].name);
+					$("#id_blances").val(data[0].blance);
+					
+					
+					sys_blance = Number(data[0].blance)
+					$('#id_blance').val(sys_blance)
+					$('#c_sys_no').val(sys_card_no)
+					$('#s_card_no').val(sys_card_no)
+					
+					var card_status = data[0].cardstate;
+					if (page_valid(card_status,'8'))
+					   {
+					    $("#write_card").removeProp("disabled");
+					   }
+					else
+					    {
+						$("#write_card").prop("disabled","disabled");
+					    }
+
+					
+					
+					
+				}
+				else
+				   {
+				       $("#id_error_uc").html('<ul class="errorlist"><li>当前卡片为管理卡或者操作卡，操作失败！</li></ul>');
+				       $("#write_card").prop("disabled","disabled");
+				   } 
+                    
+                
+			}
+			else
+			{
+			    //$("input[type=text]").val("");
+			    //$("#id_money").val(0);
+			    $("#write_card").prop("disabled","disabled");
+			    
+			    $("#id_error_uc").html('<ul class="errorlist"><li>卡账号'+sys_card_no+'不存在</li></ul>');
+			}
+
+		}
+	});
+}
+
+
+
+$(function()
+  {
+	$('#id_issue_date').datepicker(datepickerOptions)
+	
+	{% if "POS_IC"|filter_config_option %}
+		addZKOnline()	
+	
+	{%endif%}
+	
+	if(sys_pwd==''||card_type=='0')
+	{
+		if(sys_pwd=='')	
+		 $("#id_error_uc").html('<ul class="errorlist"><li>该系统还未设置IC卡密码，请首先进入<系统配置>-><系统选项>-><消费参数设置>进行卡参数配置</li></ul>').show();
+	       else
+		 $("#id_error_uc").html('<ul class="errorlist"><li>该系统还未设置卡类型，请首先进入<系统配置>-><系统选项>-><消费参数设置>进行卡参数配置</li></ul>').show();
+	
+			
+	}
+	else if(isOnline())
+	{
+	     $("#read_card").removeProp("disabled");
+	     //$("#btnstart").attr('style','none');
+	     $("#write_card").prop("disabled","disabled");
+	}
+	
+	
+	
+	
+
+
+
+
+        $("#read_card").click(function() {
+		$('#id_error_uc').html('')
+	    
+	    $('#id_op_card_blance').val(0)
+            var reval = readCard();
+            if (reval.length>4)
+               {
+                   $("#id_card_no").val(reval);
+                   var cardInfo = ZK_PosReadICCard(0,sys_pwd,main_fan,minor_fan).split(',');
+                    
+		    if (cardInfo.length >1)
+                        {
+                          var sys_card_no = cardInfo[1].split('=')[1];
+                         get_card_number(sys_card_no,cardInfo);
+                        }
+                    else
+                        {
+				check_card(cardInfo);
+				}
+                   
+               }
+            else
+               {
+                   check_card(reval);
+               }
+       });
+	$("#write_card").click(function()
+         {
+		 reval = readCard();
+		if (reval.length>4)
+		{
+                   write_card();
+		}
+		else
+		{
+                   check_card(reval);
+		}
+
+		
+		
+	 });
+	
+	
+	$('#id_edit_form_consume').validate({
+                                rules: {
+                                    "Password": {required:true,"digits":true,"maxlength":6}
+                                }
+                    });
+	
+	
+	
+});
+
+</script>
+

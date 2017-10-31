@@ -1,0 +1,264 @@
+{% load i18n %}
+{% load iclock_tags %}
+<script>
+var Custom_Jqgrid_Height=""
+var groupHeaders_anual=[]
+tblName[g_activeTabID]='annual_leave_report';
+jqOptions[g_activeTabID]=copyObj(jq_Options);
+jqOptions[g_activeTabID].rowNum=50
+jqOptions[g_activeTabID].sortname='id';
+jqOptions[g_activeTabID].pager='#id_pager_'+tblName[g_activeTabID];
+jqOptions[g_activeTabID].rowList={{limit}}
+
+
+$(function(){
+	initwindow_tabs();
+		var hcontent=$("#"+g_activeTabID+" #id_content").height();
+		var hbar=$("#"+g_activeTabID+" #id_top").height();
+		var height=hcontent-hbar-115;
+		jqOptions[g_activeTabID].height=height;
+		$("#"+g_activeTabID+" #searchButton").click(function(){
+		    searchShowannual();
+		});
+		$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+		    if(event.keyCode==13)
+		    searchShowannual();
+		});
+		//$("#queryButton").click(function(){
+		//	createQueryDlg();
+		//});
+		$("#"+g_activeTabID+" #id_export").iMenu();
+                $("#"+g_activeTabID+" #searchbar").val(gettext("考勤编号,身份证号,姓名"))
+               // $("#"+g_activeTabID+" #id_toolbar").css("width",$("#id_content").width());
+                //$("#o_DeptID").val(($.cookie("DeptID")==null?"":$.cookie("DeptID")));
+                //$("#o_PIN").val(($.cookie("PIN")==null?"":$.cookie("PIN")));
+                //$("#o_EName").val(($.cookie("EName")==null?"":$.cookie("EName")));
+                //$("#o_Hiredday").val(($.cookie("TTime")==null?"":$.cookie("TTime")));
+                //$("#o_Desc").val(($.cookie("Desc")==null?"":$.cookie("Desc")));
+                //
+		
+		var inputEl = $("#"+g_activeTabID+" .search-input")
+			 defVal[g_activeTabID] = inputEl.val();
+			 inputEl.on("focus",function(){
+					     var _this = $(this);
+						if (_this.val() == defVal[g_activeTabID]) {
+						    _this.val('');
+						    _this.css('color','#000000');
+						    //_this.attr('role','disabled')
+						}
+				})
+			inputEl.on("blur",function(){
+					var _this = $(this);
+					if (_this.val() == '') {
+					    _this.val(defVal[g_activeTabID]);
+					    _this.css('color','#CCCCCC');
+					    _this.attr('role','defvalue')
+					}
+					else
+					    _this.attr('role','cansearch')
+				})
+			inputEl.on("keydown",function(event) {
+					if (event.which == 13) {
+					      var _this = $(this);
+					       _this.attr('role','cansearch')
+					 }
+				})
+		var currDate=new Date();
+		var times=currDate.getFullYear()
+		var html=""
+		for(var i=0;i<16;i++){
+			if(i==6){
+				html+="<option selected>"+(times+i-6)+"</option>"
+			}else{
+				html+="<option>"+(times+i-6)+"</option>"
+			}
+		}
+		$("#"+g_activeTabID+" #id_year").html(html)
+		var year=$("#"+g_activeTabID+" #id_year").val()
+		times=year+"-01"
+		
+		$.ajax({
+			type:"GET",
+			url:"/iclock/att/annualstatic/?y="+times,
+			dataType:"json",
+			sync:false,
+			success:function(json){
+				jqOptions[g_activeTabID].colModel=json['colModel']
+				jqOptions[g_activeTabID].data=[]
+				jqOptions[g_activeTabID].datatype='local'
+				$("#id_grid_"+tblName[g_activeTabID]).jqGrid(jqOptions[g_activeTabID]);
+			}
+		});		
+
+})
+$("#"+g_activeTabID+" #id_reload").click(function(){
+	var year=$("#"+g_activeTabID+" #id_year").val()
+	times=year+"-01"//+times+"-01"
+	var ischecked=0;
+	if($("#id_cascadecheck_"+g_activeTabID).prop("checked")){
+		ischecked=1;
+	}
+	var deptID=getSelected_dept("showTree_"+g_activeTabID)
+	if (deptID!=undefined&&deptID!=''){
+		var t_url='/iclock/att/annualstatic/?deptIDs='+deptID+"&isContainChild="+ischecked+'&y='+times
+	} else{
+		return
+	}
+	reloadData('annual_leave_report',t_url);
+})
+
+//模糊查询
+function searchShowannual(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+	var year=$("#"+g_activeTabID+" #id_year").val()
+	times=year+"-01"
+	var url="/iclock/att/annualstatic/?q="+escape(v)+"&y="+times;
+	savecookie("search_urlstr",url);
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+//function createQueryDlg(){
+//	createQueryDlgbypage('annual_leave_report_search')
+//	$('#dlg_for_query_annual_leave_report_search').dialog({position: { my: "right top", at: "right bottom",of:"#id_searchbar"},
+//	buttons:[{id:"btnShowOK",text:gettext('搜索'),
+//	  click:function(){searchbydept('annual_leave_report_search');}},
+//	 {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+//	}] })
+//}
+//
+//function searchbydept(page){
+//    var dept_ids=getSelected_dept("showTree_"+page)
+//    if (dept_ids!=null){
+//    	if(dept_ids==undefined||dept_ids==''){
+//    		alert("{% trans "请选择单位" %}")
+//    		return false;
+//    	}
+//    }else{
+//    	alert("{% trans "请选择单位" %}")
+//    	return false;
+//    }
+//    var ischecked=0;
+//    if($("#id_cascadecheck_"+page).prop("checked"))
+//    	ischecked=1;
+//	var year=$("#id_year").val()
+//	times=year+"-01"
+//    urlStr="deptIDs="+dept_ids+"&isContainChild="+ischecked    
+//    var url="/iclock/data/employee/?t=annual_leave.js&"+urlStr+"&y="+times
+//	savecookie("search_urlstr",url);
+//    $("#id_grid").jqGrid('setGridParam',{url:url}).trigger("reloadGrid");
+//}
+
+	html="<span id=id_opt_tree><input type='checkbox' id='id_cascadecheck_"+g_activeTabID+"' />{%trans '级联下级单位' %}</span>"
+	$("#"+g_activeTabID+" #id_west").html(html)
+	html="<div id='show_dept_tree_'>"
+		+"<ul id='showTree_"+g_activeTabID+"' class='ztree' style='margin-left: 0px;height:100%;'></ul>"
+		+"</div>"   
+	$("#west_content_tab_iclock_report_annual").html(html)
+	//var h=$("#"+g_activeTabID+" #west_content").height()-20
+	//$('#showTree_'+g_activeTabID).css('height',h)
+
+        ShowDeptData(g_activeTabID,true)
+
+
+	
+	var zTree = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+	zTree.setting.check.enable = false;
+
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+			var deptID=treeNode.id;
+			var deptName=treeNode.name;
+			$.cookie("dept_ids",deptID, { expires: 7 });
+			
+			$("#"+g_activeTabID+" #hidden_selDept").val(deptID);
+			$("#"+g_activeTabID+" #hidden_depts").val(deptID);
+			$("#"+g_activeTabID+" #hidden_deptsName").val(deptName)
+		
+
+			var ischecked=0;
+		if($("#id_cascadecheck_"+g_activeTabID).prop("checked"))
+			ischecked=1;
+			var times=$("#"+g_activeTabID+" #id_month").val()
+			var year=$("#"+g_activeTabID+" #id_year").val()
+			times=year+"-01"//+times+"-01"
+			
+			$.ajax({
+				type:"GET",
+				url:"/iclock/att/annualstatic/?y="+times,
+				dataType:"json",
+				sync:false,
+				success:function(json){
+					jqOptions[g_activeTabID].colModel=json['colModel']
+					urlStr="/iclock/att/annualstatic/?deptIDs="+deptID+"&isContainChild="+ischecked+"&y="+times;
+					savecookie("search_urlstr",urlStr);
+					jqOptions[g_activeTabID].url=urlStr	;
+					jqOptions[g_activeTabID].datatype='json'
+					jqOptions[g_activeTabID].pager='#id_pager_'+tblName[g_activeTabID];
+					grid_disabledfields[g_activeTabID]=json['disabledcols']
+					$("#id_grid_"+tblName[g_activeTabID]).jqGrid('GridUnload');
+					//$.jgrid.gridUnload("#id_grid" )
+					$("#id_grid_"+tblName[g_activeTabID]).jqGrid(jqOptions[g_activeTabID]);
+					$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGroupHeaders', {useColSpanStyle: true,groupHeaders:groupHeaders_anual})
+				}
+			});
+	}
+
+
+
+
+</script>
+
+	<div id="id_line" style="padding: 2px;width: 100%;overflow: hidden;">
+		<span style="float:left;"><label  style="line-height:18px;padding:1px;">{%trans "年份"%}</label><select id="id_year" name="year"></select>
+		</span>
+		
+<!--                <span id="id_order" style='display:inline;width:315px'><label class="required">{%trans "Order"%}</label>-->
+<!--			<input type="checkbox" name="DeptID" id="o_DeptID" />{%trans "department"%}-->
+<!--			<input type="checkbox" name="PIN" id="o_PIN" />{%trans "人员代码"%}-->
+<!--			<input type="checkbox" name="EName" id="o_EName" />{%trans "EName"%}-->
+<!--			<input type="checkbox" name="TTime" id="o_Hiredday"  checked />{%trans "聘用日期"%}-->
+<!--			<input type="hidden" name="Asc" id="o_Asc" />-->
+<!--			<input type="checkbox" name="Desc" id="o_Desc"  checked />{%trans "Descending Order"%}-->
+<!--		</span>-->
+     		<span style="float:right;">
+			<div id="id_searchbar" class='search-pu'>
+				<div class="nui-ipt nui-ipt-hasIconBtn " >
+					<input id="searchbar" class="search-input" type="text"  value='' role='defvalue' autocomplete="off">
+
+				</div>
+				<div class="main-search-btn" style="height:22px">
+					<span><img id="searchButton" src="/media/img/s.gif" title="{%trans "Search"%}" style="cursor:hand;"></span>
+				</div>
+			</div>
+		</span>	
+	</div>
+
+        <div id="id_toolbar">
+                <UL class="toolbar" id="navi">
+                        <LI id="id_reload"><SPAN class="icon iconfont icon-shuaxin"></SPAN>{%trans "Reload"%}</LI>
+			<LI id="id_export"><SPAN class="icon iconfont icon-daochu"></SPAN>{%trans "Export"%}
+                                <ul id="op_menu_" class="op_menu">
+                                        <li><span>{%trans "文件格式"%}</span>
+                                                <ul>
+                                                <li onclick="javascript:clickexport(tblName[g_activeTabID],0);"><a href="#">EXCEL</a></li>
+                                                <li onclick="javascript:clickexport(tblName[g_activeTabID],1);"><a href="#">TXT</a></li>
+                                                <li onclick="javascript:clickexport(tblName[g_activeTabID],2);"><a href="#">PDF</a></li>
+                                                </ul>
+                                        </li>
+                                </ul>
+                        </LI>
+                        <!--<LI id="id_custom"  class="button-custom"><SPAN></SPAN>{%trans "Preferences"%}</LI>-->
+                </UL>
+                
+        </div>
+
+
+<div class="module"">
+	<table id='id_grid_annual_leave_report'></table><div id='id_pager_annual_leave_report'></div>
+</div>
+
+
+

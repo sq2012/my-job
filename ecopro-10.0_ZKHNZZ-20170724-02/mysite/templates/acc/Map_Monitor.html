@@ -1,0 +1,132 @@
+{% extends "base_site10.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block content %}
+<style>
+
+
+table th{
+font-size:14px;
+background: url("../media/img/nav-bg.gif") repeat-x scroll left top #E1E1E1;
+border-bottom: 1px solid #888888;
+border-left: 1px solid #DDDDDD;
+}
+
+table td{
+font-size:14px;
+}
+.style3 td{
+color:#000000;
+background:#FFFFCC;
+vertical-align:middle !important;
+}
+.style4 td{
+color:#000000;
+background:#FFFFCC;
+vertical-align:middle !important;
+}
+
+.style1 td{
+color:#000000;
+background:#FF3300;
+vertical-align:middle !important;
+}
+
+.style2 td{
+color:#000000;
+background:#90EE90;
+vertical-align:middle !important;
+}
+
+
+</style>
+<script type="text/javascript">
+$(function(){
+	
+	$.ajax({
+		type:"GET",
+		url:"/iclock/iacc/getMapManage/?stamp="+new Date().toUTCString(),
+		dataType:"json",
+		async:false,
+		success:function(json){
+			$("#id_map").html(json);
+		}
+	});
+	$.ajax({
+		type:"GET",
+		url:"/iclock/iacc/iaccessStateIMG/",
+		dataType:"json",
+		async:false,
+		success:function(json){
+			$("#id_imgSM").html(json);
+		}
+	});
+	var $tabs = $('#id_map').tabs();
+	var selected = $tabs.tabs('option', 'selected');
+	var mapid=$("#mapid_"+selected).val()
+	MapRealLoad(mapid);
+	$("#id_title").css("width","auto");
+	$("#id_map").css("width","auto");
+//	$("#con").css("height",window.screen.availHeight-100).css("width","auto");
+	$("#ids").css("height",window.screen.availHeight-80).css("width","auto");
+	$("#id_map").tabs({
+		select: function(event, ui) {
+			$('#id_error').html('');
+		}
+	})
+
+	$('#id_map').bind('tabsselect', function(event, ui) {
+		var selected=$("#mapids").val();
+		var mapid=$("#mapid_"+selected).val()//.attr("alt");
+		$("#id_title").css("width","auto");
+		$("#id_map").css("width","auto");
+		MapRealLoad(0);
+		
+	});
+})
+function MapRealLoad(mapid){
+	clearTimeout(logtimer2);
+	if(mapid==0){
+		var selected=$("#mapids").val();
+		var mapid=$("#mapid_"+selected).val()
+	}
+	url="/iclock/iacc/MapRealLoad/?mapid="+mapid+"&stamp="+new Date().toUTCString();
+	$.ajax({
+		type:"GET",
+		url:url,
+		dataType:"json",
+		async:false,
+		success:function(json){
+			$("#id_iclock").html(json);
+			logtimer2=setTimeout("MapRealLoad("+mapid+")", 2000);
+		}
+	});
+	
+}
+</script>
+<div id="ids" style="overflow:auto;position:absolute;margin-left: 15px;">
+<div style="height:31px;"><div style="color:#FF8411;font-size:14px;font-weight:bold;padding-top: 10px;">注:此页面只监控门禁设备</div></div>
+<div id="con" >
+<table border='1px' style='border:1px solid #808080;'>
+  <tr>
+    <td style="vertical-align:top;">
+		<div style="text-align:center;color:red;margin-top: 10px; margin-bottom: 10px;">图例说明</div>
+		<div id="id_imgSM" style="width:100px;">
+		
+		</div>
+	</td>
+	<td  style="vertical-align:top;">
+		<div id="id_map">
+		</div>
+		<div id="id_iclock"></div>
+		<input type='hidden' id='mapids' value='0' />
+	</td>
+	
+  </tr>
+</table>
+
+</div>
+</div>
+
+
+{% endblock %}

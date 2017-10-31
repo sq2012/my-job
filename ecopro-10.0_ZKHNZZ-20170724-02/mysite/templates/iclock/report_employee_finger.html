@@ -1,0 +1,54 @@
+{% extends "report_att.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+
+
+{% block date_range %}
+    <div id="id_finger" class='left' style='width:650px'><label ">{%trans "过滤"%}</label>
+            <input type="radio" name="ISFINGER" checked value='1' id="r_ALL" />{%trans "全部"%}
+            <input type="radio" name="ISFINGER" value='2' id="r_YES" />{%trans "采集指纹人员"%}
+            <input type="radio" name="ISFINGER" value='0' id="r_NO" />{%trans "未采集指纹人员"%}
+            <input type="radio" name="ISFINGER" value='3' id="r3_YES" />{%trans "采集面部人员"%}
+            <input type="radio" name="ISFINGER" value='4' id="r4_NO" />{%trans "未采集面部人员"%}
+            <input type="radio" name="ISFINGER" value='5' id="r5_YES" />{%trans "采集卡人员"%}
+            <input type="radio" name="ISFINGER" value='6' id="r6_NO" />{%trans "未采集卡人员"%}
+    </div>
+{% endblock %}
+
+
+{% block date_set_range %}	
+
+{% endblock %}
+
+
+{% block getDateUrl %}
+
+function getDateUrl()
+{
+	var urlStr=g_urls[g_activeTabID]
+	var val=$('input:radio[name="ISFINGER"]:checked').val();	
+	if(urlStr.indexOf("?")!=-1)
+		urlStr+="&SEP="+val
+	else
+		urlStr+="?SEP="+val
+/*
+	if($("#r_YES").prop('checked'))
+	{
+		if(urlStr.indexOf("?")!=-1)
+			urlStr+="&SEP=2"
+		else
+			urlStr+="?SEP=2"
+	}
+        
+	if($("#r_NO").prop('checked'))
+	{
+		if(urlStr.indexOf("?")!=-1)
+			urlStr+="&SEP=0"
+		else
+			urlStr+="?SEP=0"
+	}
+     */   
+	return urlStr
+
+}
+{% endblock %}

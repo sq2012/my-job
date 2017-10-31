@@ -1,0 +1,190 @@
+{% load iclock_tags %}
+{% load i18n %}
+<script>
+
+function InitSystem()
+{
+	var info =gettext( 'Are you sure initialize system？');
+	var result= window.confirm(info);
+	if(result){
+		Initialize();
+	}
+	
+}
+
+function Initialize()
+{
+	$.blockUI({theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}</br></h1>'});
+    $.ajax({type: "POST",
+		url:'/iclock/att/getData/?func=init_database',
+        dataType:"json",
+		success: function (retdata){
+				if(retdata.ret==0)
+					$.unblockUI();
+				else{
+					alert(retdata.message);
+				}
+			},
+		error: function(){alert($.validator.format(gettext('Operating failed for {0} !'),options.title)); $.unblockUI();}
+    });
+
+}
+
+function backup_database()
+{
+	$.blockUI({theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}</br></h1>'});
+    $.ajax({type: "POST",
+		url:'/iclock/att/getData/?func=backup_database',
+        dataType:"json",
+		success: function (retdata){
+				if(retdata.ret==0)
+					$.unblockUI();
+				else{
+					alert(retdata.message);
+				}
+			},
+		error: function(){alert($.validator.format(gettext('Operating failed for {0} !'),options.title)); $.unblockUI();}
+    });
+
+}
+
+
+
+function clearOutOffDatas(){
+	var html=
+		  "<div id='dlg_clear_data'>"
+		+  "<div >"
+		+ 	"<fieldset style='border:1px solid #7bc4ff;height:140px'><legend class='dtitle'></legend>"
+		+   "<br/>&nbsp;&nbsp;{%trans 'StartTime'%}&nbsp;&nbsp;<input id='id_str0' name='STR0' value='1999-01-01'/><br/><br/>&nbsp;&nbsp;{%trans 'EndTime'%}&nbsp;&nbsp;<input id='id_end0' name='END0'/>"
+		+	"<br/><br/>&nbsp;&nbsp;{%trans '清除类型'%}&nbsp;&nbsp;<select id='id_cleartype' style='width:160px'><option value='0'>"+gettext('AC Clock-in/out Records')+"</option><option value='1'>"+gettext('Attendance Picture Records')+"</option><option value='2'>"+gettext('Attendance Cacluate Records')+"</option><option value='3'>"+gettext('服务器下发命令日志')+"</option><option value='4'>"+gettext('设备上传数据日志')+"</option></select>"
+		+	"</fieldset><br/>"
+		+"<span id=id_info>&nbsp;&nbsp;{% trans 'A valid date format : 2010-10-01' %}</span>"
+		+'<span id="id_error"></span>'
+		+ "</div>"
+		+"</div>"
+	
+	$(html).dialog({modal:true,
+					width: 400,
+					height:320,
+					title:"{% trans 'Clear Obsolete Data' %}",
+					buttons:[{id:"btnShowOK",text:'{%trans "Submit" %}',
+								  click:subdata},
+							{id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$("#dlg_clear_data").remove();}
+							}],
+					close:function(){$("#dlg_clear_data").remove();}		
+				});
+	$('#id_end0').datepicker(datepickerOptions);
+	$('#id_str0').datepicker(datepickerOptions);
+	
+	function subdata(){
+		$("._pop_cal_").remove();
+		var attEndTime=$("#id_end0").val();
+		var attStrTime=$("#id_str0").val();
+		var cleartype=$("#id_cleartype").val();
+		if(attStrTime==""){
+			attStrTime='1999-01-01'
+		}
+		if(attEndTime!="")
+		{
+		    if(!valiDate(attEndTime))
+		    { 
+		        $("#id_error").css("display","block")
+		        $("#id_error").html("<ul><li class='error'>"+gettext('Must input a valid date!')+"</li></ul>"); 
+		        return false;
+		    }
+		    else
+		    {
+		        $("#id_error").css("display","none");
+				$.blockUI({title:gettext('正在操作请稍后...'),theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}</br></h1>'});
+		        $.ajax({
+		            type: "POST",
+		    		url:'/iclock/att/getData/?func=clearObsoleteData&attEndTime='+attEndTime+'&attStrTime='+attStrTime+'&cleartype='+cleartype,
+		            dataType:"text",
+		    		success: function(retdata){
+						var obj=eval('('+retdata+')')
+						$.unblockUI();
+		                if(obj.ret==0){		
+		                   $("#id_error").css("display","block");
+		                   $("#id_error").html("<ul class='errorlist'><li>{%trans 'Operate finish'%}</li></ul>");
+		                }
+		                else
+		                {
+							var i=retdata.indexOf("errorInfo=\"");
+							alert(retdata.substr(i+11,retdata.length-i-13));
+		                }
+		
+		            },
+		    		error: function(){alert($.validator.format(gettext('Operating failed for {0} !'),options.title)); $.unblockUI();}
+		        });
+		    
+		    }
+		}
+		return false;
+
+
+	}		
+} 
+
+$(function(){
+	$("#id_init").button({icons: {primary:'ui-icon-closethick'}})
+	$("#id_clearout").button({icons: {primary:'ui-icon-scissors'}})
+	$("#id_backup").button({icons: {primary:'ui-icon-seek-next'}})
+	$("#id_import_dept").button({icons: {primary:'ui-icon-arrowthickstop-1-e'}})
+	$("#id_import_emp").button({icons: {primary:'ui-icon-arrowthickstop-1-e'}})
+	$("#id_import_finger").button({icons: {primary:'ui-icon-arrowthickstop-1-e'}})
+	$("#id_auto_send_emp_to_dev").button({icons: {primary:'ui-icon-arrowthickstop-1-e'}})
+
+});
+</script>
+
+<div id="id_data" style="height:90%;background-image:url(../media/img/m_bg.gif);">
+  <fieldset style="height:50px;padding:20px 20px 20px 20px;border:1px solid #7bc4ff;background:#FFFFFF;">
+    <legend>{% trans 'Data Management' %}</legend>
+	{% if user|HasPerm:"iclock.Init_database" %}
+		<BUTTON id="id_init" onclick="InitSystem();" > {%trans "Initialize System"%}</BUTTON>
+	{% endif %}
+	{% if user|HasPerm:"iclock.Clear_Obsolete_Data" %}
+		<button id="id_clearout" onclick="clearOutOffDatas();">{%trans 'Clear Obsolete Data'%}</button>
+	{% endif %}
+	{% if user|HasPerm:"iclock.Backup_Database" %}
+		<button id="id_backup" onclick="backup_database(); " >{%trans 'Backup Database'%}</button>
+	{% endif %}
+  </fieldset>
+  <fieldset style="height:50px;padding:20px 20px 20px 20px;border:1px solid #7bc4ff;background:#FFFFFF;">
+    <legend>{% trans 'Data Import' %}</legend>
+	{% if user|HasPerm:"iclock.import_department_data" %}
+		<button id="id_import_dept" onclick="importDepartment();">{%trans "import department data"%}</button>
+	{% endif %}
+	{% if user|HasPerm:"iclock.import_employee_data" %}
+		<button id="id_import_emp" onclick="importEmployee();" > {%trans "import employee data"%}</button>
+	{% endif %}
+	{% if user|HasPerm:"iclock.Import_Finger_data" %}
+		<button id="id_import_finger" onclick="importFptemp(); " >{%trans 'Import Finger data'%}</button>
+	{% endif %}
+  </fieldset>
+	 <fieldset style="height:50px;padding:20px 20px 20px 20px;border:1px solid #7bc4ff;background:#FFFFFF;">
+	   <legend>{% trans 'Employee Data' %}</legend>
+		{% if user|HasPerm:"iclock.AutoToDev_employee" %}
+			<button id="id_auto_send_emp_to_dev" onclick="autoSendEmpToDev();">{%trans "Auto Send Employee To Device"%}</button>
+		{% endif %}
+	 </fieldset>
+<div style="margin-left:20px;color:#3259D4;">
+	<h4>功能说明:</h4>
+	<ul style="list-style:none">
+		<li>1.初始化系统:对数据库进行初始化,清空数据库中所有数据</li>
+		<li>2.清除过期数据:通过设置结束时间，清除数据库中结束日期以前的考勤记录、考勤照片和考勤统计数据</li>
+		<li>3.备份数据库:该功能实现了对系统自带的mysql数据库进行数据备份</li>
+		<li>4.导入单位数据:该功能实现了从CSV文件、文本文件和Excel文件导入单位信息到系统中</li>
+		<li>5.导入人员数据:该功能实现了从CSV文件、文本文件和Excel文件导入人员信息到系统中</li>
+		<li>6.导入指纹数据:该功能实现了从CSV文件、文本文件和Excel文件导入指纹信息到系统中。需要注意的是,导入指纹信息之前系统中必须存在人员信息，否则导入失败</li>
+		<li>7.自动传送人员到设备:实现了自动将人员信息发送到该人员所在单位对应的考勤设备中</li>
+	</ul>
+
+<div>
+
+</div>
+
+<div id="id_tip" class="tip"></div>
+
+
+

@@ -1,0 +1,30 @@
+﻿{% extends "data_edit.html" %}
+{% load iclock_tags %}
+
+{% block form %}
+{% autoescape off %}
+<tr>
+{% for field in form %}
+  <tr>
+  {{ field|field_as_td_h:1 }}
+  </tr>
+{% endfor %}
+</tr>
+{% endautoescape %}
+{% endblock %}
+
+{% block add_contents %}
+{% if form.non_field_errors %}
+<tr>
+<td colspan=20>
+    {% autoescape off %}
+       {{form.non_field_errors}}
+    {% endautoescape %}
+</td>
+</tr>
+{% endif %}
+
+
+
+{% endblock %}
+

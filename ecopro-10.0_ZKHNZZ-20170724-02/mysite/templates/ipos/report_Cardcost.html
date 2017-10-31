@@ -1,0 +1,102 @@
+{% extends "report_ipos.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+
+
+{% block getDateUrl %}
+
+function getDateUrl(pos_start_date,pos_end_date)
+{
+
+	$("#id_con_error").css("display","none");
+
+	var urlStr=g_urls[g_activeTabID]
+	
+	var st=moment().startOf('month').format('YYYY-MM-DD')
+	var et=moment().endOf('month').format('YYYY-MM-DD')
+        if(pos_start_date) st=pos_start_date
+        if(pos_end_date) et=pos_end_date
+
+        jqOptions.sortname='checktime'
+	if(urlStr.indexOf("?")!=-1){
+		urlStr=urlStr+"&StartDate="+st+"&EndDate="+et;
+	}
+	else{
+		urlStr=urlStr+"?StartDate="+st+"&EndDate="+et;
+	}
+    
+	return urlStr
+
+}
+{% endblock %}
+
+
+{% block queryButton %}
+	
+$("#"+g_activeTabID+" #queryButton").click(function(){
+	createQueryDlg();
+});
+
+
+function searchbydept_Cardcost(page) {
+
+	var dept_ids = getSelected_dept("showTree_" + page)
+	if (dept_ids != null) {
+		if (dept_ids == undefined || dept_ids == '') {
+			alert("{% trans "请选择部门" %}")
+			return false;
+		}
+	} else {
+		alert("{% trans "请选择部门" %}")
+		return false;
+	}
+	//var ischecked = 0;
+	//if ($("#id_cascadecheck_" + page).prop("checked")) ischecked = 1;
+	//urlStr = "deptIDs=" + dept_ids + "&isContainChild=" + ischecked
+	var emp = getSelected_emp_ex("sel_employee_search_Cardcost");
+	if (emp.length > 0) {
+		urlStr = "&UserIDs=" + emp
+	}
+	else{
+		alert("{% trans "请选择人员" %}")
+	}
+
+        var isError=validate_form_ipos();
+	if(isError){
+ 
+		var st=$("#"+g_activeTabID+" #id_StartDate").val();
+		var et=$("#"+g_activeTabID+" #id_EndDate").val();
+		var url = "/ipos/report/Cardcost/?" + "StartDate=" + st + "&EndDate=" + et + urlStr
+		}
+	else
+	{
+	    alert('请检查时间格式是否正确，且最多查询100天！')
+	    return;
+	}	
+
+        pos_start_date=st
+        pos_end_date=et
+
+	savecookie("search_urlstr", url);
+	$("#id_grid_report").jqGrid('setGridParam', {
+		url: url,
+		datatype: 'json'
+	}).trigger("reloadGrid");
+}
+
+
+function createQueryDlg(){
+	createDlgdeptfor10('employee_search_Cardcost',1)
+	$('#dlg_for_query_employee_search_Cardcost').dialog(
+	{
+		buttons:
+		[
+			{id:"btnShowOK",text:gettext('搜索'),click:function(){searchbydept_Cardcost('employee_search_Cardcost');$(this).dialog("destroy"); }},
+			{id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }}
+		]
+	})
+}
+
+
+{% endblock %}
+

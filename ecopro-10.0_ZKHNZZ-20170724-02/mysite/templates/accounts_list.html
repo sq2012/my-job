@@ -1,0 +1,85 @@
+{% extends "data_list.html" %}
+{% load iclock_tags %}
+{% load i18n %}
+{% block tblHeader %}
+options[g_activeTabID].dlg_width=400;
+options[g_activeTabID].dlg_height=275;
+
+
+//hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+//hasImport={% if user|HasPerm:"iclock.import_accounts" %}true{% else %}false{% endif %}
+jqOptions[g_activeTabID].colModel={{colModel}}
+tb1Name[g_activeTabID]='accounts';
+jqOptions[g_activeTabID].sortname='';
+
+function afterPost_accounts(flag,obj)
+{
+	$("#id_edit_form",obj).find(":input[type=text]").each(function(i,elem){
+		$(this).val("");})
+
+}
+function strOfData_accounts(data)
+{
+	return data.StartTime+" "+data.EndTime+" "+data.Type;
+}
+
+$(function(){
+    var info='<p>1.过账处理可以对指定日期范围内的以下操作进行锁定、解锁：重新统计报表、请假、员工忘签到签退、加班、员工排班</p>'
+    renderLeftInformation(info);
+    $("#"+g_activeTabID+" #id_custom").hide()
+    $("#"+g_activeTabID+" #id_newrec").click(function(event){
+    	processNewModel();
+    });
+	$("#"+g_activeTabID+" #id_line").css('display','none');
+    $("#"+g_activeTabID+" #id_export").css('display','none');
+});
+function process_dialog_accounts(obj,title,url){
+    $('#addition_fields',obj).before('<tr><th><label id="id_StartTime">{%trans "Posting beginning time"%}:</label></th>'
+    +'<td><input type="text" id="start_time"  name="StartTime" class="vDateField" maxlength="19"></td></tr>'
+    +'<tr><th><label id="id_EndTime">{%trans "Posting ending time"%}:</label></th>'
+    +'<td><input type="text" id="end_time" name="EndTime" class="vDateField" maxlength="19"></td></tr>'
+    +'<tr><th><label id="id_Type">{%trans "Posting Type"%}:</label></th>'
+    +'<td><select id="type" name="Type">'
+    +'<option selected="selected" value="">---------</option>'
+    +'<option value="99">{%trans "All"%}</option>'
+    +'<option value="1">{%trans "Calculate Angin"%}</option>' 
+    +'<option value="2">{%trans "ALF"%}</option>'
+    +'<option value="3">{%trans "Forgetting to Clock in/out"%}</option>'
+    +'<option value="4">{%trans "overtime"%}</option>'
+    +'<option value="5">{%trans "empoyee shift"%}</option>'
+    +'</select>'
+    +'</td></tr>'
+    +'<tr><th><label id="status">{%trans "Status"%}:</label></th>'
+    +'<td><select id="id_Status" name="Status">'
+    +'<option selected="selected" value="">---------</option>'
+    +'<option value="99">{%trans "No Locking"%}</option>'
+    +'<option value="1">{%trans "Locked"%}</option>'
+    +'<option value="2">{%trans "UnLocked"%}</option>'
+    +'</select>'
+    +'</td></tr>'
+   );
+    var currDate=new Date();
+    td=currDate.getFullYear()
+    	+"-"
+    	+(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+    	+"-"
+    	+currDate.getDate()
+    	+" ";
+    $("#start_time",obj).val(td+"00:00");
+    $("#end_time",obj).val(td+"23:59");
+    
+    $("#start_time",obj).datetimepicker(datetimepickerOptions);
+    $("#end_time",obj).datetimepicker(datetimepickerOptions);
+	f=$(obj).find("#id_edit_form").get(0)
+	$(f).validate({
+			rules: {
+					"StartTime": {"required":true},
+					"EndTime": {"required":true},
+                    "Type":{"required":true},
+					"Status":{"required":true}
+				}
+			});
+	
+
+}
+{% endblock %}

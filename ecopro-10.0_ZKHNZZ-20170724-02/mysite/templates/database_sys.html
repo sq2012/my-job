@@ -1,0 +1,112 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+<script>
+{% autoescape off %}
+DATABASES={{ DATABASES }}
+{% endautoescape %}
+function getEngine(Engine)
+{
+    var options_html="";
+	for(i=0;i<DATABASES.length;i++)
+        if(DATABASES[i].ENGINE==Engine)
+            options_html+="<option value='"+i+"' selected>"+DATABASES[i].ENGINE+"</option>";
+        else
+            options_html+="<option value='"+i+"'>"+DATABASES[i].ENGINE+"</option>";
+
+    return options_html;
+}
+function getDefaultItem(engine)
+{
+	for(i=0;i<DATABASES.length;i++)
+	{
+		if(DATABASES[i].ENGINE==engine) return DATABASES[i]
+	}
+	return {}
+}
+
+
+$(function(){
+
+            $("#content").html("<h1><img src='/media/img/blogmarks.png'></img>{%trans 'Database' %}</h1>"
+            +"<form id='id_edit_form' method='post'><table ><tbody><tr><td >"
+            +"<fieldset  style='border:1px solid #7bc4ff;width:600px;'><legend><font  size='4'>{%trans 'Basic settings'%}</font></legend><table><tbody>"
+            +"<tr>"
+              +"<th width='200px'><label for='Engine' >{%trans 'Database Engine'%}</label></th>"
+              +"<td><select id='id_Engine' name='Database_Engine'>"+getEngine('{{ Database.ENGINE}}')+"</select></td>"
+          +"</tr>"
+            +"<tr>"
+                +"<th><label for='id_NAME' >{%trans 'Database Name'%}</label></th>"
+               +"<td><input type='text' maxlength='30' name='NAME' id='id_NAME' value='{{Database.NAME}}'/></td>"
+            +"</tr>"
+            +"<tr>"
+                +"<th><label for='id_USER' >{%trans 'Username'%}</label></th>"
+               +"<td><input type='text' maxlength='30' name='USER' id='id_USER' value='{{Database.USER}}'/></td>"
+            +"</tr>"
+            +"<tr>"
+                +"<th><label for='id_PASS' >{%trans 'Password'%}</label></th>"
+               +"<td><input type='password' maxlength='30' name='PASS' id='id_PASS' value='{{Database.PASSWORD}}' /></td>"
+            +"</tr>"
+            +"<tr>"
+                +"<th><label for='id_HOST' >{%trans 'Host'%}</label></th>"
+               +"<td><input type='text' maxlength='30' name='HOST' id='id_HOST' value='{{Database.HOST}}'/></td>"
+            +"</tr>"
+            +"<tr>"
+                +"<th ><label for='id_PORT' >{%trans 'Port'%}</label></th>"
+               +"<td><input type='text' maxlength='30' name='PORT' id='id_PORT' value='{{Database.PORT}}'/><span id='id_port_hint'>{%trans 'Default:'%}83306</span></td>"
+            +"</tr>"
+          
+            
+            +"</tbody></table></fieldset>"
+
+           
+            +"</td></tr></table></tbody></form>"
+			+"<p> <BUTTON id='id_save'>{%trans 'Save' %}</BUTTON><BUTTON id='id_test'>{% trans 'Connection Test' %}</BUTTON></p>"
+			+"<span  id='id_error'></span>"
+            );
+    
+
+			
+	$("BUTTON").button();
+			
+    $("#id_Engine").change(function(){ 
+	    $("#id_port_hint").html('{%trans 'Default:'%}'+DATABASES[$("#id_Engine").val()].PORT)
+	})
+	$("#id_save").click(function(){ 
+	    save_database("&action=save")
+	})
+	$("#id_test").click(function(){ 
+	    save_database("&action=connect")
+	})
+
+});
+    
+function save_database(action)
+{
+	var formStr=formToRequestString($("#id_edit_form").get(0))+action;
+	$.post(g_urls[g_activeTabID], 
+		formStr,
+		function (ret, textStatus) {
+			if(ret.ret==0)
+			{
+				$("#id_error").css("display","block");
+				$("#id_error").html("<ul class='errorlist'><li>"+ ret.message +"</li></ul>");
+			}
+			else
+			{
+				$("#id_error").css("display","block");
+				$("#id_error").html("<ul class='errorlist'><li>"+ ret.message +"</li></ul>");
+					
+			}
+		},
+		"json");
+
+
+}    
+    
+</script>
+
+
+
+<div id="content" >
+</div>

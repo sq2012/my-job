@@ -1,0 +1,101 @@
+{% load i18n %}
+{% load iclock_tags %}
+{% load i18n static %}
+
+	
+{% autoescape off %}
+
+<div class='version_box' id="about_main">
+         <div class='version_content_box'>
+                    <div class='version_details_box'><span>
+						<div><img src=/media/img/login/pro_logo.png style="width:300px;"/></div>
+                        {% trans '版本号'%}:{{ version }}</span><br />							
+                        </span><br /><span>
+                        {% trans '授权信息'%}:</span><br />
+                        {{ authorizeinfo }}
+                        <br /><span>激活<br></span><a href='javascript:licenceActive(1);' style="color:green;"><u>在线激活</u></a>
+						&nbsp;<a href='javascript:licenceActive(2);' style="color:green;"><u>离线激活</u></a>
+						&nbsp;<a href='javascript:importLicence();' style="color:green;"><u>导入许可文件</u></a>(已有许可文件时)
+                        <br />
+						{{SupportExplore}}
+						<br />
+						{{ Display }}<br />
+						{{ SupportSystem }}<br />
+						{{ SupportDB }}<br />
+						{{ServerInfo}}
+						
+                    </div>
+         </div>
+
+
+		<div id='id_licence' class='version_box' style="display: none;">
+					   <div class='version_content_box'>
+						   <div class='version_details_box'>
+							   <form id='form_sn_import' enctype='multipart/form-data'><table width='100%'>
+									<tr style="height:22px"><th>&nbsp;{%trans '省份:' %}</th><td width='72%'><select id='id_province' name='province' style='width:110px'></select></td></tr>
+									<tr style="height:22px"><th>&nbsp;{%trans '城市:' %}</th><td width='72%'><select id='id_city' name='city' style='width:110px'></select></td></tr>
+									<tr style="height:22px"><th>&nbsp;{%trans '区/县:' %}</th><td width='72%'><select id='id_area' name='area' style='width:110px'></select></td></tr>
+									<tr style="height:22px"><th><label class='required'>{%trans '公司地址:' %}</label></th><td><input id='id_company_address' name='company_address' type='text'></tr>
+									<tr style="height:22px"><th><label class='required'>{%trans '公司名称:' %}</label></th><td><input id='id_company_name' name='company_name' type='text'></tr>
+									<tr style="height:22px"><th>&nbsp;{%trans '使用人数:' %}</th><td><input name='user_count' type='text'></tr>
+									<tr style="height:22px"><th>&nbsp;{%trans '联系方式:' %}</th><td><input name='contact' type='text'></tr>
+									<tr style="height:22px"><th>&nbsp;{%trans '手机号码:' %}</th><td><input name='phone' type='text'></tr>
+									<tr style="height:22px"><th>&nbsp;{%trans '电话:' %}</th><td><input name='tel' type='text'></tr>
+									<tr style="height:22px"><th><label class='required'>{%trans '邮箱:'%}</label></th><td><input id='id_email' value='' name='email' type='text'></tr>
+									<tr style="height:22px"><th>&nbsp;{%trans '经销商:' %}</th><td><input name='dealer' type='text'></tr>
+									<tr><th><label class='required'>{%trans '授权文件' %}</label></th><td><input type='file' name='sn_upload_file' class='wZBaseFileField' id='sn_upload_file'></tr>
+									<tr><td colspan=2 id='id_offline_memo' style="display: none;">
+										{%trans '说明:生成并下载UPK文件后,将此文件发送给软件提供者，用来生成最终许可文件，获取最终许可文件后点导入许可文件进行激活' %}
+										
+									</td>
+									
+									<tr align='right'><td><input type='hidden' id='id_active_type' name='id_active_type' value='online' /></td><td><a id='id_button_active' class="m-btn  zkgreen rnd" onclick=doActive()>{%trans '激活' %}</a>
+									<a id='id_button_offline_active' class="m-btn  zkgreen rnd"  onclick=importLicence()>{%trans '导入许可文件' %}</a></td>
+									</tr>
+							   </table></form>
+						   </div>
+					   </div>
+	   </div>
+
+
+    <div class='version_box' id="id_version_box" style="display: none;">
+                <div class='version_content_box'>
+                    <div class='version_details_box'>
+                        <form id='form_lic_import' enctype='multipart/form-data'><table width='100%'>
+                            <tr><td><label class='required'>{%trans '许可文件:' %}</label></td><td><input type='file' name='lic_upload_file' class='wZBaseFileField' id='lic_upload_file'></tr>
+                            <tr  align='middle'><td></td><td ><a id='id_button_offline_active' class="m-btn  zkgreen rnd"  onclick=doImportLicence()>{%trans '激活' %}</a><td></tr>
+                        </table></form>
+                    </div>
+                </div>
+     </div>
+
+<!--<a href='/base/download_upk_file/?upk_id="+jdata.upk_id +"'
+	<div class='version_box' id="id_download_upk" style="display: none;">
+				 <div class='version_content_box'>"
+					 <div class='version_details_box'>"
+					 <a href='#'><font color='#2d78f4'>{%trans '下载授权UPK文件' %}</font></a>
+					 ,{%trans '将UPK文件发送给软件提供商, 生成授权文件!' %}<br>
+						 <form id='form_lic_import' enctype='multipart/form-data'><table width='100%'>
+							 <tr><td><label class='required'>"+gettext('授权文件:')+"</label></td><td><input type='file' name='lic_upload_file' class='wZBaseFileField' id='lic_upload_file' accept='text/xml,application/xml'/></tr>"
+							 <tr align='right'><td/><td><button id='id_button_active'  class="m-btn  zkgreen rnd" onclick=doImportLicence()>{%trans '激活' %}</a><td></tr>
+						 </table></form>
+					 </div>
+				 </div>
+			 </div>
+-->
+
+
+
+</div>
+
+
+
+{% endautoescape %}
+	
+
+
+
+
+
+
+

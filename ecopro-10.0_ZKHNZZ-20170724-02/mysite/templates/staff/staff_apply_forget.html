@@ -1,0 +1,144 @@
+{% load i18n %}
+{% load iclock_tags %}
+<script>
+EmpAndDept={% autoescape off %} {{ ForgetAtt_list }}{% endautoescape %}
+states= EmpAndDept.states;
+function getchecktypeOptions()
+{
+    checktype_html=""
+    for(var i=0;i<states.length;i++){
+        checktype_html+="<option value='"+states[i].symbol+"'>"+states[i].pName+"</option>"
+    }
+    return $("#id_checktype").html(checktype_html);
+}
+//function getAudit(isAudit){
+//    html="";
+//    if(isAudit=="" || isAudit==0)
+//        html+="<option value='0' selected>{%trans 'No'%}</option>"
+//    else
+//        html+="<option value='0'>{%trans 'No'%}</option>"
+//    if(isAudit==1)
+//        html+="<option value='1' selected>{%trans 'Yes'%}</option>"
+//    else
+//        html+="<option value='1'>{%trans 'Yes'%}</option>"
+//    return $("#isAudit").html(html);
+//}
+$(function refresh(){
+    $('#id_checktime').prop('readonly',true)
+    getchecktypeOptions()
+    //getAudit(0)
+    var currDate=new Date();
+	var tpickerOptions=copyObj(timepickerOptions)
+	tpickerOptions.showSecond=true
+	tpickerOptions.timeFormat='HH:mm:ss'
+	var dateTime=currDate.getFullYear()
+		+"-"
+		+(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+		+"-"
+		+(currDate.getDate()<10?"0"+currDate.getDate():currDate.getDate())
+        $("#id_checkdate_a").val(dateTime);
+        $("#id_checkdate_a").datepicker(datepickerOptions);
+        $("#id_checktime").val();
+        $("#id_checktime").timepicker(tpickerOptions);
+})
+
+function validateForm(obj){
+    var t_checkdate=$("#id_checkdate_a",obj).val();
+    var t_checktime=$("#id_checktime",obj).val();
+    if(t_checkdate==""||!valiDate(t_checkdate)){
+            return 1;
+    }else if(t_checktime==""){
+            return 2;
+    }else{
+            return 0;
+    }
+}
+function beforePost(obj,actionName){
+                if(validateForm(obj)==1)
+                {
+                        $("#id_errors",obj).css("display","block");
+                        $("#id_error",obj).html("{%trans '请输入一个有效的补签日期!' %}").css("color","red");
+                        return false;
+                }else if(validateForm(obj)==2){
+                        $("#id_errors",obj).css("display","block");
+                        $("#id_error",obj).html("{%trans '请输入一个有效的补签时间!' %}").css("color","red");
+                        return false;	}
+                if(actionName=="_new_"){
+                        var emp="{{ emp_id }}";
+                        $("#id_userid",obj).val(emp);
+                        $("#id_error",obj).css("display","none");
+                        $("#id_userid",obj).val(emp);
+                }else {}
+}
+
+function SaveFormDataEx(FormObj,url,flag)
+{
+	f=FormObj
+	if (!$(f).valid()){$("#id_error").html(gettext("occur error!")).css("color","red").css('display','block'); return 0;}
+	var formStr=formToRequestString(f);
+	$.post(url,
+		formStr,
+		function (ret, textStatus) {
+            $("#id_errors").css("display","block");
+			$("#id_error").html(ret.message).css("color","red").css('display','block');
+            setTimeout("$('#id_errors').css('display','none');", 3000);
+		},
+		"json");
+}
+</script>
+
+<!--<div>
+	<ul id="breadcrumb">
+		<li><a href='/iclock/staff/'>申请中心</a> <span style='color:#CCCCCC'>/</span> <a href="#">{{ location }}</a></li>
+	</ul>
+</div>
+-->
+
+<div align="center" style="margin-top: 10px">
+<table border="1"  height="250" style="border-width: 0px">
+	<!-- MSTableType="layout" -->
+	<tr>
+		<td style="border-style: none; border-width: medium">　<form class="contact_form"  id="id_edit_form" method="post" action='' enctype='multipart/form-data'>
+    <ul>
+        <li>
+              <label for="name" ><h3 style="margin-top: -30px;width: 100px;">申请补记录</h3></label>
+        </li>
+        <li id="checkdate">
+            <label for='id_checkdate_a' class='required'>{% trans '补签日期'%}</label>
+            <input type='none' id='id_checkdate_a' name='checkdate_a' value='' size='11' maxlength='10' style="width:140px !important;" />&nbsp;&nbsp;
+        </li>
+        <li id="checktype">
+            <label for='id_checktype'>{% trans 'Checkinout type:'%}</label>
+            <select style='width:120px !important;' id='id_checktype' name='checktype'></select>&nbsp;&nbsp;
+        </li>
+        <li id="checktime">
+            <label for='id_checktime' class='required'>{% trans 'Time:'%}</label>
+           <input type='none' id='id_checktime' name='checktime' value='' size='9' maxlength='8' class='vTimeField' style="width:140px !important;" />&nbsp;&nbsp;
+        </li>
+        <li id="reason">
+            <label for='id_reason' >{% trans '补签原因:'%}</label>
+            <input id='id_reson' type='text' name='reson' style="width:140px !important;" />&nbsp;&nbsp;
+        </li>
+        <!--<li id="isAudits">
+            <label for='isAudit' class='required'>{% trans '是否需要审核'%}</label>
+            <select  id='isAudit' style='width:120px !important;'></select>&nbsp;&nbsp;
+        </li>-->
+        <li>
+            <input type='hidden' id='id_audit'  type='text' value='1' class="radio vam"  name='audit' disabled="disabled" style="width:140px!important;" />
+            <input type='hidden' id='id_userid' value='' name='UserIDs' />
+            <input type='hidden' id='id_checkdate_bs' type='checkbox' alt='' name='id_checkdate_bs' value = '0' />
+            <div id="id_errors" style="width:300px;font-size:12px;display: none;">
+                <span id="id_error" style="width:280px;float: right;"></span>
+                <img src="../media/img/icon_alert.gif"  />
+            </div>
+        </li>
+        <li>
+            <span>{%trans '因故未签到、签退，可使用本功能申请补签签到、签退记录,' %}</span>
+        </li>
+    </ul>
+</form></td>
+	</tr>
+</table>
+        	<button id="id_staff_apply_forget_save" class="m-btn  zkgreen rnd" type="button" role="button" aria-disabled="false" type="submit" style="width: 100px;" title="保存" onclick="if(typeof beforePost=='function'){if(beforePost(document.getElementById('id_edit_form'),'_new_')==false) return ;}  SaveFormDataEx(document.getElementById('id_edit_form'),'/iclock/apply/checkexact/_new_/','addandcontinue');">{%trans 'Save'%}</button>
+</div>
+

@@ -1,0 +1,129 @@
+﻿{% load i18n %}
+{% load iclock_tags %}
+
+<div>
+	
+</div>
+<!--<div>
+	<ul id="breadcrumb">
+		<li><a href='/iclock/staff/'>数据中心</a> <span style='color:#CCCCCC'>/</span> <a href="#">{{ location }}</a></li>
+	</ul>
+</div>
+-->
+        <div>
+              <label for="name" style="margin-top: -15px;"><h3>{% trans '出勤详情' %}</h3></label>
+                <span>&nbsp;</span>
+        </div>
+
+<div class="s-info" id="time_area">			
+                                 <span>
+                                       <label  >{%trans 'Begin Date'%}</label>
+                                        <input type='text' name='ComeTime' maxlength='10' id='id_ComeTime_' style='width:80px !important;'>
+                                        <label  >{%trans 'End Date'%}</label>
+                                        <input type='text' name='EndTime' maxlength='10' id='id_EndTime_' style='width:80px !important;'>
+       
+                                </span>
+		<span id='id_search' ><a class='m-btn  zkgreen rnd mini'>{%trans 'Query'%}</a></span>
+                                
+                 </div>
+
+
+<div id='id_staff_records' style='padding: 10px; height: 480px; width: 690px;overflow: auto;'>
+
+<!--
+{% block search %}
+	<div id='id_line' style='height: 40px;'>
+		
+		   <label class="required" >{%trans "Begin Date"%}</label>
+		   <input type="None" name="ComeTime" maxlength="10" id="id_ComeTime" size="9">
+		
+		   <label class="required" >{%trans "End Date"%}</label>
+		   <input type="None" name="EndTime" maxlength="10" id="id_EndTime"  size="9">
+		  <button id='id_search' class="m-btn  blue rnd" style='height: 30px;vertical-align: middle; ' >{%trans 'Query'%}</button>
+					
+	</div>
+		    
+{% endblock %}
+  -->
+  
+  
+<table id="staff_records" style="border:1px solid #333333;">
+</table>
+	
+	
+	
+</div>
+
+
+
+
+<script>
+function load_data(starttime,endtime) {
+	url2='/iclock/staff/attshifts/?starttime='+starttime+'&endtime='+endtime
+        $.ajax({
+            type: "POST",
+            url:url2,
+            data:'',
+            dataType:"json",
+            success:function(data){
+		$('#staff_records').simple_datagrid('loadData', data)
+           },
+            error:function(){
+            }
+        });
+	
+	
+	
+	
+}
+function setDate(page_style)
+{
+
+	$("#id_ComeTime_").datepicker(datepickerOptions);
+	$("#id_EndTime_").datepicker(datepickerOptions);
+	td=moment().format("YYYY-MM-DD")
+	st=td.substring(0,td.length-2)+'01'
+	et=td
+	if(loadcookie("id_ComeTime_")){
+		st=loadcookie("id_ComeTime_")
+		et=loadcookie("id_EndDate_")
+	}
+	$("#id_ComeTime_").val(st)
+	$("#id_EndTime_").val(et)
+	load_data(st,et)
+
+}
+	
+$(function(){
+  
+//
+//$("#"+g_activeTabID+" #id_ComeTime").datepicker(datepickerOptions);
+//$("#"+g_activeTabID+" #id_EndTime").datepicker(datepickerOptions);  
+//  
+//  
+  
+{% autoescape off %}
+
+$('#staff_records').simple_datagrid({
+  columns:{{ ColNames}}
+  
+   
+});
+  setDate('')
+
+ {% endautoescape %}
+ 
+ $('#id_search').click(function(){
+	st=$("#id_ComeTime_").val()
+	et=$("#id_EndTime_").val()
+	load_data(st,et)
+	
+	
+	
+	})
+});	
+	
+	
+	
+</script>
+

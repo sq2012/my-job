@@ -1,0 +1,106 @@
+{% load i18n %}
+{% load iclock_tags %}
+<script>
+{% autoescape off %}
+	var email={{ email }}
+{% endautoescape %}
+
+	var html="<div id='id_option1' style='padding:20px;'>"
+        +"<form id='id_edit_form_email' method='post'>"
+            +"<div class='ui-widget-header' style='width:700px;height: 28px;margin-left: 100px;margin-top: 10px;'><h3 style='padding-top: 8px;padding-left: 10px'><a>{%trans '发送邮件服务器设置'%}</a></h3></div>"
+			+"<table style='margin-left: 100px;margin-top: 20px;'><tr>"
+			    +"<th><label for='id_smtp' >{%trans 'SMTP Server'%}</label></th>"
+			    +"<td><input type='text' maxlength='30'  id='id_smtp' value='"+email.smtpserver+"' name='smtpserver'/></td>"
+			+"</tr>"
+			+"<tr><th><label for='id_username' >{%trans 'UserName'%}</label></th>"
+			    +"<td><input type='text' maxlength='30'  id='id_UserName' value='"+email.smtp_user+"' name='smtp_user'/></td>"
+			+"</tr>"
+			+"<tr><th><label for='id_password' >{%trans 'Password'%}</label></th>"
+			    +"<td><input type='password' maxlength='30'  id='id_Password' value='"+email.smtp_pass+"' name='smtp_pass'/></td>"
+			+"</tr>"
+			+"<tr><th><label for='id_authorized' ></label></th><td><input  type='checkbox' maxlength='30'  id='id_authorized' name='authorized'/>{%trans 'SMTP Authorized'%}</td></tr>"
+			+"<tr><th><label for='id_usessl' ></label></th><td><input  type='checkbox' maxlength='30'  id='id_usessl' name='usessl'/>{%trans '启用SSL'%}</td></tr>"
+			+"<tr><th><label for='id_test_email' >{%trans '测试邮件收件箱'%}</label></th>"
+			    +"<td><input type='text' maxlength='30'  id='id_test_email' value='' name='test_email'/></td>"
+			+"</table>"
+
+            +"<div class='ui-widget-header' style='width:700px;height: 28px;margin-left: 100px;margin-top: 10px;'><h3 style='padding-top: 8px;padding-left: 10px'><a>{%trans 'Email功能设置'%}</a></h3></div>"
+            +"<table style='margin-left: 100px;margin-top: 20px;'>"
+			+"<tr><td><input  type='checkbox' maxlength='30'  id='id_forgot' name='forgot'/>{%trans '支持忘记系统登录密码发送邮件'%}</td></tr>"
+			+"<tr><td><input  type='checkbox' maxlength='30'  id='id_exceptionemail' name='exceptionemail'/>{%trans '支持漏卡邮件提醒'%}</td></tr>"
+			+"<tr><td><input  type='checkbox' maxlength='30'  id='id_l_mail' name='l_mail'/>{%trans 'Send email to employee after leave audit'%}</td></tr>"
+			+"<tr><td><input  type='checkbox' maxlength='30'  id='id_rec_mail' name='rec_mail'/>{%trans 'Send email to employee after check'%}</td></tr></table>"
+		+"</form>"
+		+"<div><ul class='errorlist'><li id='option_email_id_error' style='display:none;'></li></ul></div>"
+
+	{% if user|HasPerm:"iclock.sys_email_setting" %}
+	+"<div style='margin-left: 100px;margin-top: 20px;'><input id='id_options_save' type='button' class='m-btn  zkgreen rnd' value='{%trans 'Save' %}'/>"
+	+"<input id='id_options_test' type='button' class='m-btn  zkgreen rnd' value='{%trans '发送测试邮件' %}'/></div>"
+	{% endif %}
+	+"</div>"
+	
+
+var SaveOptions=function(obj,keys){
+	$("#option_email_id_error").html('')
+	var formStr=formToRequestString(obj.get(0));
+	var url='/base/isys/options/'
+    $.post(url+'?action='+keys,
+		formStr,
+		function (ret, textStatus) {		
+			$("#"+g_activeTabID+" #option").remove()
+				if (keys=='status')	
+				reloadData();
+				$("#option_email_id_error").css("display","block");
+				$("#option_email_id_error").html(ret.message);
+					
+		},
+		"json");
+	
+
+}
+	
+$(function(){
+	$("#"+g_activeTabID+" #id_content").html(html)
+	
+        if(email.authorized=='1'){ $("#"+g_activeTabID+" #id_authorized").attr("checked","checked");}  
+        if(email.forgot=='1'){ $("#"+g_activeTabID+" #id_forgot").attr("checked","checked");}
+        if(email.exceptionemail=='1'){ $("#"+g_activeTabID+" #id_exceptionemail").attr("checked","checked");}		
+		if(email.l_mail=='1'){ $("#"+g_activeTabID+" #id_l_mail").attr("checked","checked");} 
+		if(email.rec_mail=='1'){ $("#"+g_activeTabID+" #id_rec_mail").attr("checked","checked");} 
+		if(email.usessl=='1'){ $("#"+g_activeTabID+" #id_usessl").attr("checked","checked");} 
+
+	
+	$("button").button({
+            icons: {primary: "ui-icon-check"}
+       });
+	$("#"+g_activeTabID+" #id_options_save").click(function(){
+		SaveOptions($("#"+g_activeTabID+" #id_edit_form_email"),'email')
+	});
+
+	$("#"+g_activeTabID+" #id_options_test").click(function(){
+		$("#option_email_id_error").html('');
+		toaddr = $("#"+g_activeTabID+" #id_test_email").val()
+		if (toaddr=='') {
+			if ($("#option_email_id_error").css("display")=='none'){
+				$("#option_email_id_error").css("display","block");
+			}
+			$("#option_email_id_error").html('请填写测试邮件的收件箱');
+			return
+		}
+		$.ajax({
+			url:'/base/isys/test_send_email/',
+			method:'POST',
+			data:{'toaddr':toaddr},
+			dataType:'json',
+			success:function(ret) {
+				$("#option_email_id_error").css("display","block");
+				$("#option_email_id_error").html(ret.message);
+			}
+		});
+	});
+});	
+	
+	
+	
+</script>
+

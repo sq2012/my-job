@@ -1,0 +1,180 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+fieldHeaders=["{{ cl.FieldName.PIN }}", "{{ cl.FieldName.EName }}", "<th abbr='DeptID__DeptID'>{% trans 'department number' %}</th>", "<th abbr='DeptID__DeptName'>{% trans 'department name' %}</th>", "{{ cl.FieldName.Gender }}", "{{ cl.FieldName.Birthday }}", "{{ cl.FieldName.National }}","{{ cl.FieldName.Title }}","{{ cl.FieldName.Tele }}","{{ cl.FieldName.Mobile }}","{{ cl.FieldName.email }}","{{ cl.FieldName.Card }}","{{ cl.FieldName.SN }}", "<th>"+gettext("FP")+"</th>", "{{ cl.FieldName.OffDuty }}","<th>{%trans "Transactions"%}</th>", "<th>{%trans "Picture"%}</th>"];
+hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+function checkFileName()
+{
+	var fileName = document.frmComebackDb.fileUpload.value;
+	var postfix = fileName.substring(fileName.length - 4);
+	if ((postfix != ".txt" && postfix !=".TXT") && (postfix != ".csv" && postfix !=".CSV"))
+	{
+		alert("{%trans "Please select .txt or .csv file!"%}");
+		return false;
+	}
+	else
+	{
+		return true;
+	}	
+}
+hasImport={% if user|HasPerm:"iclock.import_employee" %}true{% else %}false{% endif %}
+
+$(function(){
+$("#"+g_activeTabID+" #id_export").after('<input type="button" id="id_print" class="cls_op"  value="{%trans "Print"%}" />');
+$("#"+g_activeTabID+" #id_print").click(function(){
+var search=window.location.search
+window.open("/iclock/att/print/employee/"+search);
+});
+if(hasImport)$("#"+g_activeTabID+" #id_export").before('<input type="button" id="id_import" class="cls_op"  value="{%trans "Import"%}" />');
+$("#"+g_activeTabID+" #id_import").click(function(){
+    importEmployee();
+});
+});
+function selectDevAct(action)
+{	
+	sn=prompt("{%trans "Sequence of input devices"%}：\n"+hd, "");
+	if(!sn) return '';
+	return '?action='+action+'&SN='+sn;
+}
+
+function toDev(url)
+{
+	createDialog("miniData?key=iclock", "{%trans "Transfer employee to the device"%}", "{%trans "device"%}", 250, url);		
+}
+
+function hide_batchOp() {//隐藏部分批处理动作
+	if ("{{ permissions }}" == "22") { //机构管理员
+		str = "op={%trans "Deleted from the device employee"%}op={%trans "Change employee department"%} ";
+		$(".selectedDataOp a").each(function (i){
+			if (str.indexOf($(this).html()) > -1)
+				$(this).hide();
+		});
+	};
+}
+
+function selectUnitAct()
+{
+	sn=prompt("{%trans "Input Department #"%}：", "");
+	if(!sn) return '';
+	return '?action=dept&department='+sn;
+}
+
+function strOfData_LeaveEmployee(data)
+{
+	return data[1]+" "+data[2];
+}
+
+function actionToDevWithin(url, keys)
+{
+	var fromTime=$("#id_date_range_from").val();
+	var toTime=$("#id_date_range_to").val();	
+	urlStr=getQueryStr(window.location.href, ["action"], '?action=toDevWithin&SN='+keys+'&start='+fromTime+'&end='+toTime);
+	if('1null'=="1"+keys)
+	{
+		alert(gettext("Must select a device!"))
+		return;
+	}
+	if(toTime!="")
+	{
+		if(toTime.length<10 && toTime.indexOf("-")==-1){ alert(gettext("Must input a valid date!")); return}
+	}
+	
+	$.ajax({type: "POST",
+		url: urlStr,
+		data: url.ret,
+		dataType:"json",
+		success: actionSuccess,
+		error: function(){alert($.validator.format(gettext('Operating failed for {0} !'),options.title)); $.unblockUI();}
+		});
+}
+
+function doAction_LeaveEmployee(url, action)
+{
+	if (action == 'toDev')
+		createDialog(url, '?action=toDev&SN=', "miniData?key=SN", "{%trans "Transfer employee to the device"%}", "{%trans "device"%}", 350,true);
+	if (action == 'toDevWithin')
+	{
+		createDateRangeDlg("{%trans "Transfer employee to the device templately"%}")
+		var sns=createMiniSel(true)
+		$(".dialog table").after("<div class='dtitle'>{%trans 'Transfer employee to the device' %} </div>"+sns);
+		if(procMiniData("miniData?key=SN"))
+		{
+			procSubmit("btnShowOK", url, actionToDevWithin)
+		}
+	}
+	else if (action == 'delDev')
+		createDialog(url, '?action=delDev&SN=', "miniData?key=SN", "{%trans "Deleted employee from the device"%}", "{%trans "device"%}", 350,true);
+	else if (action == 'toDepart')
+		createDialog(url, '?action=toDepart&department=', "miniData?key=depart", "{%trans "Change employee's department"%}", "{%trans "department"%}", 350);	
+	else if (action == 'mvToDev')
+		createDialog(url, '?action=mvToDev&SN=', "miniData?key=SN", "{%trans "Change the employee's registration device"%}", "{%trans "new device"%}", 350,true);
+}
+
+extraBatchOp=[
+{action:{% if user|HasPerm:"iclock.toDev_employee" %}function(url){doAction_LeaveEmployee(url, 'toDev')}{% else %}''{% endif %}, title: '{%trans "Transfer employee to the device"%}'},
+{action:{% if user|HasPerm:"iclock.toDevWithin_employee" %}function(url){doAction_LeaveEmployee(url, 'toDevWithin')}{% else %}''{% endif %}, title: '{%trans "Transfer to the device templately"%}'},
+{action:{% if user|HasPerm:"iclock.delDev_employee" %}function(url){doAction_LeaveEmployee(url, 'delDev')}{% else %}''{% endif %}, title:'{%trans "Delete employee from the device"%}'},
+{action:{% if user|HasPerm:"iclock.empLeave_employee" %}'?action=empLeave'{% else %}''{% endif %}, title: '{%trans "Employee leave"%}'},
+{action:{% if user|HasPerm:"iclock.mvToDev_employee" %}function(url){doAction_LeaveEmployee(url, 'mvToDev')}{% else %}''{% endif %}, title: "{%trans "Move employee to a new device"%}"},
+{action:{% if user|HasPerm:"iclock.toDepart_employee" %}function(url){doAction_LeaveEmployee(url, 'toDepart')}{% else %}''{% endif %}, title: "{%trans "Change employee's department"%}"}
+//{action:{% if user|HasPerm:"iclock.enroll_employee" %}'?action=enrollAEmp'{% else %}''{% endif %}, title: "{%trans "Enroll employee's fingerprint"%}"}
+];
+
+function getMoreInfo(index){
+	return 	"{% trans "Emp name" %}:"+data[index][2]
+				+"<br />{% trans "department number" %}:"+data[index][3]
+				+"<br />{% trans "department name" %}:"+data[index][4]
+				+"<br />{% trans "Sex" %}:"+(data[index][5]=="None"?"":data[index][5])
+				+"<br />{% trans "Birthday" %}:"+(data[index][6]=="None"?"":data[index][6])
+				+"<br />{% trans "Nationality" %}:"+(data[index][7]=="None"?"":data[index][7])
+				+"<br />{% trans "Title" %}:"+(data[index][8]=="None"?"":data[index][8])
+				+"<br />{% trans "Office phone" %}:"+(data[index][9]=="None"?"":data[index][9])
+				+"<br />{% trans "Mobile" %}:"+(data[index][10]=="None"?"":data[index][10])
+				+"<br />{% trans "Id card" %}:"+data[index][12]
+				+"<br />{% trans "FP" %}:"+data[index][16]
+				+"<br />{% trans "Left" %}:"+data[index][17]
+}
+function showBox(data)
+{	
+	var html="";
+	if(data.length>0)
+	{
+		for(var i=0;i<data.length;i++)
+		{
+        var img=data[i][19];
+          if(img<"<")
+            {
+                        img="<img src='/media/img/employee/man.jpg' />";
+                        if(data[i][5]=="{%trans 'Female'%}")
+                            img="<img src='/media/img/employee/woman.jpg' />";
+            }
+        	html+="<div id='ic_"+data[i][0]+"' class='AIClockBox'>"
+				+"<div class='iclockButton'>"
+				+"<input type='checkbox' class='class_select' onclick='showSelected();' id='id_row_"+i+"' />"
+				+"<span onmouseover='index_tip_info(this);' onmouseout='tip_info_exit();' index='"+i+"' >"+img
+             +data[i][2]
+				+"</span></div>"
+				+"<div id='tt_"+data[i][0]+"' class='iclockTT'>"
+					+"<span><a href='/iclock/data/employee/"+data[i][0]+"/' >"+data[i][1]+"</a><br/>"
+					+data[i][4]+"<br/>"
+					+"{%trans "Registration device"%}: "
+					+"<a href='../iclock/"+data[i][13]+"/'>"+data[i][13]+"</a><br />"
+					+"{%trans "Transactions"%}: "+data[i][17]+"</span>"
+				+'</div>'
+				+"</div>"
+        }
+	}
+	else
+		html+="<div class='NoIclock'>{%trans "No Employee!" %}</div>"
+	return html;
+
+}
+
+
+//options.disableCols=[0, 13, 14];
+options[g_activeTabID].showStyle=true;
+
+
+{% endblock %}
+

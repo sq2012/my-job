@@ -1,0 +1,53 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+
+<div id='id_option' style='padding: 20px;'>
+	<form id='id_edit_form_acc_open' method='post'>
+        <div class='ui-widget-header' style='width: 500px; height: 28px;margin-left: 100px;margin-top: 10px;'><h3 style="padding-top: 8px;padding-left: 10px"><a>{%trans '远程开门设置'%}</a></h3></div>
+        <table style="margin-left: 100px;margin-top: 20px;">
+		<tr><th></th><td><input  type='checkbox' maxlength='30'  id='id_open_pass' name='open_pass'/>{%trans '开门前输入登录密码验证'%}</td></tr>
+	</table></form>
+	<div><ul class='errorlist'><li id='option_acc_open_id_error' style='display:none;'></li></ul></div>
+	{% if user|HasPerm:"iclock.sys_acc_setting" %}
+	<div style="margin-left: 100px;margin-top: 20px;"><input id='id_submit' type='button' class='m-btn  zkgreen rnd' value='{%trans "Save" %}'/></div>
+	{% endif %}
+</div>
+
+
+
+<script>
+{% autoescape off %}
+var _data={{ params }}
+{% endautoescape %}
+
+
+
+
+
+
+
+$(function(){
+        if(_data.is_=='1'){ $("#"+g_activeTabID+" #id_open_pass").prop("checked","checked");}  
+	
+
+        $("#"+g_activeTabID+" #id_submit").click(function(){
+         			var queryStr=$("#"+g_activeTabID+" #id_edit_form_acc_open").formSerialize();
+        			$.ajax({ 
+        				type: "POST",
+        				url:"/base/isys/option_acc/",
+        				data:queryStr,
+        				dataType:"json",
+        				success:function(retdata){
+                                var message=retdata.message
+        						$("#option_acc_open_id_error").html(message).show();
+        					}
+        				});
+        		});
+
+	
+	
+});
+
+</script>
+

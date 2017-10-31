@@ -1,0 +1,981 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+
+{% load iclock_tags %}
+{% block tblHeader %}
+        jqOptions[g_activeTabID].colModel={{colModel}}
+        tblName[g_activeTabID]='USER_SPEDAY';
+        jqOptions[g_activeTabID].sortname='ApplyDate';
+        jqOptions[g_activeTabID].sortorder="desc";
+        jqOptions[g_activeTabID].pager="id_pager_"+tblName[g_activeTabID]
+       // dtFields = "{{ dtFields }}"
+        leaveClass_user_speday=[]
+        Leave_Status_user_speday=['{%trans "Apply"%}','{%trans "Accepted"%}','{%trans "Refused"%}','{%trans "Again"%}']
+        Leave_Status_Code=[0,2,3,6]
+
+        function canExport(){
+                var treeObj = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+                var nodes = treeObj.getSelectedNodes();
+                var pid=0;
+                if (nodes.length>0)
+                {
+                   pid=nodes[0].pid;
+                }
+                if(pid==0){
+                        if($("#id_cascadecheck_"+g_activeTabID).prop("checked")){
+                             alert("{% trans '请选择总单位以下级别的单位' %}")
+                              return true;    
+                        }
+                }else{
+                   return false;
+                }
+        }
+        
+        
+        function isDisableClearance(leaveID,obj)
+        {
+                        for(var i=0;i< leaveClass_user_speday.length;i++){
+                                if(leaveID==leaveClass_user_speday[i].LeaveID){
+                                        if(leaveClass_user_speday[i].clearance==0)
+                                            {
+                                                if(obj)
+                                                $("#clearance",obj).prop('disabled',true)
+                                                else
+                                                $("#clearance").prop('disabled',true)
+                                                
+                                            }
+                                        else
+                                        {
+                                          if(obj)
+                                            $("#clearance",obj).removeProp('disabled')
+                                          else
+                                            $("#clearance").removeProp('disabled')
+                                          
+                                        }
+                                }
+                        }
+        
+        }
+        
+        function createNewDlg_USER_SPEDAY(){
+                var title="{%trans '新增请假' %}";
+                createDlgdeptfor('USERSpeady_off_add',1)
+                $('#dlg_for_query_USERSpeady_off_add').dialog({title:title,
+                        buttons:[
+                                {id:"btnShowOK",text:"{% trans "save and return" %}",click:function(){ if(typeof beforePost_USER_SPEDAY=="function"){if(beforePost_USER_SPEDAY(this,"_new_")==false) return ;}  SaveFormData(this,g_urls[g_activeTabID]+"_new_/",'add',"USER_SPEDAY");  }},
+                                {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}
+                        ]
+                })
+
+                createDlgother_USER_SPEDAY('USERSpeady_off_add')
+
+                var currDate=new Date();
+                td=currDate.getFullYear()
+                        +"-"
+                        +(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+                        +"-";
+                tday= currDate.getDate()<10?"0"+currDate.getDate():currDate.getDate()      
+                $("#clearance").html(getClearance(0))	;
+
+                $("#id_ApplyDate").val(td+" "+currDate.getHours()
+                                        +":"
+                                        +currDate.getMinutes()
+                                        +":"
+                                        +currDate.getSeconds()).attr("disabled","true");
+
+                $("select[id='id_leave']").html(getLeaveClass(1));
+                $("#id_StartSpecDay").val(td+"01 00:00");
+                $("#id_EndSpecDay").val(td+tday+" 23:59");
+				var tpickerOptions=copyObj(datetimepickerOptions)
+				tpickerOptions.showSecond=true
+				tpickerOptions.timeFormat='HH:mm:ss'
+				$("#id_StartSpecDay").datetimepicker(tpickerOptions);
+				$("#id_EndSpecDay").datetimepicker(tpickerOptions);
+                $("#id_speday th").css("text-align","left");
+                isDisableClearance($("select[id='id_leave']").val())                
+
+                $("#id_leave").change(function(){
+                        leaveID=$(this).val();
+                        for(var i=0;i< leaveClass_user_speday.length;i++)
+                        {
+                                if(leaveID==leaveClass_user_speday[i].LeaveID)
+                                        $("#clearance").val(leaveClass_user_speday[i].IsLeave)
+                                
+                        }
+                        isDisableClearance(leaveID)                
+        
+                });
+                                
+                                
+                                
+        }
+
+        function createDlgother_USER_SPEDAY(page){
+                var html="<div id='id_form'><div class='module' style='position:relative;'>"
+                        +"<table id='id_speday'><tr>"
+                        +"<td style='vertical-align:top;color:black;'><div id='show_dept_emp_tree'></div></td></tr><tr><td style='vertical-align:top;'><div id='id_conditions'>"
+                        +"<form id='id_edit_form' method='POST'><table id='id_setField' style='margin-top: -20px;'>"
+                                +"<tr><td><label for='id_StartSpecDay' class='required'>{% trans 'Begin time'%}</label></td>"
+                                +"<td><input id='id_StartSpecDay'  type='text'  value='' maxlength='19' name='StartSpecDay'  style='width:135px !important;'/></td>"
+                
+                                +"<td><label for='id_EndSpecDay' class='required'>{% trans 'End time'%}</label></td>"
+                                +"<td><input id='id_EndSpecDay'  type='text'  value='' maxlength='19' name='EndSpecDay' style='width:135px !important;'/></td>"
+                                        
+                                +"<td><label for='id_leave' class='required'>{% trans 'Leave Class:'%}</label></td>"
+                                +"<td><select  id='id_leave' style='width:135px !important;'></select></td><br /></tr>"
+                                
+                                +"<tr><td><label for='id_Place'>{% trans '外出地点:'%}</label></td>"
+                                +"<td><input type='text' style='width:135px !important;' id='id_Place' name='Place' value=''/></td>"
+                                
+                                +"<td><label for='id_mobile'>{% trans '联系电话:'%}</label></td>"
+                                +"<td><input type='text' id='id_mobile' name='mobile' style='width:135px !important;'/></td>"
+                                
+                                +"<td><label for='id_successor'>{% trans '工作承接人:'%}</label></td>"
+                                +"<td><input type='text' id='id_successor' name='successor' style='width:135px !important;'/></td></tr>"
+                                
+                                +"<tr><td><label for='clearance' class='required'>{% trans 'Leave clearance'%}</label></td>"
+                                +"<td><select  id='clearance' style='width:135px !important;'></select></td>"
+                                
+                                +"<td><label for='id_YUANYING' >{% trans 'Reson'%}</label></td>"
+                                +"<td><textarea  type='text' style='width:135px !important;' id='id_YUANYING' name='YUANYING' value='' ></textarea ></td>"
+
+                                +"<td><label for='id_remarks'>{% trans '备注'%}</label></td>"
+                                +"<td><textarea  type='text' style='width:135px !important;' id='id_remarks' name='remarks' value='' ></textarea ></td></tr>"
+
+                                +"<tr><td><label for='id_spedy_file'>{%trans '文件上传'%}:</label></td><td colspan='3' ><input type='file' name='spedy_file' id='id_spedy_file'/></td></tr>"
+                               // +"<tr><td><label for='id_ApplyDate' class='required'>{% trans 'ApplyDate'%}</label></td>"
+                               // +"<td><input id='id_ApplyDate'  type='text' value='' maxlength='19' name='ApplyDate' style='width:135px !important;'/></td><br /></tr>"
+                
+                                +"<tr><td></td></tr>"
+                                +"<tr><td colspan='2'>"
+                                +"<input type='hidden' id='id_userid' value='' name='UserID' />"
+                                +"<input type='hidden' id='id_DateID' value='' name='DateID' />"
+                                +"<input type='hidden' id='id_clearance' value='' name='clearance' />"
+                                +"</td></tr>"
+                                +"<tr><td colspan='2'><span id='id_error'></span></td>"
+                        +"</table></form></td>"
+                        +"</tr></table></div></div>";
+                $("#id_StartSpecDay").datetimepicker(datetimepickerOptions);
+                $("#id_EndSpecDay").datetimepicker(datetimepickerOptions);
+                
+                $("#dlg_other_body_"+page).html(html)
+                //$("#dlg_other_title_"+page).addClass('cascadecheck')
+                $("#dlg_other_"+page).css("width",'750')
+                $("#dlg_other_"+page).css("height",'200')
+                $("#dlg_emp_"+page).css("width",'470')
+                $("#dlg_emp_"+page).css("height",'300')
+                $("#dlg_dept_"+page).css("height",'300')
+                $("#dlg_dept_body_"+page).css("height",'265')
+                $("#dlg_emp_body_"+page).css("height",'290')
+                
+                $("#showTree_USERSpeady_off_add").css("height",'245')
+                $("#dlg_other_"+page).css("height",$("#dlg_emp_"+page).height())
+                //$("#dlg_other_"+page).addClass('dlgempdiv')
+                $("#dlg_for_query_"+page).dialog({dialogClass: "",width:'800',height:'575'})
+                $("#dlg_emp_"+page).position({
+                        my: "left top",
+                        at: "right top",
+                        of: "#dlg_dept_"+page
+                });
+                $("#dlg_other_"+page).position({
+                        my: "left top",
+                        at: "left bottom",
+                        of: "#dlg_dept_"+page
+                });
+				
+	f=$('#id_form').find("#id_edit_form").get(0)
+	$(f).validate({
+			rules: {
+					"Place": {"maxlength":120,string:true},
+					"YUANYING": {"maxlength":200,string:true},
+					"remarks": {"maxlength":200,string:true}
+				}
+			});
+				
+				
+				
+				
+        }
+        
+        
+        if('{{approval}}'!='0'){
+                currentState=-2;
+        }else{
+                currentState=-1;
+        }
+
+        
+        
+        function showState_USER_SPEDAY(newState){	
+                //if(currentState==newState) return;
+                currentState=newState;
+                createFilter_user_speday();
+                
+                
+                if (newState>=0)
+                        var url=g_urls[g_activeTabID]+"?State="+Leave_Status_Code[newState]+"&filtertag=0";
+                else if(newState==-1)
+                        var url=g_urls[g_activeTabID];
+                else if(newState==-2)
+                        var url=g_urls[g_activeTabID]+"?filtertag=1"
+                else if(newState==-3)
+                        var url=g_urls[g_activeTabID]+"?filtertag=2";
+                else if(newState==-4)
+                        var url=g_urls[g_activeTabID]+"?filtertag=3";
+                        
+                var deptID=getSelected_dept("showTree_"+g_activeTabID);
+                if(deptID!=''){
+                        var ischecked=0;
+                        if($("#id_cascadecheck_"+g_activeTabID).prop("checked"))
+                                ischecked=1;
+                        if (newState==-1)
+                                url=url+"?deptIDs="+deptID+"&isContainChild="+ischecked
+                        else
+                                url=url+"&deptIDs="+deptID+"&isContainChild="+ischecked
+                                
+                        
+                }
+                var ComeTime=$("#id_ComeTime_user_speday").val();
+                var EndDate=$("#id_EndTime_user_speday").val();
+ 
+                var isError=validate_form_user_speday();
+                
+                var urlTime="";
+                var urlTime1="";
+                if(!isError){
+                       exporttag=1;
+//                       urlTime1=$("#id_date").val()+"__gte="+ComeTime+"&"+$("#id_date").val()+"__lt="+EndDate
+                       urlTime1="startdate="+ComeTime+"&"+"enddate="+EndDate
+                        if (url.indexOf("?")==-1)
+                                urlTime="?"+urlTime1
+                        else
+                                urlTime="&"+urlTime1
+               }
+                 urlStr=url+urlTime+"&UserID__DelTag__lt=1"
+				 var jie1=$("#"+g_activeTabID+" #id_jie").val()
+				 urlStr=urlStr+"&jiezhuang="+jie1 
+                var dateid=$("#"+g_activeTabID+" #id_LeaveClass").val()
+                if(dateid!='all')
+                urlStr=urlStr+"&DateID="+dateid
+                 
+                 
+                 
+ 		savecookie("search_urlstr",urlStr);
+       
+                        
+		 $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+                        
+        }
+
+
+        function createFilter_user_speday(){
+                var html="<li style=' border: 0px solid white;'><a href='#' style='color: #000;background:white;padding-left:0;'>{% trans 'Leave Status' %}</a>"
+                        +"<ul><li "+(currentState==-1?"class='selected'":"")+"><a href='#' onclick='showState_USER_SPEDAY(-1)'>{%trans "All"%}</a></li>";
+                for(i=0;i<=3;i++)
+                        html+="<li "+(currentState==i?"class='selected'":"")+"><a href='#' onclick='showState_USER_SPEDAY("+i+")'>"+Leave_Status_user_speday[i]+"</a></li>";
+                if('{{approval}}'!='0'){html+="<li "+(currentState==-2?"class='selected'":"")+"><a href='#' onclick='showState_USER_SPEDAY(-2)'>{% trans "processState"%}</a></li>";}
+                if('{{approval}}'!='0'){html+="<li "+(currentState==-3?"class='selected'":"")+"><a href='#' onclick='showState_USER_SPEDAY(-3)'>{% trans "越级查看"%}</a></li>";}
+                if('{{approval}}'!='0'){html+="<li "+(currentState==-4?"class='selected'":"")+"><a href='#' onclick='showState_USER_SPEDAY(-4)'>{% trans "经我审核"%}</a></li>";}
+                $("#"+g_activeTabID+" #id_filterbar").html(html+'</ul></li>');
+        }
+        function validate_form_user_speday(){   //验证表单的合法性(人员(可不选，在计算项目中计算选中单位的人员，其他的就默认值0)、开始时间、结束时间)
+                var t_ComeTime=$("#id_ComeTime_user_speday").val();
+                var cTime=t_ComeTime.split("-");
+                var t_EndDate=$("#id_EndTime_user_speday").val();
+                var eTime=t_EndDate.split("-");
+                cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+                edate=new Date(parseInt(eTime[0],10),parseInt(eTime[1],10)-1,parseInt(eTime[2],10));
+                var days=(edate.valueOf()-cdate.valueOf())/(1000*3600*24)+1;
+                if(cdate>edate || t_ComeTime=="" || t_EndDate==""||!valiDate(t_ComeTime)||!valiDate(t_EndDate)){
+                        return 1;
+                }else{
+                        return 0
+                }
+        }
+        function department_tree(){
+		var title="";
+		var urlStr=g_urls[g_activeTabID];
+		createDlgdeptfor('USER-SPEDAY',1)
+		$('#dlg_for_query_USER-SPEDAY').dialog({
+			title:'员工请假',
+			buttons:[{id:"btnShowOK",text:gettext('确定'),click:function(){getSelectData();}},
+				{id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+				}]
+		})	
+	}
+        function getSelectData(){
+		var dept_ids=getSelected_dept("showTree_USER-SPEDAY")
+		$.cookie("dept_ids",dept_ids, { expires: 7 });
+		var dept_names=getSelected_deptNames("showTree_USER-SPEDAY");
+		$("#department").val(dept_names);
+		var emp = getSelected_emp_ex('USER-SPEDAY')
+		$.cookie("emp",emp, { expires: 7 });
+		if($("#id_cascadecheck_USER-SPEDAY").prop("checked")){
+			$("#id_cascadecheck").prop("checked", "true");
+		} else {
+			$("#id_cascadecheck").removeAttr("checked");
+		}
+		dlgdestroy('USER-SPEDAY')
+	}
+        $(function(){
+                
+                $("#tab_iclock_USER_SPEDAY #id_reload").click(function(){
+                        var ComeTime=$("#id_ComeTime_user_speday").val();
+                        var EndDate=$("#id_EndTime_user_speday").val();
+                        if(ComeTime>EndDate) {
+                            alert('开始时间不能大于结束时间')
+                            return
+                        } else{
+                            reloadData('USER_SPEDAY')
+                        }
+                });
+                
+                
+                $("#"+g_activeTabID+" #queryButton").click(function(){
+                    searchShowSpeday();
+                });
+                $("#"+g_activeTabID+" #searchButton").click(function(){
+                   searchShowSpeday();
+                });
+                $("#"+g_activeTabID+" #searchbar").keypress(function(event){
+                   if(event.keyCode==13)
+                  searchShowSpeday();
+                });
+                $("#"+g_activeTabID+" #searchbar").val(gettext("考勤编号,身份证号,姓名"))
+                $("#"+g_activeTabID+" #id_newrec").click(function(){
+                        createNewDlg_USER_SPEDAY();
+                });
+                
+                $("#"+g_activeTabID+" #id_import").click(function(){
+                        importSpeday();
+                });
+                
+                
+                
+                $("#"+g_activeTabID+" #id_export").css('display','block');
+                //if('{{approval}}'!='0'){$("#id_custom").after('<li id="id_quanbu" class="leave_all"><span></span>{%trans "全部记录"%}</li>');
+               // $("#id_custom").after('<li id="id_dengdai" style="border:1px solid #77B7DE;" ><span class=""></span><a href="#">{%trans "等待审核记录"%}</a></li>');}
+                $("#"+g_activeTabID+" #id_clearrec").css('display','none');
+                var width=$("#"+g_activeTabID+" #id_content").width();
+                //$("#titleId").css("width","30px");
+                var currDate=new Date();
+                var dateTime=currDate.getFullYear()
+                        +"-"
+                        +(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+                        +"-01"
+                $("#id_ComeTime_user_speday").val(dateTime)
+                var dateTime=currDate.getFullYear()
+                        +"-"
+                        +(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+                        +"-"
+                        +(currDate.getDate()<10?"0"+currDate.getDate():currDate.getDate())
+                
+                
+                $("#id_EndTime_user_speday").val(dateTime)
+                        
+                
+                $("#id_ComeTime_user_speday").datepicker(datepickerOptions);
+                $("#id_EndTime_user_speday").datepicker(datepickerOptions);
+                $("#"+g_activeTabID+" #id_quanbu").click(function(){
+                        showState_USER_SPEDAY(-1)
+                })
+                $("#"+g_activeTabID+" #id_dengdai").click(function(){
+                        showState_USER_SPEDAY(-2)
+                })
+                $("#"+g_activeTabID+" #id_search").click(function(){
+                        var emp="";
+                        var deptIDs=$.cookie("dept_ids");
+                        //if (deptIDs!=null){
+                                //emp=getSelected_emp();
+                        //}
+                        emp=$.cookie("emp");
+                        var ComeTime=$("#id_ComeTime_user_speday").val();
+                        var EndDate=$("#id_EndTime_user_speday").val();
+                        $.cookie("ComeTime",ComeTime, { expires: 7 });
+                        $.cookie("EndDate",EndDate, { expires: 7 });
+                        var isError=validate_form_user_speday();
+                        var ischecked=0;
+                        if($("#id_cascadecheck_user_speday").prop("checked"))
+                                ischecked=1;
+                        if(deptIDs==undefined)
+                                deptIDs=''
+                        var deptnames=$("#"+g_activeTabID+"#department").val();
+                        if (deptnames==undefined)
+                                deptnames='';
+                        if( typeof(emp)=="object")
+                        {
+                                var maxUrlLength=2000;
+                                while((emp.join(",").length>maxUrlLength))
+                                        emp.pop(0);
+                        }
+                        var urlTime="";
+                        var urlTime1="";
+                        if(!isError){
+                                exporttag=1;
+                       urlTime1="startdate="+ComeTime+"&"+"enddate="+EndDate
+                                //urlTime1=$("#id_date").val()+"__gte="+ComeTime+"&"+$("#id_date").val()+"__lt="+EndDate
+                        }
+                        urlTime="&"+urlTime1
+                        var urlStr="";
+                        if(emp!=""){
+                                urlStr="UserID__id__exact="+emp+urlTime
+                        }else{
+                                urlStr="deptIDs="+deptIDs+"&isContainChild="+ischecked+urlTime        
+                        }
+                        var url="/iclock/data/USER_SPEDAY/?"
+                
+                        if (urlStr!="" &&  urlStr!=null)
+                                url+=urlStr+"&UserID__DelTag__lt=1";
+                        $("#id_grid").jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+                        savecookie("search_urlstr",url);
+        
+                
+                });
+ 
+                $.ajax({ 
+                        type: "POST",
+                        url:"/iclock/att/getLeaveClass/",
+                        dataType:"json",
+                        success:function(json){
+                                leaveClass_user_speday=json;
+                                $("#"+g_activeTabID+" #id_LeaveClass").html("<option value='all'>全部</option>"+getLeaveClass())
+                        }
+                })
+                
+                $("#id_filtername_user_speday").css("display","block")	
+                createFilter_user_speday(-1)
+
+                
+        });
+        
+//模糊查询
+        function searchShowSpeday(){
+            var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+            if (flag!='cansearch'&&flag!='defvalue') return;
+            if (flag!='defvalue')
+                var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+            else
+                var v=""
+            //var timetype=$("#id_date").val();
+            var leaveID=$("#"+g_activeTabID+" #id_LeaveClass").val();
+			var leavejie=$("#"+g_activeTabID+" #id_jie").val();
+            var ComeTime=$("#id_ComeTime_user_speday").val();
+            var EndDate=$("#id_EndTime_user_speday").val();
+            $.cookie("ComeTime",ComeTime, { expires: 7 });
+            $.cookie("EndDate",EndDate, { expires: 7 });
+            var isError=validate_form_user_speday();
+            var urlTime1='';
+            if(!isError){
+                        if(leaveID=='all'){
+                            urlTime1="&startdate="+ComeTime+"&enddate="+EndDate+"&jiezhuang="+leavejie
+                            }
+                        else{
+                            urlTime1="&startdate="+ComeTime+"&enddate="+EndDate+"&DateID="+leaveID+"&jiezhuang="+leavejie
+                            }
+                        } else{
+							alert('开始时间不能大于结束时间')
+                            return
+						}
+            var url="/iclock/data/USER_SPEDAY/?q="+escape(v)+urlTime1+"&UserID__DelTag__lt=1"
+            savecookie("search_urlstr",url);
+            $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+        }
+		function createQueryDlg_USER_SPEDAY(){
+			createDlgdeptfor10('employee_search_USER_SPEDAY',1)
+			$('#dlg_for_query_employee_search_USER_SPEDAY').dialog({
+			buttons:[{id:"btnShowOK",text:gettext('搜索'),
+			  click:function(){searchbydept_USER_SPEDAY('employee_search_USER_SPEDAY');$(this).dialog("destroy"); }},
+			 {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+				}] })
+		}
+
+        function searchbydept_USER_SPEDAY(page){
+            var leaveID=$("#"+g_activeTabID+" #id_LeaveClass").val();
+			var leavejie=$("#"+g_activeTabID+" #id_jie").val();
+            var ComeTime=$("#id_ComeTime_user_speday").val();
+            var EndDate=$("#id_EndTime_user_speday").val();
+            $.cookie("ComeTime",ComeTime, { expires: 7 });
+            $.cookie("EndDate",EndDate, { expires: 7 });
+            var isError=validate_form_user_speday();
+            var urlTime1='';
+            if(!isError){
+                        if(leaveID=='all'){
+                            urlTime1="startdate="+ComeTime+"&enddate="+EndDate
+                            }
+                        else{
+                            urlTime1="startdate="+ComeTime+"&enddate="+EndDate+"&DateID="+leaveID
+                            }
+                        }
+            var url="/iclock/data/USER_SPEDAY/?"
+            var emp=getSelected_emp_ex("sel_employee_search_USER_SPEDAY");
+            if(emp.length>0){
+                url+="UserID__in="+emp+"&"+urlTime1
+            }else{
+                url+=urlTime1
+            }
+            savecookie("search_urlstr",url);
+            $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+        }
+
+ 
+ 
+        function strOfData_USER_SPEDAY(data)
+        {
+                return stripHtml(data.PIN)+" "+data.EName+' '+data.StartSpecDay+' '+data.EndSpecDay;
+        }
+        function beforePost_USER_SPEDAY(obj,actionName){
+						f=$('#id_form').find("#id_edit_form")
+						if(!f.valid()) return false;
+
+                        if(validateForm_user_speday(obj)==1)
+                        {
+                                $("#id_error",obj).css("display","block");
+                                $("#id_error",obj).html("<ul class='errorlist'><li>{%trans 'Enter a valid date/time' %}</li></ul>");					
+                                return false;	
+                        }else if(validateForm_user_speday(obj)==2){
+                                $("#id_error",obj).css("display","block");
+                                $("#id_error",obj).html("<ul class='errorlist'><li>{%trans 'End time less than begin time' %}</li></ul>");					
+                                return false;	
+                                
+                        }
+                        $("#id_DateID",obj).val($("#id_leave",obj).val())
+                        $("#id_clearance",obj).val($("#clearance",obj).val())
+                        if(actionName=="_new_"){
+                                var deptid=getSelected_dept("showTree_USERSpeady_off_add");
+                                var emp=getSelected_emp_ex("USERSpeady_off_add");
+                                $("#id_userid",obj).val(emp);
+                                if(emp.length==0){
+                                        $("#id_error",obj).css("display","block");
+                                        $("#id_error",obj).html("<ul class='errorlist'><li>{%trans 'Please select one or more employee!'%}</li></ul>");
+                                        return false;
+                                }
+                                else{
+                                        $("#id_error",obj).css("display","none");
+                                        $("#id_userid",obj).val(emp);
+                                }
+                                
+                        }else {
+                        
+                        }
+        
+                
+        }
+        function process_dialog_USER_SPEDAY(obj,actionName)
+        {
+                 $(obj).dialog({resizable:false,modal:true})
+                var currDate=new Date();
+                td=currDate.getFullYear()
+                        +"-"
+                        +(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+                        +"-"
+                        +currDate.getDate()
+                        +" "
+                        +currDate.getHours()
+                        +":"
+                        +currDate.getMinutes()
+                        +":"
+                        +currDate.getSeconds()
+        
+                $("#id_ApplyDate",obj).val(td);
+        
+                var leng=arguments.length;
+                begin=$("#id_StartSpecDay",obj).val();
+                end=$("#id_EndSpecDay",obj).val();
+                reson=$("#id_YUANYING",obj).val();
+                apply=$("#id_ApplyDate",obj).val();
+                leaveID=$("#id_DateID",obj).val();
+                clearance=$("#id_clearance",obj).val();
+                username=''//$("#id_UserID",obj).get(0).options[$("#id_UserID",obj).get(0).selectedIndex].text;
+                if(actionName=='edit'){
+        
+                        $("#id_DateID",obj).parent().parent().html("<th><font color='red'>*</font><label for='id_leave' >{% trans 'Leave Class'%}</label></th><td><select  id='id_leave' style='width:150px !important;'>"+getLeaveClass(leaveID)+"</select></td><input type='hidden' name='DateID' value='"+leaveID+"' id='id_DateID' />")
+                        $("#id_clearance",obj).parent().parent().html("<th><font color='red'>*</font><label for='clearance' >{% trans 'Leave clearance'%}</label></th><td><select  id='clearance' style='width:150px !important;'>"+getClearance(clearance)+"</select></td>"+"<input type='hidden' id='id_clearance' value='' name='clearance' />")
+                        $("#id_ApplyDate",obj).attr('readonly', true);   
+                        options[g_activeTabID].dlg_width=440;
+                        options[g_activeTabID].dlg_height=450;
+                }
+				var tpickerOptions=copyObj(datetimepickerOptions)
+				tpickerOptions.showSecond=true
+				tpickerOptions.timeFormat='HH:mm:ss'
+				$("#id_StartSpecDay",obj).datetimepicker(tpickerOptions);
+				$("#id_EndSpecDay",obj).datetimepicker(tpickerOptions);
+                $("#id_speday th").css("text-align","left");
+               
+                isDisableClearance($("select[id='id_leave']",obj).val(),obj)                
+               
+                $("#id_leave",obj).change(function(){
+                        leaveID=$(this).val();
+                        for(var i=0;i<leaveClass_user_speday.length;i++){
+                                if(leaveID==leaveClass_user_speday[i].LeaveID)
+                                       
+                                        $("#clearance",obj).val(leaveClass_user_speday[i].IsLeave)
+                        }
+                        isDisableClearance(leaveID,obj)                
+                        
+                        
+                });
+ 
+ 	f=$("#id_form")
+	f.validate({
+			rules: {
+					"Place": {"maxlength":24,"required":true,'digits':true},
+				}
+			});
+
+                
+        }
+
+        function getLeaveClass(leaveID){
+                var html=""
+                for(var i=0;i<leaveClass_user_speday.length;i++){
+                        if(leaveID=="")
+                                html+="<option value='"+leaveClass_user_speday[0].LeaveID+"' selected>"+leaveClass_user_speday[i].LeaveName+"</option>"
+                        else if(leaveID==leaveClass_user_speday[i].LeaveID)
+                                html+="<option value='"+leaveClass_user_speday[i].LeaveID+"' selected>"+leaveClass_user_speday[i].LeaveName+"</option>"
+                        else
+                                html+="<option value='"+leaveClass_user_speday[i].LeaveID+"'>"+leaveClass_user_speday[i].LeaveName+"</option>"
+                }
+                return html;
+        }
+        function getClearance(clearance){
+            html="";
+            if(clearance=="" || clearance==0)
+                html+="<option value='0' selected>{%trans 'No'%}</option>"
+            else
+                html+="<option value='0'>{%trans 'No'%}</option>"
+            if(clearance==1)
+                html+="<option value='1' selected>{%trans 'Yes'%}</option>"
+            else
+                html+="<option value='1'>{%trans 'Yes'%}</option>"
+            return html;
+        }
+        function validateForm_user_speday(obj){
+            apply=$("#id_ApplyDate",obj).val();
+            var t_ComeTime=$("#id_StartSpecDay",obj).val();
+            var t_EndDate=$("#id_EndSpecDay",obj).val();
+
+            var cdate=new Date(t_ComeTime.replace(/-/g,"/"))
+            var edate=new Date(t_EndDate.replace(/-/g,"/"))
+            var days=(edate.valueOf()-cdate.valueOf())/(1000*3600*24)+1;
+                if(t_ComeTime=="" || t_EndDate==""){
+                        return 1;
+                }else if(cdate>edate){
+                        return 2;
+                }else{
+                        return 0;
+                }
+
+        }
+        function ApprovalComments(url,do_url){
+                var block_html="<div id='dlg_to_Exit'>"
+
+                    +"<table width=100%>"
+                                        
+                                        +"<tr><td colspan='2'><div style=''>{%trans '审批时间'%}&nbsp;&nbsp;<input id='id_date_range_from' width='19' style='width:135px !important;' readonly='readonly'/></div></td>"
+                                        +"</tr><tr><td colspan='2'><div style=''>{%trans '审批意见'%}&nbsp;&nbsp;<textarea type='text' id='id_comments' width='19' style='width:235px !important;'/></textarea ></div></td>"
+                                        +"</tr>"
+                                        
+                                        +"<tr><td colspan='2'>&nbsp;</td></tr>"
+                    +"</table>"
+					+  "<span  id='id_error'></span>"
+					+       "</div>"
+                $(block_html).dialog({modal:true,
+						  width: 600,
+						  height:220,
+						  title:"{% trans '休假审批' %}",
+						  buttons:[{id:"btnShowOK",text:'{%trans "Submit" %}',
+								  click:subdata},
+								 {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("close"); }
+								}],
+						  close:function(){$("#dlg_to_Exit").remove();}		
+						})
+
+                td=moment().format('YYYY-MM-DD HH:mm:ss')
+                $("#id_date_range_from").val(td);
+		//$('#id_date_range_from').datetimepicker(datetimepickerOptions)
+		function subdata(){
+		var ET=$("#id_date_range_from").val();
+                var EA=$("#id_comments").val();
+		var is_all=0;
+                //
+		var urlStr=g_urls[g_activeTabID]+ do_url+'&ProcessingTime='+ET+'&comments='+escape(EA);
+		$.blockUI({title:"{% trans '休假审批' %}",theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}</br></h1>'});
+		$.ajax({type: "POST",
+			url: urlStr,
+			data:url.ret,
+			dataType:"json",
+			success: function(retdata){
+					if(retdata.ret==0)
+					{	
+                                                $.unblockUI();
+                                                $("#dlg_to_Exit").remove();
+                                                reloadData();
+
+					}else{
+							alert(retdata.message);
+                            $.unblockUI();
+                            $("#dlg_to_Exit").remove();
+                            reloadData();
+						}},
+			error: function(){
+			$.unblockUI();alert($.validator.format(gettext('Operating failed for {0} !'),options[g_activeTabID].title));}
+			});
+                }
+        }
+		function jiezhuang1(url,do_url){
+                var block_html="<div id='dlg_to_Exit'>"
+
+                    +"<table width=100%>"
+                                        
+                                        +"<tr><td colspan='2'><div style=''>{%trans '结转时间'%}&nbsp;&nbsp;<input id='id_date_range_from' width='19' style='width:135px !important;' readonly='readonly'/></div></td>"
+                                        +"</tr><tr><td colspan='2'><div style=''>{%trans '结转天数'%}&nbsp;&nbsp;<input id='id_tianshu' width='19' style='width:135px !important;'/></div></td>"
+                                        +"</tr><tr><td colspan='2'><div style=''>{%trans '结转原因'%}&nbsp;&nbsp;<textarea type='text' id='id_comments' width='19' style='width:235px !important;'/></textarea ></div></td>"
+										+"</tr>"
+                                        
+                                        +"<tr><td colspan='2'>&nbsp;</td></tr>"
+                    +"</table>"
+					+  "<span  id='id_error'></span>"
+					+       "</div>"
+                $(block_html).dialog({modal:true,
+						  width: 600,
+						  height:220,
+						  title:"{% trans '休假结转' %}",
+						  buttons:[{id:"btnShowOK",text:'{%trans "Submit" %}',
+								  click:subdata},
+								 {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("close"); }
+								}],
+						  close:function(){$("#dlg_to_Exit").remove();}		
+						})
+
+                td=moment().format('YYYY-MM-DD HH:mm:ss')
+                $("#id_date_range_from").val(td);
+		//$('#id_date_range_from').datetimepicker(datetimepickerOptions)
+		function subdata(){
+		var ET=$("#id_date_range_from").val();
+                var EA=$("#id_tianshu").val();
+				var QA=$("#id_comments").val();
+		var ids = $("#id_grid_USER_SPEDAY").jqGrid('getGridParam','selarrrow');
+			var datas = ''
+			for (var i=0; i<ids.length;i++) {
+				var v = ('&K='+ids[i])
+				datas += v
+			}
+			datas = datas.substring(1)
+			datas=datas+'&jieTime='+ET+'&tianshu='+EA+'&jieYUANYING='+QA;
+			//datas = datas.substring(1)
+		//var urlStr='/iclock/jiezhuang/USER_SPEDAY/'+'&ProcessingTime='+ET+'&comments='+escape(EA);
+		$.blockUI({title:"{% trans '休假结转' %}",theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}</br></h1>'});
+		$.ajax({type: "POST",
+			url: '/iclock/jiezhuang/USER_SPEDAY/',
+			data:datas,
+			dataType:"json",
+			success: function(retdata){
+					if(retdata.ret==0)
+					{	
+                                                $.unblockUI();
+                                                $("#dlg_to_Exit").remove();
+                                                reloadData();
+
+					}else{
+							alert(retdata.message);
+                            $.unblockUI();
+                            $("#dlg_to_Exit").remove();
+                            reloadData();
+						}},
+			error: function(){
+			$.unblockUI();alert($.validator.format(gettext('Operating failed for {0} !'),options[g_activeTabID].title));}
+			});
+                }
+        }
+        function afterPost_USER_SPEDAY(flag,obj)
+        {
+                $("#id_YUANYING",obj).val("")
+        }
+        function ApprovalCommentsAccept(url){
+            ApprovalComments(url,"?action=leaveAudit&to=Accept");
+        }
+        function ApprovalCommentsRefuse(url){
+            ApprovalComments(url,"?action=leaveAudit&to=Refuse");
+        }
+        function ApprovalCommentsAgain(url){
+            ApprovalComments(url,"?action=leaveAudit&to=Again");
+        }
+		function deleteFile() {
+			uploadFileDelete()
+		}
+		function jiezhuang(){
+		    jiezhuang1()
+		}
+		function chejiezhuang(){
+		    chejiezhuang1()
+		}
+		function chejiezhuang1() {
+			var ids = $("#id_grid_USER_SPEDAY").jqGrid('getGridParam','selarrrow');
+			var datas = ''
+			for (var i=0; i<ids.length;i++) {
+				var v = ('&K='+ids[i])
+				datas += v
+			}
+			datas = datas.substring(1)
+            $.blockUI({theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>'+gettext("Please wait...")+'</br></h1>'});
+			$.ajax({
+				type: "POST",
+				url: '/iclock/chejiezhuang/USER_SPEDAY/',
+				data:datas,
+				dataType:"json",
+				success: function(ret){
+						$.unblockUI();
+						alert(ret.message)
+						reloadData()
+						},
+				error: function(){
+						$.unblockUI()
+						alert(gettext('服务器错误，操作失败!'))
+						}
+			});
+        }
+		function uploadFileDelete() {
+			var ids = $("#id_grid_USER_SPEDAY").jqGrid('getGridParam','selarrrow');
+			var datas = ''
+			for (var i=0; i<ids.length;i++) {
+				var v = ('&K='+ids[i])
+				datas += v
+			}
+			datas = datas.substring(1)
+            $.blockUI({theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>'+gettext("Please wait...")+'</br></h1>'});
+			$.ajax({
+				type: "POST",
+				url: '/iclock/fileDelete/USER_SPEDAY/',
+				data:datas,
+				dataType:"json",
+				success: function(ret){
+						$.unblockUI();
+						alert(ret.message)
+						reloadData()
+						},
+				error: function(){
+						$.unblockUI()
+						alert(gettext('服务器错误，操作失败!'))
+						}
+			});
+        }
+        extraBatchOp=[
+                {caption:'{%trans "请假数据相关操作"%}',
+                        submenu:[
+                        {% if user|HasPerm:"iclock.leaveAudit_user_speday" %}
+                        //{action: '"?action=leaveAudit&to=Accept"', title: '{%trans "Audit: Accept"%}'},
+                        //{action: '"?action=leaveAudit&to=Refuse"', title: '{%trans "Audit: Refuse"%}'},
+                        //{action: '"?action=leaveAudit&to=Again"', title: '{%trans "Audit: Apply Again"%}'},
+                        {action: ApprovalCommentsAccept,itemCanBeOperated:true ,title: '{%trans "Audit: Accept"%}'},
+                        {action: ApprovalCommentsRefuse,itemCanBeOperated:true ,title: '{%trans "Audit: Refuse"%}'},
+                        {action: ApprovalCommentsAgain,itemCanBeOperated:true ,title: '{%trans "Audit: Apply Again"%}'},
+						{action: deleteFile,itemCanBeOperated:true ,title: '{%trans "上传文件删除"%}'},
+						{action: jiezhuang,itemCanBeOperated:true ,title: '{%trans "假类结转"%}'},
+						{action: chejiezhuang,itemCanBeOperated:true ,title: '{%trans "撤销结转"%}'},
+                        {% endif %}
+                ]}
+        ];
+{% endblock %}
+</script>
+<script>
+{% block loadData %}
+	html="<span id=id_opt_tree><input type='checkbox' id='id_cascadecheck_"+g_activeTabID+"'/>{%trans '级联下级单位' %}</span>"
+	$("#"+g_activeTabID+" #id_west").html(html)
+	html="<div id='show_dept_tree_'>"
+		+"<ul id='showTree_"+g_activeTabID+"' class='ztree' style='margin-left: 0px;height:100%;'></ul>"
+		+"</div>"   
+	$("#west_content_tab_iclock_USER_SPEDAY").html(html)
+
+	//var h=$("#"+g_activeTabID+" #west_content").height()-20
+	//$('#showTree_'+g_activeTabID).css('height',h)
+
+        ShowDeptData(g_activeTabID,true)
+        loadNULLPage('#id_grid_'+tblName[g_activeTabID]);
+        
+        
+        
+	var zTree = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+        
+        
+	zTree.setting.check.enable = false;
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		var deptID=treeNode.id;
+		var deptName=treeNode.name;
+		$.cookie("dept_ids",deptID, { expires: 7 });
+		var ischecked=0;
+		if($("#id_cascadecheck_"+g_activeTabID).prop("checked"))
+			ischecked=1;
+                var ComeTime=$("#id_ComeTime_user_speday").val();
+                var EndDate=$("#id_EndTime_user_speday").val();
+                $.cookie("ComeTime",ComeTime, { expires: 7 });
+                $.cookie("EndDate",EndDate, { expires: 7 });
+                var isError=validate_form_user_speday();
+                
+                var urlTime="";
+                var urlTime1="";
+                if(!isError){
+                       exporttag=1;
+                       urlTime1="startdate="+ComeTime+"&"+"enddate="+EndDate
+
+                      // urlTime1=$("#id_date").val()+"__gte="+ComeTime+"&"+$("#id_date").val()+"__lt="+EndDate
+                        urlTime="&"+urlTime1
+                } else{
+					alert('开始时间不能大于结束时间')
+					return
+				}
+               
+                        
+                        
+		var urlStr="/iclock/data/USER_SPEDAY/?deptIDs="+deptID+"&isContainChild="+ischecked+urlTime+"&UserID__DelTag__lt=1"
+                newState=currentState
+                if (newState>=0)
+                        urlStr=urlStr+"&State="+Leave_Status_Code[newState]+"&filtertag=0";
+                else if(newState==-1)
+                        urlStr=urlStr;
+                else if(newState==-2)
+                        urlStr=urlStr+"&filtertag=1"
+                else if(newState==-3)
+                        urlStr=urlStr+"&filtertag=2";
+                else if(newState==-4)
+                        urlStr=urlStr+"&filtertag=3";
+                        
+                var dateid=$("#"+g_activeTabID+" #id_LeaveClass").val()
+                if(dateid!='all')
+                urlStr=urlStr+"&DateID="+dateid
+                
+		savecookie("search_urlstr",urlStr);
+		//currentState=-2;
+		//createFilter();
+		//$.blockUI({title:'',theme: true ,message: '<h1><img src="/iclock/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}<br /></h1>'});
+		 $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+		//$.unblockUI()
+	}
+{% endblock %}
+
+{% block otherQuery %}
+
+		<div class="s-info left" id="time_area">			
+                                 <span>
+                                       <label  >{%trans 'Begin Date'%}</label>
+                                        <input type='text' name='ComeTime' maxlength='10' id='id_ComeTime_user_speday' style='width:80px !important;'>
+                                        <label  >{%trans 'End Date'%}</label>
+                                        <input type='text' name='EndTime' maxlength='10' id='id_EndTime_user_speday' style='width:80px !important;'>
+                                         &nbsp;&nbsp;&nbsp;&nbsp;<label  >{%trans '假类'%}</label>
+                                        <select name='LeaveClass' id='id_LeaveClass'></select>
+										&nbsp;&nbsp;&nbsp;&nbsp;<label  >{%trans '是否结转'%}</label>
+										<select name='jie' id='id_jie'><option value=''>--------</option><option value='1'>是</option><option value='0'>否</option></select>
+                            <!--
+                                        &nbsp;&nbsp;&nbsp;&nbsp;<select name='id_date' id='id_date'><option value='StartSpecDay'>开始时间</option><option value='EndSpecDay'>结束时间</option><option value='ApplyDate'>申请时间</option></select>
+                            -->
+                                </span>
+                                
+                        </div>
+                             
+
+{% endblock %}
+{% block importOp %}
+{% if request|reqHasPerm:"add" %}
+		    <LI id="id_import" ><SPAN class="icon iconfont icon-daoru"></SPAN>{%trans "Import"%}</LI>
+{% endif %}
+
+{% endblock %}

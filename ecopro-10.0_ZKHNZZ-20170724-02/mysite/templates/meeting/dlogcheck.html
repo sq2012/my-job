@@ -1,0 +1,302 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+<style>
+	#id_photo_meet table{
+		margin-top: -25px; margin-bottom: 0px;
+	}
+#tbl_monitor th{
+	text-align: right;
+}
+#meeting-monitor .ui-state-default{
+    background: url("media/img/nav-bg.gif") repeat-x scroll left top #e1e1e1;
+    color: #666;
+}
+
+	
+</style>
+
+
+<script>
+	jqOptions[g_activeTabID]=copyObj(jq_Options);
+	var jqOptions_record=copyObj(jq_Options);
+{% autoescape off %}
+	jqOptions_record.colModel={{recordColModel}}
+	jqOptions[g_activeTabID].colModel={{meetModel}}
+{% endautoescape %}	
+	
+	var lastId=0
+	var meetid=-1
+	var maxLine=50;
+	var maxLineopp=50;
+	var isFresh=false
+	
+function refreshLines(data){
+		showDatas_info(data.empdata,data.empdata.urls,data.empdata.urls1)
+		lastId=data.lasttId;
+		
+		for(var i=0;i<data.ret;i++)
+		{
+			 var ids = $("#id_grid_record").jqGrid('getDataIDs');
+			if (ids.length>100)
+			$('#id_grid_record').jqGrid('clearGridData')
+			
+			$('#id_grid_record').jqGrid('addRowData',data.data[i].id,data.data[i],'first');
+		}
+	
+}
+	
+function refreshLinesMeet(data){
+		if (meetid==-1)
+		{
+			meetid=data.lastmid
+			for(var i=0;i<data.ret;i++)
+			{
+				$('#id_grid_monitor').jqGrid('addRowData',data.data[i].id,data.data[i],'first');
+			}
+			
+		}
+		else
+		{
+
+			if(isFresh)
+			$('#id_grid_monitor').jqGrid('clearGridData')
+
+			for(var i=0;i<data.ret;i++)
+			{
+				if(isFresh)
+					$('#id_grid_monitor').jqGrid('addRowData',data.data[i].id,data.data[i],'first');
+				else
+				{
+					$('#id_grid_monitor').jqGrid('setCell',data.data[i].id,'Should',data.data[i].Should)
+					$('#id_grid_monitor').jqGrid('setCell',data.data[i].id,'Real',data.data[i].Real)
+					$('#id_grid_monitor').jqGrid('setCell',data.data[i].id,'absent',data.data[i].absent)
+				
+				}
+				
+			}			
+			isFresh=false
+
+			
+			
+		}
+
+}	
+	
+	
+	
+	function checkTime(i){
+		if (i<10) 
+			{i="0" + i}
+		return i
+	}
+	
+	function timeStr(){
+		return moment().format('HH:mm:ss')
+	}
+	
+	
+	function showDatas_info(datas,urls,urls1){
+		var html="<table id='tbl_monitor' style='height:50px;width:700px;'><tbody>"
+			+"<tr><th>{%trans 'PIN'%}:</th><td >"+(datas["PIN"]==null?"":datas["PIN"])+"</td>"
+			+"<th>{%trans 'Name'%}:</th><td>"+(datas["EName"]==null?"":datas["EName"])+"</td>"
+			+"<th>{%trans 'Sex'%}:</th><td>"+(datas["Sex"]==null?"":datas["Sex"])+"</td></td>"
+			+"</tr>"
+			+"<tr><th>{%trans '部门'%}:</th><td style='width:200px;'>"+(datas["DeptName"]==null?"":datas["DeptName"])+"</td>"
+			+"<th>{%trans 'Title'%}:</th><td style='width:100px;'>"+(datas["Title"]==null?"":datas["Title"])+"</td>"
+			+"<th>{%trans 'Id card'%}:</th><td  style='width:100px;'>"+(datas["Card"]==null?"":datas["Card"])+"</td>"
+			+"</td></tr>"
+			+"</tbody></table>"
+			+"<div style='display:inline'></div>"
+			//+'<span><input type="button" value="{%trans '选择要监控的设备'%}" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" id="id_devtran" ></span>'
+		var photo="<table><tr><td><div style='text-align:center;font-weight:bold;'>{%trans '现场照'%}</div><div><img width='100' height='100' src='"+urls+"'></div></td><td width='30px'></td><td><div style='text-align:center;font-weight:bold;'>{%trans '登记照'%}</div><div><img width='100' height='100' src='"+urls1+"'></div></td></tr></table>";
+		$("#id_Info").html(html);
+		$("#id_photo_meet").html(photo);
+		//$("#id_devtran").click(function(){getDevs()})
+	}
+	
+	Uid=0;
+	class_name="";
+	
+function getNewTrans(){   
+		clearTimeout(logtimer1);
+		var treeObj = $.fn.zTree.getZTreeObj("showTree_monitor");
+		var nodes = treeObj.getSelectedNodes();
+		var urlstr="/meeting/_checktranslog_/?lasttid="+lastId
+		if (nodes.length>0)
+		{
+		    deptIDs=nodes[0].id
+		    if (deptIDs>0)
+		    urlstr+='&meet='+deptIDs
+		}
+		
+		$.ajax({type: "POST", 
+			url:urlstr ,
+			dataType:"json",
+			success: function(data){
+				if(data.ret>0){	
+					$("#net_info").html(data.tm+"| {%trans "get"%} "+(data.ret)+" {%trans " new transaction"%}")
+					refreshLines(data);
+				}
+				else{
+					$("#net_info").html(data.tm+"|{%trans "no new records"%}");
+				}
+				logtimer1=setTimeout("getNewTrans()", 5000);
+			},
+			error: function(obj, msg, exc){
+				$("#net_info").html("|{%trans "access to the latest data errors"%}");
+				logtimer1=setTimeout("getNewTrans()", 10000);
+			}
+		});
+	}
+	
+	function getKeyQuery(key){
+		var q=window.location.href;
+		if(q.indexOf('?')<0) return "";
+		var qry=q.split("?")[1].split("&");
+		for(var i in qry)
+			if(qry[i].split("=")[0]==key) return qry[i];
+		return "";
+	}
+
+	function getMeetState(){
+		clearTimeout(logtimer2);
+		var treeObj = $.fn.zTree.getZTreeObj("showTree_monitor");
+		var nodes = treeObj.getSelectedNodes();
+		var urlstr="/meeting/_checkmeet_/?lastmid="+meetid
+		if (nodes.length>0)
+		{
+		    deptIDs=nodes[0].id
+		    if (deptIDs>0)
+		    urlstr+='&meet='+deptIDs
+		}
+		
+		
+		$.ajax({type: "POST", 
+			url: urlstr,//+"&"+getKeyQuery("SN"), 
+			dataType:"json",
+			success: function(data){
+				
+				if(data.ret>0)
+				{	
+					refreshLinesMeet(data);				
+				}
+				//else
+					//$("#net_info").html(timeStr()+":{%trans "no new records"%}")
+				
+				logtimer2=setTimeout("getMeetState()", 10000);
+			},
+			error: function(obj, msg, exc){
+				//$("#net_info").html(timeStr()+"{%trans "access to the latest data errors"%}");
+				logtimer2=setTimeout("getMeetState()",30000);
+			}
+		});
+				
+	}
+	
+	
+function ShowMeetData(page,tag,isDiy)
+{
+	var setting = {
+            check: {enable: !tag,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},          
+	    async: {
+			    enable: true,
+			    url: "/meeting/getData/?func=meets",
+			    autoParam: ["id"]
+		    }
+	};
+	$.fn.zTree.init($("#showTree_"+page), setting,null);	
+}
+
+$(function(){
+		initwindow_tabs();
+		html="<div id='show_dept_tree_'>"
+			+"<ul id='showTree_monitor' class='ztree' style='margin-left: 0px;height:100%;'></ul>"
+			+"</div>"   
+		$("#west_content_tab_meeting__checktranslog_").html(html)
+	
+		//var h=$("#west_content").height()-30
+		//$('#showTree_monitor').css('height',h)
+	
+		ShowMeetData('monitor',true)
+		var zTree = $.fn.zTree.getZTreeObj("showTree_monitor");
+		zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+			
+			isFresh=true
+			
+		}
+		
+		jqOptions[g_activeTabID].datatype='local'
+		jqOptions[g_activeTabID].height=100
+		jqOptions[g_activeTabID].multiselect=false
+		jqOptions[g_activeTabID].width='auto'
+		jqOptions[g_activeTabID].pager=''
+		jqOptions.caption=moment().format('YYYY-MM-DD')+'会议实时状态...'
+		$("#id_grid_monitor").jqGrid(jqOptions[g_activeTabID]);
+		
+		jqOptions_record.datatype='local'
+		jqOptions_record.height=200
+		jqOptions_record.multiselect=false
+		jqOptions_record.width='auto'
+		jqOptions_record.pager=''
+		jqOptions_record.altRows=true
+		jqOptions_record.altclass='altclass'
+		jqOptions_record.caption=moment().format('YYYY-MM-DD')+'会议实时签到记录...'
+		$("#id_grid_record").jqGrid(jqOptions_record);
+/*		
+		var html="<table style='height:50px;width:500px;'><tbody>"
+			+"<tr><th>{%trans 'PIN'%}:</th><td></td>"
+			+"<th>{%trans 'Name'%}:</th><td></td>"
+			+"<th>{%trans 'Sex'%}:</th><td></td></td>"
+			+"</tr>"
+			+"<tr><th>{%trans 'Department'%}:</th><td style='width:170px;'></td>"
+			+"<th>{%trans 'Title'%}:</th><td></td>"
+			+"<th>{%trans 'Id card'%}:</th><td></td>"
+			+"</td></tr>"
+			+"</tbody></table>"
+
+		var photo="<table><tr><td><div style='text-align:center;font-weight:bold;'>{%trans '考勤现场照'%}</div><div><img width='100' height='100' src='/media/img/transaction/noimg.jpg'></div></td><td width='30px'></td><td><div style='text-align:center;font-weight:bold;'>{%trans '人员登记照'%}</div><div><img width='100' height='100' src='/media/img/transaction/noimg.jpg'></div></td></tr></table>";
+		$("#id_Info").html(html);
+		$("#id_photo_meet").html(photo);
+*/
+		
+		getNewTrans();
+		getMeetState();
+		showDatas_info({},'/media/img/transaction/noimg.jpg','/media/img/transaction/noimg.jpg')
+		
+	})
+	//function renderGridData(PageName,Options)
+	//{
+	//	var IsGridExist=$("#id_grid_"+PageName).jqGrid('getGridParam','records')
+	//	if(typeof(IsGridExist)=='undefined')
+	//		$("#id_grid_"+PageName).jqGrid(Options)
+	//	else
+	//		$("#id_grid_"+PageName).jqGrid('setGridParam',{url:Options.url}).trigger("reloadGrid");
+	//}
+</script>
+<div id='id_top'>
+	<img src="/media/img/load.gif"><span  id="net_info">Starting ... </span>
+</div>
+<div id="dlogcheck_id">
+		<table style="height:120px;">
+			<tr>
+				<td id="id_Info" height="100px"></td>
+				<td id="id_photo_meet" rowspan="2" height="100px"></td>
+			</tr>
+		</table>
+
+</div>
+<div id='meeting-monitor'>
+	<div style='height: 160px;width: 1000px;overflow: hidden;'>
+		<table id="id_grid_monitor" >	</table>
+		<div id="id_pager_monitor"></div>
+	</div>
+	<div style='height: 300px;width: 1000px;overflow: hidden;'>
+		<table id="id_grid_record" >	</table>
+		<div id="id_pager_record"></div>
+	</div>
+
+</div>
+
+
+

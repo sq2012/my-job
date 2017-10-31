@@ -1,0 +1,214 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+<script>
+{% block tblHeader %}
+options.disableCols=[0];
+
+jqOptions[g_activeTabID].sortname='';
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='interlock';
+jqOptions[g_activeTabID].sortname='id'
+jqOptions[g_activeTabID].pager="#id_pager_"+tblName[g_activeTabID];
+options[g_activeTabID].dlg_height=400;
+options[g_activeTabID].dlg_width=800;
+$(function(){
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+		processNewModel();
+	});
+	$("#"+g_activeTabID+" #queryButton").hide()
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowHolidays();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowHolidays();
+	});
+	$("#"+g_activeTabID+" #id_export").css('display','none');
+	$("#"+g_activeTabID+" #id_clearrec").css('display','none')
+	$("#"+g_activeTabID+" #id_third").html("");
+});
+//function beforePost(obj,actionName){
+//	var flag=true;
+//	var tmp =$("#id_StartTime",obj).val()
+//    var tempdate= new Date()
+//    var birth =tmp.split("-");
+//	if(tmp.length<1){
+//		$("#id_error",obj).css("display","block");
+//		$("#id_error",obj).html("<ul class='errorlist'><li>{%trans 'Please enter a date' %}</li></ul>");					
+//		flag=false;
+//	}else if(birth[0]!=parseInt(birth[0])||birth[1]!=parseInt(birth[1])||birth[2]!=parseInt(birth[2])||parseInt(birth[0])<1900||parseInt(birth[1])>12||parseInt(birth[1])<1||parseInt(birth[2])<1||parseInt(birth[2])>31){
+//		$("#id_error",obj).css("display","block");
+//		$("#id_error",obj).html("<ul class='errorlist'><li>{%trans 'Invalid date' %}</li></ul>");					
+//		flag=false;
+//	}
+//	return flag
+//}
+//模糊查询
+function searchShowHolidays(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+	var url=g_urls[g_activeTabID]+"?q="+escape(v)
+	savecookie("search_urlstr",url);
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function strOfData_interlock(data)
+{
+	return stripHtml(data.device)+' '+data.interlock_rule;
+}
+function getItems(Data,id)
+{
+        var options_html="";
+	for(i=0;i<Data.length;i++)
+		if(Data[i].id==id)
+			options_html+="<option value='"+Data[i].id+"' selected>"+(Data[i].name)+"</option>";
+		else
+			options_html+="<option value='"+Data[i].id+"'>"+(Data[i].name)+"</option>";
+	
+    return options_html;
+} 
+
+function FetchInterLockInfo(SN,flag,Id)
+{
+
+        var setting = {
+                check: {enable: true,chkboxType:{ "Y": "s", "N": "s" },chkStyle: "checkbox"},
+
+                data: {simpleData: {enable: true,idKey: "id", pIdKey: "pid",  rootPId: 0}
+                }
+        };
+	urlStr="/acc/getData/?func=interlock&flag="+flag+'&keys='+SN
+	urlStr+='&id='+Id
+	$.post(urlStr,null,
+		function (ret, textStatus) {
+			var html=getItems(ret,Id)
+			$('#interlock_rule').html(html)
+		},
+		"json");
+
+}
+
+
+function ShowDeviceData(page,tag,isDiy)
+{
+	
+	var setting = {
+            check: {enable: !tag,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},          
+	    async: {
+			    enable: true,
+			    url: "/acc/getData/?func=devs_tree&ptype=acc",
+			    autoParam: ["id"]
+		    }
+	};
+	$.fn.zTree.init($("#showTree_"+page), setting,null);	
+	if(tag){
+		var zTree = $.fn.zTree.getZTreeObj("showTree_"+page);
+		zTree.setting.check.enable = false;
+		$("#searchbydept_"+page).hide()
+		zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+				$("#id_device").val(treeNode.value);
+				$("input[alt='Authed_device']").val(treeNode.value);
+
+				dlgdestroy(page)
+				FetchInterLockInfo(treeNode.value,'add',-1)
+				
+
+		}
+	}
+}
+
+
+function createQueryDlgbypage(page,tag,isDiy)//生成部门框
+{
+
+	if(page==undefined){
+		page=''
+	}
+   var html="<div id='dlg_for_query_"+page+"' style='overflow:hidden;'>"
+		+"<div id='dlg_dept_"+page+"' class='dlgdiv'>"
+   			+"<div id='dlg_dept_body_"+page+"' style='overflow:hidden;'>"
+				+"<ul id='showTree_"+page+"' class='ztree' style='height:300px;overflow:auto;'></ul>"
+			+"</div>"
+		+"</div>"
+   +"</div>"
+
+	$(html).dialog({modal:true,resizable:false,
+			//dialogClass: "no-close",
+			width: 410,
+			height:430,
+                        position:  { my: "left top-150", at: "right top",of:"#id_drop_Authed_device"},
+                                                  open:function(){ShowDeviceData(page,tag,isDiy);},
+						  close:function(){$(this).dialog("destroy"); } 		
+						})
+}
+
+
+
+function iclock_Authed_deptTree_InterLock(obj)
+{
+	$("#id_device",obj).parent().html("<div>"
+		+"<span style='float:left;border-top:1 solid #5B80B2;'><input alt='Authed_device' type='text' style='width:200px !important;' readOnly='readOnly'  id='Authed_device'/></span>"
+		+"<span style='float:left;'><img  alt='{%trans 'open department tree'%}' src='/media/img/sug_down_on.gif' id='id_drop_Authed_device'/></span>"
+		+"</div>"
+		+"<div style='display:none;'><input id='id_device' name='device' type='hidden' /></div>"
+		);
+
+		$("#id_drop_Authed_device",obj).click(function(){
+				    createQueryDlgbypage('auth_device',true,false)
+	
+			
+			
+			
+		})
+	
+	
+	
+}
+
+function process_dialog_interlock(obj,flag,urlAddr)
+{
+     $(obj).dialog({resizable:false,modal:true})
+	var _rule=$("#id_interlock_rule",obj).val();
+	$("#id_interlock_rule",obj).parent().html(""
+	                    +"<td><select id='interlock_rule' style='width:300px;'></select></td>"
+	                     +"<input type='hidden' id='id_interlock_rule' value='"+_rule+"' name='interlock_rule' />"
+	                    );
+
+	$("#interlock_rule",obj).click(function(){
+		$("#id_interlock_rule",obj).val($(this).val());
+	});
+	
+	
+	if (flag=='add') iclock_Authed_deptTree_InterLock(obj);
+	else
+	{
+		$("#id_device",obj).prop('readonly',true)
+		SN=$("input[name='device']:hidden",obj).val()
+		id=$('#id_interlock_rule',obj).val()
+		FetchInterLockInfo(SN,'edit',id)
+		
+	}
+	
+	
+	
+	
+	f=$(obj).find("#id_edit_form").get(0)
+	$(f).validate({
+			rules: {
+				}
+			});
+	
+
+}
+
+{% endblock %}
+</script>
+{% block newrec %}
+	{% if user|HasPerm:"acc.add_interlock" %}
+	 <LI id="id_newrec" ><SPAN class="icon iconfont icon-xinzeng"></SPAN>{%trans "Append"%}</LI>
+	{% endif %}
+{% endblock %}

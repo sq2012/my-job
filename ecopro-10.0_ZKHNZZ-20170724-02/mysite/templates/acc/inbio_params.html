@@ -1,0 +1,142 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+<div id='id_option1' style='padding: 20px;'>
+        <form id='id_edit_form1' method='post'><table><tbody><tr><td>
+	        <fieldset  style='border:1px solid #7bc4ff;padding: 10px;'><legend><font  size='4'>{%trans 'Basic settings'%}</font></legend><table><tbody>
+			<tr>
+			    <th><label for='id_sitetitle' >{%trans 'SiteTitle'%}</label></th>
+			    <td><input type='text' maxlength='100' name='sitetitle' id='id_sitetitle' style='width:300px !important;' value=''/></td>
+			</tr>
+			<tr>
+			    <th><label for='id_homeurl' >{%trans 'Home'%}</label></th>
+				<td><select name='homeurl' id='id_homeurl'></select></td>
+			</tr>
+			<tr>
+			    <th><label for='id_page_limit' >{%trans 'records per page'%}</label></th>
+			    <td><input type='text' maxlength='30' name='page_limit' id='id_page_limit' value="" /></td>
+			</tr>
+			<!---
+			<tr>
+			    <th><label for='id_backup_dir' >{%trans 'Backup Directory'%}</label></th>
+			    <td><input type='text' maxlength='80' name='backup_dir' id='id_backup_dir' style='width:300px !important;' value=''/></td>
+			</tr>
+			-->
+			<tr>
+			    <th><label for='id_lock_date' >{%trans '每月锁定上月数据日期'%}</label></th>
+			    <td><input type='text' maxlength='30' name='lock_date' id='id_lock_date' value='0'/>0表示不锁定</td>
+			</tr>
+
+			<tr><th><label for='id_fingerenroll' ></label></th><td><input  type='checkbox' maxlength='30'  id='id_finger' name='enroll'/>{%trans 'Fingerprint Enroll'%}</td></tr>
+			<tr><th><label for='id_algversion' ></label></th><td><input  type='checkbox' maxlength='30'  id='id_algversion' name='algversion'/>{%trans 'Fingerprint Alg Version 10.0'%}</td></tr>
+			<tr><th><label for='id_udisk_check' ></label></th><td><input  type='checkbox' maxlength='30'  id='id_udisk' name='udisk'/>{%trans 'U Disk Management'%}</td></tr>
+			<tr><th><label for='id_sms' ></label></th><td><input  type='checkbox' maxlength='30'  id='id_sms' name='sms' />{%trans 'SMS Management'%}</td></tr>
+			<tr><th><label for='id_auto_add_device' ></label></th><td><input  type='checkbox' maxlength='30'  id='id_auto_add_device' name='dev_auto' />{%trans 'Add new device automatically'%}</td></tr>
+			<tr><th><label for='id_photo_emp_check' ></label></th><td><input  type='checkbox' maxlength='30'  id='id_photo_emp' name='emp_pic' />{%trans 'Show picture of employee'%}</td></tr>
+			<tr><th><label for='id_rec_pic' ></label></th><td><input  type='checkbox' maxlength='30'  id='id_photo_rec' name='rec_pic'/>{%trans 'Show picture of record'%}</td></tr>
+			<tr><th><label for='id_self_login' ></label></th><td><input  type='checkbox' maxlength='30'  id='id_self_login' name='self_login'/>{%trans 'Self Login for employee'%}</td></tr>
+			<tr><th><label for='id_showlogin' ></label></th><td><input  type='checkbox' maxlength='30'  id='id_show_login' name='show_login'/>{%trans '登录页面显示二维码登陆信息'%}</td></tr>
+
+			<tr><th><label for='id_new_record' ></label></th><td><input  type='checkbox' maxlength='30'  id='id_new_record' name='new_record'/>{%trans 'Save for employee existed in database'%}</td></tr>
+			<tr><th><label for='id_approval' ></label></th><td><input  type='checkbox' maxlength='30'  id='id_approval' name='approval'/>{%trans 'Multi-level approval'%}</td></tr>
+			<tr><th><label for='id_Auto_audit' ></label></th><td><input  type='checkbox' maxlength='30'  id='id_Auto_audit' name='Auto_audit'/>{%trans '支持请假自动审核'%}</td></tr>
+			<tr><th><label for='id_Auto_iclock' ></label></th><td><input  type='checkbox' maxlength='30'  id='id_Auto_iclock' name='Auto_iclock'/>{%trans '自动下发人员信息到相应设备(对设备进行设置归属部门后再开启此功能)'%}</td></tr>
+
+
+<!--
+			<tr><th><label for='id_Auto_del_iclock' ></label></th><td><input  type='checkbox' maxlength='30'  id='id_Auto_del_iclock' name='Auto_del_iclock'/>{%trans '人员离职自动删除设备上的人员信息'%}</td></tr>
+-->
+		</tbody></table></fieldset>
+        </td></tr></table></form>
+
+	{% if user|HasPerm:"iclock.user_temp_sch_modify" %}
+	<button id='id_basic_save'>{%trans 'Save'%}</button>
+	{% endif %}
+	</div>
+	<div id='id_error'></div>
+
+<script>
+{% autoescape off %}
+	var basic={{ basic }}
+{% endautoescape %}
+function getUrl()
+{
+    var homeurl=basic.homeurl
+    var options_html="";
+	for(i=0;i<HOME_URL.length;i++)
+        if(HOME_URL[i].url==basic.homeurl)
+            options_html+="<option value='"+i+"' selected>"+HOME_URL[i].title+"</option>";
+	
+	else
+            options_html+="<option value='"+i+"'>"+HOME_URL[i].title+"</option>";
+
+    return options_html;
+}
+var SaveOptions=function(obj,keys){
+	$("#id_error").html('')
+	var formStr=formToRequestString(obj.get(0));
+	var url='/base/isys/options/'
+	$.post(url+'?action='+keys, 
+		formStr,
+		function (ret, textStatus) {		
+			$("#option").remove()
+				if (keys=='status')	
+				reloadData();
+				$("#id_error").css("display","block");
+				$("#id_error").html("<div style='background:red;width:300px;font-size:12px;'><img src='../media/img/icon_alert.gif'/>"+ret.message+"</div>");
+					
+		},
+		"json");
+	
+
+}
+	
+$(function(){
+	$('#id_page_limit').val(basic.page_limit)
+	$('#id_sitetitle').val(basic.sitetitle)
+	$('#id_backup_dir').val(basic.backup_dir)
+	$('#id_lock_date').val(basic.lock_date)
+        if(basic.enroll=='1'){ $("#id_finger").attr("checked","checked");}  
+        if(basic.algversion=='1'){ $("#id_algversion").attr("checked","checked");} 
+	if(basic.enroll=='-1'){$("#id_finger").parent().parent().remove();$("#id_algversion").parent().parent().remove();} 
+        if(basic.udisk=='1'){ $("#id_udisk").attr("checked","checked");} 
+	if(basic.udisk=='-1') $("#id_udisk").parent().parent().remove();
+        if(basic.sms=='1'){ $("#id_sms").attr("checked","checked");}  
+	if(basic.sms=='-1') $("#id_sms").parent().parent().remove();
+        if(basic.dev_auto=='1'){ $("#id_auto_add_device").attr("checked","checked");}  
+        if(basic.emp_pic=='1'){ $("#id_photo_emp").attr("checked","checked");}  
+        if(basic.rec_pic=='1'){ $("#id_photo_rec").attr("checked","checked");}  
+        if(basic.self_login=='1'){ $("#id_self_login").attr("checked","checked");}  
+        if(basic.new_record=='1'){ $("#id_new_record").attr("checked","checked");}  
+        if(basic.expanddept=='1'){ $("#id_expand").attr("checked","checked");}  
+        if(basic.approval=='1'){ $("#id_approval").attr("checked","checked");}  
+		if(basic.Auto_audit=='1'){ $("#id_Auto_audit").attr("checked","checked");}
+		if(basic.Auto_iclock=='1'){ $("#id_Auto_iclock").attr("checked","checked");}
+		if(basic.Auto_del_iclock=='1'){ $("#id_Auto_del_iclock").attr("checked","checked");}
+        if(basic.show_login=='1'){ $("#id_show_login").attr("checked","checked");}  
+
+
+	$('#id_homeurl').html(getUrl())
+	
+	$("button").button({
+            icons: {primary: "ui-icon-check"}
+       });
+	$('#id_basic_save').click(function(){
+		$("#id_error").hide()
+		if ($('#id_page_limit').val()=='')
+		{
+			$("#id_error").css("display","block");
+			$("#id_error").html("<div style='background:red;width:300px;font-size:12px;color:#FFFFFF;'><img src='../media/img/icon_alert.gif'/>"+"{%trans '每页默认显示的记录条数不能为空'%}" +"</div>");
+
+		}
+		else
+			SaveOptions($('#id_edit_form1'),'basic')
+	});
+
+	
+});	
+	
+	
+	
+</script>
+

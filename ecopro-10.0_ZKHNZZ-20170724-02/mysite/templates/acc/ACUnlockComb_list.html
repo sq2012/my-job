@@ -1,0 +1,198 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+//options.disableCols=["0","12","13"];
+
+hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+hasImport={% if user|HasPerm:"iclock.import_ACUnlockComb" %}true{% else %}false{% endif %}
+ACGroup=[];
+jqOptions[g_activeTabID]=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='ACUnlockComb';
+jqOptions[g_activeTabID].sortname='UnlockCombID';
+options[g_activeTabID].dlg_width=400;
+options[g_activeTabID].dlg_height=280;
+function afterPost_ACUnlockComb(flag,obj)
+{
+	$("#id_edit_form",obj).find(":input[type=text]").each(function(i,elem){
+		$(this).val("");})
+}
+$(function(){
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+		processNewModel();
+	});
+	$("#"+g_activeTabID+" #queryButton").hide()
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowACUnlockComb();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowACUnlockComb();
+	});
+	$("#"+g_activeTabID+" #id_export").css('display','none');
+	$("#"+g_activeTabID+" #id_third").html("");
+	
+	$.ajax({ 
+				type: "POST",
+				url:"/acc/getData/?func=ACGroup",
+				dataType:"json",
+				success:function(json){
+					ACGroup=json;
+				}
+			});
+});
+//模糊查询
+function searchShowACUnlockComb(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+	var url=g_urls[g_activeTabID]+"?q="+escape(v)
+	savecookie("search_urlstr",url);
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+//得到ACTimeZones列表
+function getGroup_html()
+{
+	var options_html=""
+	for(i=0;i<ACGroup.length;i++)
+	{
+		if(i==0)
+			options_html+="<option value='"+ACGroup[i].GroupID+"' name='"+ACGroup[i].Name+"' selected>"+ACGroup[i].GroupID+"("+ACGroup[i].Name+")"+"</option>"
+		else
+			options_html+="<option value='"+ACGroup[i].GroupID+"' name='"+ACGroup[i].Name+"'>"+ACGroup[i].GroupID+"("+ACGroup[i].Name+")"+"</option>"
+			
+		
+	}
+	return options_html
+}
+
+function showState_ACUnlockComb(value)
+{
+   var block_html="<div id='emp_to_dev'>"
+   		+ 	"<div>"
+   		+ 	"<label>"+$.validator.format(gettext('Please Select {0}'),"{%trans "ACGroup"%}")+"</label>"
+   		+	"<div>"
+		+   "<input id='id_selvalue' type='text' style='display:none; width: 263px;' />"
+		+ 	"<select size=15 id='md_slt' style='width: 316px;height:245px'>"
+		+	getGroup_html()
+		+ 	"</select>"
+		+	"</div>"
+   		+ 	"</div>"
+   		+	"<div id='id_message'></div>"
+   		+ 	"</div>"
+   
+     
+   $(block_html).dialog({ modal:true,
+   						  width: 350,
+   						  height:415,
+   						  title:"{%trans "device ACGroup"%}",
+   						  buttons:[{id:"btnShowOK",text:gettext("Submit"),click:function(){setACGroup(value)}},
+   								 {id:"btnShowCancel",text:gettext("Cancel"),click:function(){$("#emp_to_dev").remove();}
+   								}],
+   						  close:function(){$("#emp_to_dev").remove();}		
+   						})
+}
+
+var setACGroup=function(value){
+	if (value==1)
+	{
+		$("#id_Group01").val($("#md_slt").val());
+		$("#emp_to_dev").remove();
+	}
+	else if(value==2)
+	{
+		$("#id_Group02").val($("#md_slt").val());
+		$("#emp_to_dev").remove();
+		
+	}
+	else if (value==3)
+	{
+		$("#id_Group03").val($("#md_slt").val());
+		$("#emp_to_dev").remove();
+	
+	}
+	else if (value==4)
+	{
+		$("#id_Group04").val($("#md_slt").val());
+		$("#emp_to_dev").remove();
+	}
+
+	else
+	{
+		$("#id_Group05").val($("#md_slt").val());
+		$("#emp_to_dev").remove();
+	
+	}
+	
+	
+}
+
+function strOfData_ACUnlockComb(data)
+{
+	return data[1];
+}
+<!-- function canEdit()
+{
+	if(!options.canEdit) return;
+	var rows=$("#id_grid").jqGrid("getCol",options.edit_col,true)
+	for(var i=0;i<rows.length;i++)
+	{
+		var id=rows[i].id;
+		var colData=rows[i].value;
+		var apage="<a class=\"can_edit\" href=\"#\" onclick=\"editclick('"+colData+"')\">"+colData+"</a>"
+		$("#id_grid").jqGrid('setRowData',id,{UnlockCombID:apage})
+	} -->
+
+	
+
+}
+function process_dialog_ACUnlockComb(obj)
+{
+	var html="<select id='id_UnlockCombID' name='UnlockCombID' class='valid' style='width:132px;'>"
+		html+=$("#id_UnlockCombID",obj).html()+"</select>";
+		$("#id_UnlockCombID",obj).parent().html(html);
+	
+	$("#id_Group01",obj).parent().parent().html("<th><label for='id_Group01'>{%trans 'Group01' %}</label></th>"
+		            +"<td><input type='text' id='id_Group01' value='"+($("#id_Group01",obj).val())+"' name='Group01' readonly/>"
+					+"<span id='aGetGroup1' align='center' style='color:green' onclick='showState_ACUnlockComb(1)'>[{%trans 'select ACGroup'%}]</span></td>");
+	$("#id_Group02",obj).parent().parent().html("<th><label for='id_Group02'>{%trans 'Group02' %}</label></th>"
+			            +"<td><input type='text' id='id_Group02' value='"+($("#id_Group02",obj).val())+"' name='Group02' readonly/>"
+						+"<span id='aGetGroup2' align='center' style='color:green' onclick='showState_ACUnlockComb(2)'>[{%trans 'select ACGroup'%}]</span></td>");
+	$("#id_Group03",obj).parent().parent().html("<th><label for='id_Group03'>{%trans 'Group03' %}</label></th>"
+			            +"<td><input type='text' id='id_Group03' value='"+($("#id_Group03",obj).val())+"' name='Group03' readonly/>"
+						+"<span id='aGetGroup3' align='center' style='color:green' onclick='showState_ACUnlockComb(3)'>[{%trans 'select ACGroup'%}]</span></td>");
+	
+	$("#id_Group04",obj).parent().parent().html("<th><label for='id_Group04'>{%trans 'Group04' %}</label></th>"
+			            +"<td><input type='text' id='id_Group04' value='"+($("#id_Group04",obj).val())+"' name='Group04' readonly/>"
+						+"<span id='aGetGroup4' align='center' style='color:green' onclick='showState_ACUnlockComb(4)'>[{%trans 'select ACGroup'%}]</span></td>");
+	$("#id_Group05",obj).parent().parent().html("<th><label for='id_Group05'>{%trans 'Group05' %}</label></th>"
+			            +"<td><input type='text' id='id_Group05' value='"+($("#id_Group05",obj).val())+"' name='Group05' readonly/>"
+						+"<span id='aGetGroup5' align='center' style='color:green' onclick='showState_ACUnlockComb(5)'>[{%trans 'select ACGroup'%}]</span></td>");
+	
+	
+	f=$(obj).find("#id_edit_form").get(0)
+	$(f).validate({
+			rules: {
+					"UnlockCombID": {"required":true}
+					//"SchName": {"required":true}
+				}
+			});
+	
+
+}
+
+
+
+{% endblock %}
+{% block extractButton %}
+      {% if user|HasPerm:"iclock.Upload_AC_Options" %}
+  
+    <LI id="id_to_device" class="button-timezone"  onclick='setToDevs("ACUnlockComb");'><SPAN></SPAN>{%trans "上传设置到设备"%}</LI>
+{%endif%}
+
+{% endblock %}

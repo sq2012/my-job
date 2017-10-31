@@ -1,0 +1,1741 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+<script type="text/javascript">
+{% block tblHeader %}
+hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+hasImport={% if user|HasPerm:"iclock.add_employee" %}true{% else %}false{% endif %}
+RegisterFP={% if user|HasPerm:"iclock.enroll_employee" %}true{% else %}false{% endif %}
+Upload_pictures={% if user|HasPerm:"iclock.Upload_pictures" %}true{% else %}false{% endif %}
+edit_privilege={% if user|HasPerm:"iclock.edit_privilege" %}true{% else %}false{% endif %}
+edit_MVerifyPass={% if user|HasPerm:"iclock.edit_MVerifyPass" %}true{% else %}false{% endif %}
+edit_Card={% if user|HasPerm:"iclock.edit_Card" %}true{% else %}false{% endif %}
+Comverify={% if user|HasPerm:"iclock.change_employee" %}true{% else %}false{% endif %}
+dtFields = "{{ dtFields }}"
+//jqOptions=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{ colModel }}
+jqOptions[g_activeTabID].sortname='DeptID,PIN';
+jqOptions[g_activeTabID].pager='#id_pager_employee';
+options.edit_col=1;   //从0开始
+tblName[g_activeTabID]='employee';
+currentState=-1;
+var is_super={% if request.user.is_superuser %}true{% else %}false{% endif %}
+
+State_employee=['{%trans "Male"%}','{%trans "Female"%}','{%trans "incumbent"%}','{%trans "dimission"%}','{%trans "已离岗"%}','{%trans "借调中"%}','{%trans "YFingerprint"%}','{%trans "Nfingerprint"%}','{%trans "YFacial"%}','{%trans "NFacial"%}','{%trans "Today entry"%}','{%trans "7 days entry"%}','{%trans "This month entry"%}','{%trans "This entry"%}','{%trans "entry date"%}','{%trans "Born date"%}','{%trans "Privilege"%}']
+State_Code=["M","F",0,1]
+app='{{app}}'
+if(app=='acc')
+    options[g_activeTabID].dlg_width=1240
+else
+    options[g_activeTabID].dlg_width=940
+
+options[g_activeTabID].dlg_height=510
+
+var role_json=[]
+function ReadCard_onclick_employee(htmlObj)
+{
+	var str;
+	result=ReadIDCard_employee()
+	try{
+		if (result.ret== 0)
+		{
+			//设置照片格式为Base64
+			//SynCardOcx1.SetPhotoType(2);
+			var nRet;
+			//设置读取格式为手动读取
+			//SynCardOcx1.SetReadType(0);
+			var i=0;
+					
+			$("#id_EName",htmlObj).val($.trim(result.Certificate.Name));
+			
+			if (result.Certificate.Sex=='男'){
+				$("#id_Gender",htmlObj).val('M');
+			}else if(result.Certificate.Sex=='女'){
+				$("#id_Gender",htmlObj).val('F');
+			}else{
+				$("#id_Gender",htmlObj).val('');
+			}
+			$("#id_PIN",htmlObj).val($.trim(result.Certificate.IDNumber));
+			$("#id_National",htmlObj).val(result.Certificate.Nation);
+			$("#id_Address",htmlObj).val($.trim(result.Certificate.Address));
+			var s=result.Certificate.Birthday.substring(0,4)+'-'+result.Certificate.Birthday.substring(5,7)+'-'+result.Certificate.Birthday.substring(8,10);
+			$("#id_Birthday",htmlObj).val(s);
+			$("#id_img",htmlObj).attr("src","data:image/jpeg;base64,"+result.Certificate.Base64Photo);
+			$("#id_identity_img",htmlObj).val(result.Certificate.Base64Photo);
+		}
+		else
+		{
+			alert('没有找到身份证读卡器或者拿开身份证重放');
+		}
+	}catch(e){
+		alert(e.name+' '+e.message);
+	}
+}
+
+function ReadIDCard_employee()
+{
+	var url123="http://127.0.0.1:24008/ISSOnline/ScanReadIdCardInfo?OP-DEV=1&CMD-URL=4&DllType=1"
+	result={ret:-1}
+	$.ajax({
+            type: "GET",
+            url:url123,
+			async: false,
+            data:'',
+            dataType:"json",
+            success:function(ret){
+				result=ret
+           },
+            error:function(request, errorMsg){
+				//alert(gettext('请安装驱动或启动该服务!'));
+				//alert(errorMsg)
+				$("#id_error").html('<ul class="errorlist"><li>请安装驱动或启动该服务！</li></ul>').show();
+           }
+        });
+    return result;
+}
+function showState_employee(value)
+{
+    var d = new Date();
+    var d1 = new Date(d.valueOf() - 7*24*60*60*1000);
+    
+    td=d.getFullYear()
+        +"-"
+        +(d.getMonth()+1<10?"0"+(d.getMonth()+1):d.getMonth()+1)
+        +"-"
+        +d.getDate()
+    td7=d1.getFullYear()
+        +"-"
+        +(d1.getMonth()+1<10?"0"+(d1.getMonth()+1):d1.getMonth()+1)
+        +"-"
+        +d1.getDate()
+
+	//if(currentState==value) return;
+	currentState=value;
+	createFilter_employee();
+	if (value>=0 && value<2)
+		var url=g_urls[g_activeTabID]+"?Gender__exact="+State_Code[value];
+    else if (value>=2 && value<4)
+        var url=g_urls[g_activeTabID]+"?OffDuty="+State_Code[value];
+    else if (value==4)
+        var url=g_urls[g_activeTabID]+"?OffPosition=1";//已离岗
+    else if (value==5)
+        var url=g_urls[g_activeTabID]+"?bstate=0";//借调中
+    else if (value==6)
+        var url=g_urls[g_activeTabID]+"?Finger=1";//有指纹
+    else if (value==7)
+        var url=g_urls[g_activeTabID]+"?Finger=0";//无指纹
+    else if (value==8)
+        var url=g_urls[g_activeTabID]+"?Face=1";//有面部
+    else if (value==9)
+        var url=g_urls[g_activeTabID]+"?Face=0";//无面部
+    else if (value==10)
+        var url=g_urls[g_activeTabID]+"?Hiredday="+td;
+    else if (value==11)
+        var url=g_urls[g_activeTabID]+"?Hiredday__gte="+td7+"&Hiredday__lte="+td;  
+    else if (value==12)
+        var url=g_urls[g_activeTabID]+"?Hiredday__year="+d.getFullYear()+"&Hiredday__month="+(d.getMonth()+1<10?"0"+(d.getMonth()+1):d.getMonth()+1);  
+    else if (value==13) 
+        var url=g_urls[g_activeTabID]+"?Hiredday__year="+d.getFullYear() 
+    else if (value==14)
+    {
+        createDateRangeDlg1(gettext('Please Input'));
+        $("#btnShowOK").click(function() {
+            var fromTime=$("#id_date_range_from").val();
+            var toTime=$("#id_date_range_to").val();
+            var url="";
+            if(fromTime=="" ||toTime=="")
+                url="";
+            else{
+                var isfromTime=false;
+                var istoTime=false;
+                if(fromTime.length<=11)
+                    isfromTime=valiDate(fromTime)
+                else
+                    isfromTime=valiDateTimes(fromTime)
+                    
+                if(toTime.length<=11)
+                    istoTime=valiDate(toTime)
+                else
+                    istoTime=valiDateTimes(toTime)
+                url=(isfromTime?("?Hiredday__gte="+fromTime):"")+(istoTime?("&Hiredday__lte="+toTime):"");
+            }
+            if(url=="") url="Hiredday__isnull=True"
+            var url=g_urls[g_activeTabID]+url;
+		show_style=$('#show_style').val()
+		if(show_style=='photo')
+		{
+		    urlStr=urlStr+'&show_style=photo'
+		 $("#id_grid_picture").jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+		}
+		else		
+	            $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype: "json"}).trigger("reloadGrid");
+            $("#emp_tmp_to_dev").remove();
+            
+            });
+    }
+    else if (value==15)
+    {
+        createDateRangeDlg1(gettext('Please Input'));
+        $("#btnShowOK").click(function() {
+            var fromTime=$("#id_date_range_from").val();
+            var toTime=$("#id_date_range_to").val();
+            var url="";
+            if(fromTime=="" ||toTime=="")
+                url="";
+            else{
+                var isfromTime=false;
+                var istoTime=false;
+                if(fromTime.length<=11)
+                    isfromTime=valiDate(fromTime)
+                else
+                    isfromTime=valiDateTimes(fromTime)
+                    
+                if(toTime.length<=11)
+                    istoTime=valiDate(toTime)
+                else
+                    istoTime=valiDateTimes(toTime)
+                url=(isfromTime?("?Birthday__gte="+fromTime):"")+(istoTime?("&Birthday__lte="+toTime):"");
+            }
+            if(url=="") url="Birthday__isnull=True"
+            var url=g_urls[g_activeTabID]+url; 
+            $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+            $("#emp_tmp_to_dev").remove();
+            
+            });
+    }
+    else if (value==16)
+    {
+        createPrivilegeDlg(gettext('Filtering employee by privilege'));
+        $("#btnShowOK").click(function() {
+	    var privilege=$("#sltShow").val();
+            var url="";
+            if(privilege=="")
+                url="";
+            else{
+                url="?Privilege__exact="+privilege;
+            }
+            if(url=="") url="?Privilege__isnull=True"
+            var url=g_urls[g_activeTabID]+url; 
+            $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+            $("#emp_tmp_to_dev").remove();
+            
+            });
+    }    
+	else
+		var url=g_urls[g_activeTabID];
+    savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function createFilter_employee(){
+
+	html="<li style=' border: 0px solid white;'><a href='#' style='color: #000;background-color:white !important;padding-left:0;height: 22px;'>{% trans 'Personnel state' %}</a>"
+		+"<ul><li "+(currentState==-1?"class='selected'":"")+"><a href='#' onclick='showState_employee(-1)'>{%trans "All"%}</a></li>";
+	for(i=0;i<State_employee.length;i++)
+		html+="<li "+(currentState==i?"class='selected'":"")+"><a href='#' onclick='showState_employee("+i+")'>"+State_employee[i]+"</a></li>";
+    
+	$("#"+g_activeTabID+" #id_filterbar").html(html+'</ul></li>');
+}
+function showphotodiv(obj,photourl)
+{	
+	$("#id_tip").html("<img src="+photourl+" style='width:300px;height:400px;' />");
+	var offset=$(obj).offset();
+	lefts=offset.left-520
+	if($("#id_tip").css("visibility")=="hidden"){
+		$("#id_tip").css({"z-index":1024,"visibility":"visible","position":"absolute","top":(30),"left":(lefts)})
+		$("#id_tip").mouseover(function(){
+			$(this).css({"z-index":1024,"visibility":"visible","position":"absolute","top":(30),"left":(lefts)})
+		}).mouseout(function(){
+			$("#id_tip").css("visibility","hidden");
+		});
+	}
+	else
+		$("#id_tip").css("visibility","hidden");
+}
+function dropphotodiv()
+{
+	$("#id_tip").css("visibility","hidden")
+}
+/*
+function save_finger_data(empPin, fingers, templates, fptype)
+{
+    var querystr="PIN="+empPin+"&fingers="+fingers+"&templates="+encodeURIComponent(templates)+"&fptype="+fptype;
+    $.ajax({
+        type: "POST",
+        url: "/iclock/att/savefingerdata/",
+        data: querystr,
+        dataType: "json", 
+        success: function(jsonResult) {
+        }
+    });
+}
+*/
+function afterPost_employee(flag,obj)
+{
+    //var pin = $("#id_PIN").val();
+    //var fingers =$("#id_finnger10").val();
+    //var templates =$("#id_template10").val(); 
+    //var fptype = $("#id_fptype").val();
+    //save_finger_data(pin, fingers, templates, fptype);
+    
+    $("#id_edit_form",obj).find(":input[type=text]").each(function(i,elem){
+        if(this.id!='id_National'&&this.id!='id_DeptID')
+       $(this).val("");
+	   })
+	if($('#id_show_style li').attr('class')!='show_style_table_focus') {
+		reloadData('picture')
+	}
+}
+//function beforePost(obj,actionName){
+//	var flag=true;
+//	var tmp =$("#id_Birthday",obj).val()
+//    var tempdate= new Date()
+//    var birth =tmp.split("-");
+// 	if(parseInt(birth[0])>tempdate.getFullYear()||parseInt(birth[0])<1900||parseInt(birth[1])>12||parseInt(birth[1])<1||parseInt(birth[2])<1||parseInt(birth[2])>31){
+//		$("#id_error",obj).css("display","block");
+//		$("#id_error",obj).html("<ul class='errorlist'><li>{%trans 'Invalid birthday' %}</li></ul>");					
+//		flag=false;
+//	}
+//	return flag
+//}
+function    show_table_data()
+{
+    var html=	"<table id='id_grid_employee' >	</table>"
+	+"<div id='id_pager_employee'></div>"
+    $("#"+g_activeTabID+" .module").html(html)    
+    $("#"+g_activeTabID+" #id_toolbar").show()
+    loadNULLPage('#id_grid_employee')	
+
+}
+function   show_photo_data()
+{
+    var html="<div id='id_picture_info'><table id='id_grid_picture'>	</table>"
+			+"<div id='id_pager_picture'></div>"
+			+"</div>"
+    $("#"+g_activeTabID+" #id_toolbar").hide()
+
+    $("#"+g_activeTabID+" .module").html(html)
+	var jqOptions_record=copyObj(jq_Options);
+		var hcontent=$("#"+g_activeTabID+" #id_content").height();
+		var hbar=$("#"+g_activeTabID+" #id_top").height();
+		var height=hcontent-hbar-65;
+		if (groupHeaders.length>0)
+		 height=height-30;
+		
+		if(typeof(Custom_Jqgrid_Height)!='undefined'&&Custom_Jqgrid_Height!=""){
+			jqOptions_record.height=Custom_Jqgrid_Height;
+		}else{jqOptions_record.height=height;}
+	jqOptions_record.sortname='DeptID,PIN';
+	jqOptions_record.pager='id_pager_picture'
+	jqOptions_record.colModel=[
+		{'name':'id','hidden':true},
+		{'name':'p0','sortable':false,'width':150,'title':false,'resizable':false,'align':'center','label':''},
+		{'name':'p1','sortable':false,'width':150,'resizable':false,'title':false,'label':''},
+		{'name':'p2','sortable':false,'width':150,'resizable':false,'title':false,'label':''},
+		{'name':'p3','sortable':false,'width':150,'resizable':false,'title':false,'label':''},
+		{'name':'p4','sortable':false,'width':150,'resizable':false,'title':false,'label':''},
+		{'name':'p5','sortable':false,'width':150,'resizable':false,'title':false,'label':''}
+	]
+		jqOptions_record.datatype='local'
+
+		jqOptions_record.multiselect=false
+		jqOptions_record.altRows=true
+		jqOptions_record.altclass='altclass'
+		jqOptions_record.hoverrows=false
+		//jqOptions_record.caption=moment().format('YYYY-MM-DD')+' 照片...'
+		$("#id_grid_picture").jqGrid(jqOptions_record);
+   
+    
+    
+}
+
+
+
+function getSelected_empNames_ex(){
+	var emp=$("#id_grid_"+tblName[g_activeTabID]).jqGrid('getGridParam','selarrrow');
+	var empNames=[];
+	if(typeof emp=='undefined') return empNames;
+	for(var i=0;i<emp.length;i++)
+	{
+		pin=$("#id_grid_"+tblName[g_activeTabID]).jqGrid('getCell',emp[i],4);
+		empNames.push(pin)
+	}
+
+return empNames;
+}
+function getSelected_empPin_ex(){
+	var emp=$("#id_grid_"+tblName[g_activeTabID]).jqGrid('getGridParam','selarrrow');
+	var empNames=[];
+	if(typeof emp=='undefined') return empNames;
+	
+	for(var i=0;i<emp.length;i++)
+	{
+		pin=$("#id_grid_"+tblName[g_activeTabID]).jqGrid('getCell',emp[i],3);
+		empNames.push(pin)
+	}
+
+return empNames;
+}
+
+
+
+function saveEmpComverify(){
+		       $.blockUI({title:'',theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans '请稍等......'%}</br></h1>'});
+			var emp=getSelectedIDs('')
+			var treeObj = $.fn.zTree.getZTreeObj("showTree_");
+			var nodes = treeObj.getSelectedNodes();
+			var deptIDs='';
+			var deptName=''
+			if (nodes.length>0)
+			{
+			    deptIDs=nodes[0].id
+			    deptName=nodes[0].name;
+			}
+			
+			$("#id_error_sec").css("display","none");
+
+			var ischecked=0;
+			if($("#id_cascadecheck_"+page_tab).prop("checked"))
+				ischecked=1;
+			var queryStr=$("#id_edit_form").formSerialize()+"&isContainChild="+ischecked+"&UserIDs="+emp+"&deptIDs="+deptIDs;
+			$.ajax({ type: "POST",
+				url: "/iclock/att/saveEmpComverify/",
+				data:queryStr,
+				dataType:"json",
+				success: function(ret){
+				$("#id_error_sec").css("display","block");
+				$("#id_error_sec").html("<ul class='errorlist'><li>"+ret.message+"</li></ul>");
+				},
+				error: function(request, errorMsg){
+					 alert($.validator.format(gettext('Operating failed for {0} : {1}'), options.title, errorMsg));
+					}
+			});
+			$.unblockUI();
+}
+
+function getVerifyMethod_html()
+{
+	var options_html="";
+	for(i=0;i<verifymethod.length;i++)
+		options_html+="<option value='"+verifymethod[i].id+"'>"+verifymethod[i].Name+"</option>"
+	return options_html;
+}
+
+	
+function showEmpComverifyDlg(eTitle)
+{
+		var block_html="<div id='EmpComverify' >"
+			+"<div class='dcontent'><form id='id_edit_form'>"
+			+"<table align='center'>"
+				+"<tr><th><label for='comverify' class='required'>{% trans '验证方式:'%}</label></th>"
+				+"<td><select  id='id_comverify'  name='comverify' style='width:135px !important;'>"
+
+				+"</select></td></tr>"
+				+"</tr>"
+						
+			+"</table></form>"
+			+"<span id='id_error_sec'></span>"
+			+"</div>"
+
+		$.ajax({ 
+			type: "POST",
+			url:"/iclock/att/getData/?func=verifymethod",
+			dataType:"json",
+			success:function(json){
+				 verifymethod=json;
+				 $("#id_comverify").html(getVerifyMethod_html())
+			}
+		});			
+			
+
+		$(block_html).dialog({modal:true,
+			width: 300,
+			height:200,
+			maxWidth:300,
+			title:"{% trans "修改验证方式  " %}"+"("+eTitle+")",
+			close:function(){$(this).dialog("destroy");},
+			buttons:[
+			    {id:"btnShowOK",text:'{% trans "save and return" %}',click:function(){saveEmpComverify();}},
+			    {id:"btnCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}
+			]
+		});
+
+}
+
+
+
+
+ 
+function edit_comverify(){
+		//var emp=$("#id_grid").jqGrid('getGridParam','records')
+		var emp=getSelectedIDs('')
+		var treeObj = $.fn.zTree.getZTreeObj("showTree_");
+		var nodes = treeObj.getSelectedNodes();
+		var deptIDs='';
+		var deptName=''
+		if (nodes.length>0)
+		{
+		    deptIDs=nodes[0].id
+		    deptName=nodes[0].name;
+		}
+		
+		var empNames=getSelected_empNames_ex();
+		var empPin=getSelected_empPin_ex();
+		
+		$("#isTmporary").val(0)
+		var isError=false		//validate_form(1);
+		if(isError)
+		{	
+			alert("{%trans 'Please check that you select one or more employees or click department and the date is validate and the Beginning date is earlier than the Ending date!'%}");
+		}
+		else{
+			var action=false;
+			if(emp.length<=0){
+				totalRecCnt_emp=$("#id_grid_"+tblName[g_activeTabID]).jqGrid('getGridParam','records')
+				if(totalRecCnt_emp>0)
+					action=confirm("{%trans "确定对如下单位及下级单位的所有人员进行修改吗?"%}\n"+deptName)
+				else
+				{
+					alert(deptName+"  "+"{%trans 'no employee'%}");
+				}
+			}
+			if(action ||emp.length>0){
+
+				$("#id_error").css("display","none");
+
+				queryStr="emp="+(emp.length>0?emp[0]:'')+"&deptIDs="+deptIDs
+				var eTitle=""
+				if(emp.length>0){
+					for(var t=0;t<emp.length;t++)
+					{
+						eTitle+=empNames[t]+"["+empPin[t]+"]"
+						if (t<5)
+							eTitle+=" "
+						else
+						{
+							eTitle+="..."
+							break
+						}
+					}
+				}
+				else
+					eTitle+="{%trans 'By Department'%}:"+deptName
+				
+				showEmpComverifyDlg(eTitle)
+			}
+		}
+	}
+
+
+
+
+
+
+
+function Register_dialog(){
+    addZKOnline()
+   // $("#id_zkonline").remove()
+    //$("#"+g_activeTabID+" #id_photo").after("<div style='display:none;' id='id_zkonline'>"
+    //                        +"<OBJECT classid='clsid:A318A9AC-E75F-424C-9364-6B40A848FC6B'  style='width:20px;height:20px;' id=zkonline >"
+    //                        +"</OBJECT>"
+    //                        +"<COMMENT>"
+    //                        +"<EMBED type='application/x-eskerplus' classid='clsid:A318A9AC-E75F-424C-9364-6B40A848FC6B' codebase='ZKOnline.ocx' width=20 height=20></EMBED>"
+    //                        +"</COMMENT>"
+    //                    +"</div>"
+    //);
+    //var title=gettext("Register");
+    createDlgdeptfor('employee_Register')
+    $('#dlg_for_query_employee_Register').dialog({title:title,
+    buttons:[{id:"id_registers",text:gettext("Register"),click:function(){registerfinger("employee_Register")}},{id:"btnShowOK",text:gettext('提交'),click:function(){registerfingerdata('employee_Register');}},
+    {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+    }] })
+   getDeptEmpData('employee_Register',$('#dlg_dept_body_employee_Register').height()-60,true)
+    
+    var html="<div id='RegisterTitle' style='width:400px'><img src='{{ MEDIA_URL }}/img/hint.gif' />{%trans 'If you can use the function,you will support URU4000/4000B、ZK6000 and setup driver.Now only support IE' %}<br /><div id='Algorithmversion'></div><div id='id_message' style='width:200px'></div>"
+    +"<input type='hidden' id='id_template' value='' name='templates' />"
+    +"<input type='hidden' id='id_fingerid' value='' name='fingerid' />"
+    +"</div>"
+   $("#dlg_other_employee_Register").html(html)
+    $("#RegisterTitle").position({
+    	  my: "left top",
+    	  at: "left top",
+    	  of: "#dlg_other_employee_Register"
+    	});
+    $("#RegisterDb").position({
+    	  my: "left top",
+    	  at: "right top",
+    	  of: "#RegisterTitle"
+    	});
+    $("#id_message").position({
+    	  my: "right top",
+    	  at: "right top",
+    	  of: "#dlg_other_employee_Register"
+    	});
+    if({{"opt_basic_algversion"|get_params}}=='1'){
+        $("#Algorithmversion").html("{% trans 'Fingerprint algorithm for 10.0'%}").css('color','red');
+    }else{
+        $("#Algorithmversion").html("{% trans 'Fingerprint algorithm for 9.0'%}").css('color','red');
+    }
+}
+
+function registerfingerdata(pagename){
+    var emp=getSelected_emp_ex(pagename);
+    var template=$("#id_template").val();
+    var fingerid=$("#id_fingerid").val();
+    if(emp==""){
+        $("#id_message").css("display","block").css("display","block");
+        $("#id_message").html("{%trans 'Please click department or select employee !'%}");
+        return false;
+    }
+    if(template==""){
+        $("#id_message").html("{%trans 'Please Register Fingerprint'%}").css('color','red').css("display","block");
+        return false;
+    } 
+    var querystr="UserIDs="+emp+"&templates="+encodeURIComponent(template)+"&fingerid="+fingerid;
+    $.ajax({type: "POST",
+    	url: "/iclock/att/saveFingerprint/",
+    	data:querystr,
+    	dataType:"json",
+    	success: function(ret){
+    					$.unblockUI()
+                        $("#id_message").html(ret.message).css('color','red').css("display","block");
+                        $("#id_template").val("")
+                        $("#id_fingerid").val("")
+    				},
+    		error: function(){ $.unblockUI();alert($.validator.format(gettext('Operating failed for {0} !'),options.title));}
+    		});
+}
+function registerfinger(pagename){
+      $("#id_message").hide();
+      var emp=getSelected_emp_ex(pagename)
+      if(emp==""){
+          $("#id_message").css("display","block");
+          $("#id_message").html("{%trans 'Please click department or select employee !'%}").css('color','red');
+          return false;           
+      }
+      if(typeof zkonline=="undefined"){
+          $("#id_message").html("{%trans 'The browser does not support this function'%}").css('color','red').css("display","block");
+          return false;
+      }else{
+          if(typeof zkonline.RegisterTemplate=="undefined"){
+              $("#id_message").html("{%trans 'Please check ZKOnline client already installed'%}").css('color','red').css("display","block");
+              return false;
+          }else{
+                  zkonline.FPEngineVersion=10;
+              if({{"opt_basic_algversion"|get_params}}=='0')
+	      {
+                  zkonline.FPEngineVersion=9;
+	      }	  
+		  
+	    if($("#id_template").val()=="")
+	    zkonline.CheckFinger='0000000000'
+    
+    
+    $.ajax({
+	type: "POST",
+	url:"/iclock/att/getData/?func=fingerids&userid="+emp,
+	dataType:"json",
+	success: function(json){
+			zkonline.CheckFinger=json.finger
+
+				    if(zkonline.Register())
+				    {
+					fingerids=[];template=[];
+					for(i=1;i<=10;i++)
+					{
+						var sTemp=zkonline.GetRegFingerTemplateEx(zkonline.FPEngineVersion,i);
+						 if(sTemp.length>200){
+								    fingerids.push(i);template.push(sTemp);
+								}
+					}
+				       this.alt1=fingerids;this.alt=template;
+			  
+				      $("#id_template").val($(this).prop('alt'));
+				      $("#id_fingerid").val($(this).prop('alt1'));
+			  
+				    }
+				    
+				//}
+
+
+
+
+	    }});
+    
+	  }
+    
+      /*
+      else{
+    if($("#id_template").val()=="")
+    zkonline.CheckFinger='0000000000'
+    if(zkonline.Register()){
+          fingerids=[];template=[];
+          for(i=1;i<=10;i++){
+              if(zkonline.GetRegFingerTemplate(i).length>2){
+                  fingerids.push(i);
+    		var tmp=zkonline.GetRegFingerTemplate(i)				
+    		template.push(zkonline.ConvertTemplateToEmStr(tmp));
+                              }
+                          }
+        this.alt1=fingerids;
+    	this.alt=template;
+    	
+    	$("#id_template").val($(this).prop('alt'));
+        $("#id_fingerid").val($(this).prop('alt1'));
+    
+                      }
+                  }
+              }
+        */
+          }
+	
+
+}
+
+function showResponsePhoto(ret, statusText, xhr, $form){
+
+	//$("#id_message").html(ret.message).css('color','red').css("display","block");
+    alert('提交成功！');
+}
+
+function photo_dialog(){
+    var title=gettext("Upload pictures");
+    createDlgdeptfor('employee_pictures')
+    $('#dlg_for_query_employee_pictures').dialog({title:title,
+    buttons:[{id:"btnShowOK",text:gettext('提交'),click:function(){uploadpic('employee_pictures');}},
+    {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+    }] })
+    createDlgother_employee('employee_pictures')
+    getDeptEmpData('employee_pictures',$('#dlg_dept_body_employee_pictures').height()-52,true)
+}
+/*
+function getDeptEmpData(page,height,tag){
+	if(height==undefined){
+		height=355
+	}
+	var zTree = $.fn.zTree.getZTreeObj("showTree_"+page);
+	zTree.setting.check.enable = false;
+	$("#searchbydept_"+page).hide()
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		var deptID=treeNode.id;
+		var deptName=treeNode.name;
+		$.cookie("dept_ids",deptID, { expires: 7 });
+		$("#hidden_selDept").val(deptID);
+		$("#hidden_depts").val(deptID);
+		$("#hidden_deptsName").val(deptName)
+		var ischecked=0;
+		if($("#id_cascadecheck_"+page).prop("checked"))
+			ischecked=1;
+		urlStr="/iclock/data/employee/?deptIDs="+deptID+"&isContainChild="+ischecked+'&OffDuty=0'
+		savecookie("search_urlstr",urlStr);
+		var jqOptions2=copyObj(jq_Options);
+		$.ajax({
+			type:"GET",
+			url:"/iclock/att/getColModel/?dataModel=employee",
+			dataType:"json",
+			data:'',
+			success:function(json){
+				jqOptions2.colModel=json['colModel']
+				jqOptions2.height=height
+				if(tag){
+					jqOptions2.multiselect=false
+				}
+				jqOptions2.url=urlStr;
+				jqOptions2.sortname='DeptID,PIN';				
+				jqOptions2.pager="#id_pager_"+page;
+				renderGridData(page,jqOptions2)
+			}
+		});
+	}
+}
+*/
+function uploadpic(pagename){
+       var f=$("#id_fileUpload").val();
+         var deptIDs=getSelected_dept("showTree_"+pagename);
+         var emp=getSelected_emp_ex(pagename);
+         if(deptIDs==""||emp==""){
+         			$("#id_message").css("display","block");
+         			$("#id_message").html("<div><ul class='errorlist'><li id='id_error'>{%trans '请选择一个人!'%}</li></ul></div>");
+                     return false;
+         }
+         var fs=[];
+         if(f!=undefined||f!=""){
+             fs=f.split("\\");
+         }
+         var fss=fs[fs.length-1];
+         if(f!=undefined||f!=""){
+             fs=f.split(".");
+             if(fss!=undefined||fss!=""){
+                 fs=fss.split(".");
+             }
+         }
+         if(f=="")
+         	{
+         		$("#id_message").html("<div><ul class='errorlist'><li id='id_error'>{%trans 'Please select picture'%}</li></ul></div>");
+         		return false;
+         	}
+        else if(f.substring(f.length-4)!='.jpg'){
+            $("#id_message").html("<div><ul class='errorlist'><li id='id_error'>{%trans '照片扩展名必须为jpg'%}</li></ul></div>");
+            return false;
+        }
+         else
+         	{
+                var opts = { 
+                            url:'/iclock/att/savePhoto/?PIN='+emp,
+                            dataType:'json',
+                            success: showResponsePhoto
+                			};
+                 $("#frmPhotoDb").ajaxSubmit(opts); 
+                 
+         	}
+    return false;
+
+}
+function createDlgother_employee(page){//添加附件条件
+	var html="<div id='faceorfp' style='width:400px'>"
+    +"<form id='frmPhotoDb' method='POST' action='/iclock/att/savePhoto/' enctype='multipart/form-data'>"
+        +"<table id='id_setField'>"
+	+"<tr><td colspan='3'>{%trans 'Picture'%}<input type='file' id='id_fileUpload' name='fileToUpload' size='15'/></td><td>{%trans '照片扩展名必须为jpg' %}</td></tr>"
+        +"</table>"
+    +"</form>"
+	+"<span id='id_message'></span></div>"
+	$("#dlg_other_"+page).html(html)
+}
+
+
+//人员模糊查询
+function searchShowEmp_emp(){
+    var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+    if (flag!='cansearch'&&flag!='defvalue') return;
+    if (flag!='defvalue')
+        var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+    else
+        var v=""
+    var url="/iclock/data/employee/?q="+escape(v)
+	savecookie("search_urlstr",url);
+	var show_style=$("#"+g_activeTabID+" #show_style").val()
+	if(show_style=='photo')
+	{
+	    urlStr=url+'&show_style=photo'
+	 $("#id_grid_picture").jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+	}
+	else		
+	
+	    $("#id_grid_employee").jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+function createQueryDlg_employee(){
+	createDlgdeptfor10('employee_search',1)
+	$('#dlg_for_query_employee_search').dialog({
+	buttons:[{id:"btnShowOK",text:gettext('搜索'),
+	  click:function(){searchbydept_employee('employee_search');$(this).dialog("destroy"); }},
+	 {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+	}] })
+}
+
+function searchbydept_employee(page){
+    var dept_ids=getSelected_dept("showTree_"+page)
+    if (dept_ids!=null){
+    	if(dept_ids==undefined||dept_ids==''){
+    		alert("{% trans "请选择单位" %}")
+    		return false;
+    	}
+    }else{
+    	alert("{% trans "请选择单位" %}")
+    	return false;
+    }
+    var ischecked=0;
+    if($("#id_cascadecheck_"+page).prop("checked"))
+    	ischecked=1;
+    urlStr="deptIDs="+dept_ids+"&isContainChild="+ischecked
+    var emp=getSelected_emp_ex("sel_employee_search");
+    if(emp.length>0){
+	urlStr="id__in="+emp
+    }
+    var url="/iclock/data/employee/?"+urlStr
+	savecookie("search_urlstr",url);
+	if ($('#id_show_style li').attr('class')=='show_style_table_focus'){
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:'json'}).trigger("reloadGrid");
+	}
+	else{
+		url +='&show_style=photo'
+		$("#id_grid_picture").jqGrid('setGridParam',{url:url,datatype:'json'}).trigger("reloadGrid");
+	}
+}
+
+function selectDevAct(action)
+{	
+	sn=prompt("{%trans "Sequence of input devices"%}：\n"+hd, "");
+	if(!sn) return '';
+	return '?action='+action+'&SN='+sn;
+}
+
+function toDev(url)
+{
+	createDialog("miniData?key=iclock", "{%trans "Transfer employee to the device"%}", "{%trans "device"%}", 450, url);		
+}
+
+function hide_batchOp() {//隐藏部分批处理动作
+//	if ("{{ permissions }}" == "22") { //机构管理员
+//		str = "op={%trans "Deleted from the device employee"%}op={%trans "Change employee department"%} ";
+//		$(".selectedDataOp a").each(function (i){
+//			if (str.indexOf($(this).html()) > -1)
+//				$(this).hide();
+//		});
+//	};
+}
+
+function selectUnitAct()
+{
+	sn=prompt("{%trans "Input Department #"%}：", "");
+	if(!sn) return '';
+	return '?action=dept&department='+sn;
+}
+
+function strOfData_employee(data)
+{
+	return stripHtml(data.PIN)+" "+data.EName;
+}
+
+function actionToDevWithin(url, keys)
+{
+	var fromTime=$("#id_date_range_from").val();
+	var toTime=$("#id_date_range_to").val();	
+	if(toTime!="")
+	{
+		if(toTime.length<10 && toTime.indexOf("-")==-1){ alert(gettext("Must input a valid date!")); return}
+	}
+	if(toTime=="")
+	{
+		alert(gettext("Must input a valid date!"))
+		return;
+	}
+	var urlStr=g_urls[g_activeTabID]+'?action=toDevWithin&SN='+keys+'&start='+fromTime+'&end='+toTime;
+
+    $.blockUI({theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans "Please wait..."%}<br /></h1>'});
+    $.ajax({type: "POST",
+            url: urlStr,
+            data: url.ret,
+            dataType:"json",
+            success: actionSuccess,
+            error: function(){alert($.validator.format(gettext('Operating failed for {0} !'),options.title)); $.unblockUI();}
+            });
+}
+function ligang1(){
+                var block_html="<div id='dlg_to_Exit'>"
+
+                    +"<table width=100%>"
+                                        
+                                        +"<tr><td colspan='2'><div style=''>{%trans '离岗时间'%}&nbsp;&nbsp;<input id='id_date_range_from' width='19' style='width:135px !important;' readonly='readonly'/></div></td>"
+                                        +"</tr><tr><td colspan='2'><div style=''>{%trans '离岗人员'%}&nbsp;&nbsp;<input id='id_renyuan' width='19' style='width:135px !important;' readonly='readonly'/></div></td>"
+										+"</tr>"
+                                        
+                                        +"<tr><td colspan='2'>&nbsp;</td></tr>"
+                    +"</table>"
+					+  "<span  id='id_error'></span>"
+					+       "</div>"
+                $(block_html).dialog({modal:true,
+						  width: 600,
+						  height:220,
+						  title:"{% trans '人员离岗' %}",
+						  buttons:[{id:"btnShowOK",text:'{%trans "Submit" %}',
+								  click:subdata},
+								 {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("close"); }
+								}],
+						  close:function(){$("#dlg_to_Exit").remove();}		
+						})
+
+                td=moment().format('YYYY-MM-DD HH:mm:ss')
+                $("#id_date_range_from").val(td);
+				//emp=$("#id_grid_"+tblName[g_activeTabID]).jqGrid('getGridParam','selarrrow');
+				var ss=$("#id_grid_"+tblName[g_activeTabID]).jqGrid('getGridParam','multiselect')
+	            var bb=[];
+	            if(ss){
+		            var data=$("#id_grid_"+tblName[g_activeTabID]).jqGrid('getGridParam','selarrrow');
+	                for(i=0; i<data.length; i++){
+		                var rowData=$("#id_grid_"+tblName[g_activeTabID]).jqGrid('getRowData',data[i]);
+		                bb.push(rowData.EName);
+		            }
+		             if(typeof bb=='undefined') bb=[]
+	            }else{
+		           var bb=$("#id_grid_"+tblName[g_activeTabID]).jqGrid('getGridParam','selrow');
+		           if(typeof bb=='undefined') bb=''
+	             }
+				$("#id_renyuan").val(bb);
+		//$('#id_date_range_from').datetimepicker(datetimepickerOptions)
+		function subdata(){
+		var ET=$("#id_date_range_from").val();
+		var ids = $("#id_grid_"+tblName[g_activeTabID]).jqGrid('getGridParam','selarrrow');
+			var datas = ''
+			for (var i=0; i<ids.length;i++) {
+				var v = ('&K='+ids[i])
+				datas += v
+			}
+			datas = datas.substring(1)
+			datas=datas+'&OffPositionDate='+ET;
+			//datas = datas.substring(1)
+		//var urlStr='/iclock/jiezhuang/USER_SPEDAY/'+'&ProcessingTime='+ET+'&comments='+escape(EA);
+		$.blockUI({title:"{% trans '人员离岗' %}",theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}</br></h1>'});
+		$.ajax({type: "POST",
+			url: '/iclock/ligang/employee/',
+			data:datas,
+			dataType:"json",
+			success: function(retdata){
+					if(retdata.ret==0)
+					{	
+                                                $.unblockUI();
+                                                $("#dlg_to_Exit").remove();
+                                                reloadData();
+
+					}else{
+							alert(retdata.message);
+                            $.unblockUI();
+                            $("#dlg_to_Exit").remove();
+                            reloadData();
+						}},
+			error: function(){
+			$.unblockUI();alert($.validator.format(gettext('Operating failed for {0} !'),options[g_activeTabID].title));}
+			});
+                }
+        }
+function cheligang1(){
+                var block_html="<div id='dlg_to_Exit'>"
+
+                    +"<table width=100%>"
+                                        
+                                        
+                                        +"<tr><td colspan='2'><div style=''>{%trans '离岗人员'%}&nbsp;&nbsp;<input id='id_renyuan' width='19' style='width:135px !important;' readonly='readonly'/></div></td>"
+										+"</tr>"
+                                        
+                                        +"<tr><td colspan='2'>&nbsp;</td></tr>"
+                    +"</table>"
+					+  "<span  id='id_error'></span>"
+					+       "</div>"
+                $(block_html).dialog({modal:true,
+						  width: 600,
+						  height:220,
+						  title:"{% trans '人员离岗恢复' %}",
+						  buttons:[{id:"btnShowOK",text:'{%trans "Submit" %}',
+								  click:subdata},
+								 {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("close"); }
+								}],
+						  close:function(){$("#dlg_to_Exit").remove();}		
+						})
+				//emp=$("#id_grid_"+tblName[g_activeTabID]).jqGrid('getGridParam','selarrrow');
+				var ss=$("#id_grid_"+tblName[g_activeTabID]).jqGrid('getGridParam','multiselect')
+	            var bb=[];
+	            if(ss){
+		            var data=$("#id_grid_"+tblName[g_activeTabID]).jqGrid('getGridParam','selarrrow');
+	                for(i=0; i<data.length; i++){
+		                var rowData=$("#id_grid_"+tblName[g_activeTabID]).jqGrid('getRowData',data[i]);
+		                bb.push(rowData.EName);
+		            }
+		             if(typeof bb=='undefined') bb=[]
+	            }else{
+		           var bb=$("#id_grid_"+tblName[g_activeTabID]).jqGrid('getGridParam','selrow');
+		           if(typeof bb=='undefined') bb=''
+	             }
+				$("#id_renyuan").val(bb);
+		//$('#id_date_range_from').datetimepicker(datetimepickerOptions)
+		function subdata(){
+		
+		var ids = $("#id_grid_"+tblName[g_activeTabID]).jqGrid('getGridParam','selarrrow');
+			var datas = ''
+			for (var i=0; i<ids.length;i++) {
+				var v = ('&K='+ids[i])
+				datas += v
+			}
+			datas = datas.substring(1)
+			
+			
+		$.blockUI({title:"{% trans '人员离岗恢复' %}",theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}</br></h1>'});
+		$.ajax({type: "POST",
+			url: '/iclock/cheligang/employee/',
+			data:datas,
+			dataType:"json",
+			success: function(retdata){
+					if(retdata.ret==0)
+					{	
+                                                $.unblockUI();
+                                                $("#dlg_to_Exit").remove();
+                                                reloadData();
+
+					}else{
+							alert(retdata.message);
+                            $.unblockUI();
+                            $("#dlg_to_Exit").remove();
+                            reloadData();
+						}},
+			error: function(){
+			$.unblockUI();alert($.validator.format(gettext('Operating failed for {0} !'),options[g_activeTabID].title));}
+			});
+                }
+        }
+function getempofdevice_employee(sn)
+{
+	var block_html="<div id='emp_of_dev'>"
+                            + "<div>"
+                                 +"<table id='id_grid_' >	</table>"
+                                 +"<div id='id_pager_'></div>"
+                                 +"</div>"
+                        +"<div id='id_message'>由于数据传输规则的复杂性，该功能仅供参考</div>"
+		+ "</div>"
+        var title=formatArray(sn.rr)
+	$(block_html).dialog({	modal:true,
+						  width: 680,
+						  height:450,
+						  title:title,
+                          resizable:false,
+						  close:function(){$(this).dialog("destroy")}
+						})
+	var jqOptions3=copyObj(jq_Options);
+	$.ajax({
+	   type:"GET",
+	   url:"/iclock/att/getColModel/?dataModel=empofdevice",
+	   dataType:"json",
+	   data:'',
+	   success:function(json){
+		   jqOptions3.colModel=json['colModel']
+		   jqOptions3.sortname="SN";
+		   jqOptions3.sortorder="";
+		   jqOptions3.url="/iclock/data/empofdevice/?User_in_Dev="+sn.ss
+		   jqOptions3.height=300
+		   jqOptions3.gridComplete=''
+		jqOptions3.pager="#id_pager_";
+		renderGridData('',jqOptions3)
+	   }
+	});
+
+}
+
+function doAction_employee(url, action)
+{
+	if (action == 'toDev')
+		createDialog(url, '?action=toDev&SN=', '/iclock/data/iclock/?mod_name='+mod_name, "{%trans "Transfer employee to the device"%}", "{%trans "device"%}", 600,true);
+	else if(action=='toDevPic')
+		createDialog(url, '?action=toDevPic&SN=', '/iclock/data/iclock/?mod_name='+mod_name, "{%trans "Transfer employee PIC to the device"%}", "{%trans "device"%}", 600,true);
+	else if (action == 'toDevWithin')
+	{
+		createDateRangeDlg("{%trans "Transfer employee to the device templately"%}",action)
+		//var sns=createMiniSel(true);
+		//$("#id_time_range").after(sns);
+		if(procMiniData('/iclock/data/iclock/?mod_name='+mod_name))
+		{
+			procSubmit("btnShowOK",url,actionToDevWithin);
+		}
+	}
+	else if (action == 'delDev')
+		createDialog(url, '?action=delDev&SN=', '/iclock/data/iclock/?mod_name='+mod_name, "{%trans "Deleted employee from the device"%}", "{%trans "device"%}", 600,true);
+	else if (action == 'delDevPic')
+		createDialog(url, '?action=delDevPic&SN=', '/iclock/data/iclock/?mod_name='+mod_name, "{%trans "Deleted employee PIC from the device"%}", "{%trans "device"%}", 600,true);
+	else if (action == 'toDepart')
+		createDialog(url, '?action=toDepart&department=', "miniData?key=depart", "{%trans "Change employee's department"%}", "{%trans "department"%}", 300);	
+	else if (action == 'mvToDev')
+		createDialog(url, '?action=mvToDev&SN=', '/iclock/data/iclock/?mod_name='+mod_name, "{%trans "Change the employee's registration device"%}", "{%trans "new device"%}", 600,true);
+	else if (action=='browseempindevice')
+	{
+		getempofdevice_employee(url)
+	
+	}
+	else if (action=='ligang')
+	{	
+		ligang1()
+	
+	}
+	else if (action=='cheligang')
+	{	
+		cheligang1()
+	
+	}
+
+
+}
+
+function getOptions_employee()
+{
+	var options_html=""
+	for(var i=0;i<states_emp.length;i++){
+		options_html+="<option value='"+states_emp[i].symbol+"'>"+states_emp[i].pName+"</option>"
+	}
+	return options_html;
+}
+
+function doAction_empleave(url)
+{
+    var title="{%trans '新增离职' %}";
+    var html="<div id='id_form'><div style='position:relative;'>"
+        +"<table id='id_empleavelog'><tr>"
+        +"<td style='vertical-align:top;color:black;'><div id='show_dept_emp_tree'></div></td></tr><tr><td style='vertical-align:top;'><div id='id_conditions'>"
+        +"<form id='id_edit_form' method='POST'>"
+        +"<table id='id_setField' style='margin-top: -20px;'>"
+               //离职时间
+                       +"<tr><td><label for='id_leavedate' class='required'>{% trans '离职时间'%}</label></td>"
+                               +"<td><input id='id_leavedate'  type='text'  value='' maxlength='19' name='leavedate'  style='width:135px !important;'/></td></tr>"
+               
+               //离职类型
+                       +"<tr><td><label for='id_leavetype' class='required'>{% trans '离职类型:'%}</label></td>"
+                       +"<td><select style='width:120px !important;' id='id_leavetype' name='leavetype'>"+getOptions_employee()+"</select></td><br /></tr>"
+               
+               //原因
+                    +"<tr><td>"
+                           +"<label for='id_reason' class='required'>{% trans '离职原因:'%}</label></td>"
+                           +"<td><input id='id_reson' type='text' name='reson' />"
+                       +"</td></tr>"
+               
+                +"<tr><td></td></tr>"
+                +"<tr><td colspan='2'>"
+                +"<input type='hidden' id='id_userid' value='' name='UserID' />"
+                +"</td></tr>"
+                +"<tr><td colspan='2'><span id='id_error'></span></td>"
+        +"</table></form></td>"
+        +"</tr></table></div></div>";
+    
+        $(html).dialog({title:title,
+                buttons:[
+                        {id:"btnShowOK",text:"{% trans 'save and return' %}",
+                            click:function(){ 
+//                                if(typeof beforePost_empleavelog=="function")
+//                                    {if(beforePost_empleavelog(this,"_new_")==false) return ;}  
+//                                SaveFormData(this,g_urls[g_activeTabID]+"_new_/",'add',"empleavelog");  
+                                    }},
+                        {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}
+                ]
+        });
+    
+
+    var currDate=new Date();
+    td=currDate.getFullYear()
+           +"-"
+           +(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+           +"-";
+    $("#id_leavedate").val(td+"01 00:00");
+    $("#id_leavedate").datetimepicker(datetimepickerOptions);
+}
+
+extraBatchOp=[
+	{caption:'{%trans "人员数据相关操作"%}',
+		submenu:[							
+		{% if app|isModule:'adms;att;meeting' %}{action:{% if user|HasPerm:"iclock.deptEmptoDev_iclock" %}function(url){doAction_employee(url, "toDev")}{% else %}''{% endif %}, title: '{%trans "Transfer employee to the device"%}'},{% endif %}
+		{% if app|isModule:'acc' %}{action:{% if user|HasPerm:"iclock.deptEmptoDev_iclock" %}'"?action=accEmptoDev"'{% else %}''{% endif %}, title: '{%trans "Transfer employee to the device"%}'},{% endif %}
+
+
+		{% if app|isModule:'adms;att;meeting' %}{action:{% if user|HasPerm:"iclock.deptEmptoDev_iclock" %}function(url){doAction_employee(url, "toDevPic")}{% else %}''{% endif %}, title: '{%trans "Transfer employee PIC to the device"%}'},{% endif %}
+		{% if app|isModule:'adms;att;meeting' %}{action:{% if user|HasPerm:"iclock.toDevWithin_iclock" %}function(url){doAction_employee(url, "toDevWithin")}{% else %}''{% endif %}, title: '{%trans "Transfer to the device templately"%}'},{% endif %}
+		{% if app|isModule:'adms;att;meeting' %}{action:{% if user|HasPerm:"iclock.deptEmptoDelete_iclock" %}function(url){doAction_employee(url, "delDev")}{% else %}''{% endif %}, title:'{%trans "Delete employee from the device"%}'},{% endif %}
+		{% if app|isModule:'acc' %}{action:{% if user|HasPerm:"iclock.deptEmptoDelete_iclock" %}'"?action=accEmpFromDev_DEL"'{% else %}''{% endif %}, title: '{%trans "Delete employee from the device"%}'},{% endif %}
+		//{% if app|isModule:'acc' %}{action:{% if user|HasPerm:"iclock.deptEmptoDev_iclock" %}'"?action=toEmpAccAuth"'{% else %}''{% endif %}, title: '{%trans "同步门禁权限"%}'},{% endif %}
+		
+		
+		{% if app|isModule:'adms;att;meeting' %}{action:{% if user|HasPerm:"iclock.deptEmptoDelete_iclock" %}function(url){doAction_employee(url, "delDevPic")}{% else %}''{% endif %}, title:'{%trans "Delete employee PIC from the device"%}'},{% endif %}
+		{action:{% if user|HasPerm:"iclock.empLeave_employee" %}'"?action=empLeave"'{% else %}''{% endif %}, title: '{%trans "Employee leave"%}'},
+//        {action:{% if user|HasPerm:"iclock.empLeave_employee" %}function(url){doAction_empleave(url)}{% else %}''{% endif %}, title: '{%trans "Employee leave"%}'},
+		{action:{% if user|HasPerm:"iclock.restoreEmpLeave_employee" %}'"?action=restoreEmpLeave"'{% else %}''{% endif %}, title: '{%trans "Restore Employee leave"%}'},
+		//{% if app|isModule:'adms;att;meeting' %}{action:{% if user|HasPerm:"iclock.mvToDev_iclock" %}function(url){doAction_employee(url, "mvToDev")}{% else %}''{% endif %}, title: "{%trans "Move employee to a new device"%}"},{% endif %}
+		{action:{% if user|HasPerm:"iclock.toDepart_employee" %}function(url){doAction_employee(url, "toDepart")}{% else %}''{% endif %}, title: "{%trans "Change employee's department"%}"},
+		{action:function(url){doAction_employee(url, "browseempindevice")}, title: "{%trans "查看人员所在的设备"%}"},
+		{action:{% if user|HasPerm:"iclock.ligang" %}function(url){doAction_employee(url, "ligang")}{% else %}''{% endif %}, title: "{%trans "人员离岗"%}"},
+		{action:{% if user|HasPerm:"iclock.liganghuifu" %}function(url){doAction_employee(url, "cheligang")}{% else %}''{% endif %}, title: "{%trans "离岗恢复"%}"}
+		//{action:{% if user|HasPerm:"iclock.enroll_employee" %}'"?action=enrollAEmp"'{% else %}''{% endif %}, title: "{%trans "Enroll employee's fingerprint"%}"}	
+	]}
+];
+
+function getMoreInfo(index){
+	return 	"{% trans "Emp name" %}:"+data[index][2]
+				+"<br />{% trans "department number" %}:"+data[index][3]
+				+"<br />{% trans "department name" %}:"+data[index][4]
+				+"<br />{% trans "Sex" %}:"+(data[index][5]=="None"?"":data[index][5])
+				+"<br />{% trans "Birthday" %}:"+(data[index][6]=="None"?"":data[index][6])
+				+"<br />{% trans "Nationality" %}:"+(data[index][7]=="None"?"":data[index][7])
+				+"<br />{% trans "Title" %}:"+(data[index][8]=="None"?"":data[index][8])
+				+"<br />{% trans "Office phone" %}:"+(data[index][9]=="None"?"":data[index][9])
+				+"<br />{% trans "Mobile" %}:"+(data[index][10]=="None"?"":data[index][10])
+				+"<br />{% trans "Id card" %}:"+data[index][12]
+				+"<br />{% trans "FP" %}:"+data[index][16]
+				+"<br />{% trans "Left" %}:"+data[index][17]
+}
+function showBox(data)
+{	
+	var html="";
+	if(data.length>0)
+	{
+		for(var i=0;i<data.length;i++)
+		{
+        var img=data[i][19];
+          if(img<"<")
+            {
+                        img="<img src='/media/img/employee/man.jpg' />";
+                        if(data[i][5]=="{%trans 'Female'%}")
+                            img="<img src='/media/img/employee/woman.jpg' />";
+            }
+        	html+="<div id='ic_"+data[i][0]+"' class='AIClockBox'>"
+				+"<div class='iclockButton'>"
+				+"<input type='checkbox' class='class_select' onclick='showSelected();' id='id_row_"+i+"' />"
+				+"<span onmouseover='index_tip_info(this);' onmouseout='tip_info_exit();' index='"+i+"' >"+img
+             +data[i][2]
+				+"</span></div>"
+				+"<div id='tt_"+data[i][0]+"' class='iclockTT'>"
+					+"<span><a href='/iclock/data/employee/"+data[i][0]+"/' >"+data[i][1]+"</a><br/>"
+					+data[i][4]+"<br/>"
+					+"{%trans "Transactions"%}: "+data[i][17]+"</span>"
+				+'</div>'
+				+"</div>"
+        }
+	}
+	else
+		html+="<div class='NoIclock'>{%trans "No Employee!" %}</div>"
+	return html;
+
+}
+
+
+//options.disableCols=[0, 13, 14];
+options.showStyle=false;
+function deviceText(data)
+{	
+	if(data[13]!=""){
+			return "<a href='../iclock/"+data[13]+"/'>"+data[14]+"</a>";
+	}
+	return "";
+}
+
+
+function ShowDeptTree_employee(page,tag,obj)
+{
+	var d_url="/iclock/att/getDeptData/?func=department"
+	
+	var setting = {
+            check: {enable: true,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},          
+	    async: {
+			    enable: true,
+			    url: d_url,
+			    autoParam: ["id"]
+		    }
+	};
+	$.fn.zTree.init($("#showTree_"+page), setting,null);	
+	if(tag){
+		var zTree = $.fn.zTree.getZTreeObj("showTree_"+page);
+		zTree.setting.check.enable = false;
+		zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+				var id=treeNode.id;
+				$("#department",obj).val(treeNode.value+' '+ treeNode.name);
+				$("#id_DeptID",obj).val(id);
+				$("input[type='hidden'][name='DeptID']",obj).val(id);
+				hideDeptment();
+			
+		}
+	}
+}
+
+
+
+
+function process_dialog_employee(obj,flag)
+{
+    var leng=arguments.length;
+    if (!is_super) {
+	//编辑人员设备权限
+	if(!edit_privilege){
+	    $('#id_Privilege',obj).prop('disabled','disabled')//非超级用户不能修改
+	}        
+	 if(!edit_MVerifyPass){
+	    $('#id_MVerifyPass',obj).css("display","none")
+	}
+	 if(!edit_Card){
+	    $('#id_Card',obj).attr("readonly","True")
+	}
+    }
+    if(flag=='edit'){
+        $('#id_PIN',obj).attr('readonly','True')//用户编号不能修改
+	
+	var depName=$('#id_DeptID',obj).val()
+	$('#id_DeptID',obj).after('<div style="width:200px;">'
+	+'<span style="float:left;border-top:1 solid #5B80B2;"><input alt="department" type="text" style="width:160px !important;" readOnly="readOnly"  id="department"  value="'+depName+'"></span>'
+	+'<span style="float:left;"><img  alt="{%trans 'open department tree'%}" src="/media/img/sug_down_on.gif" id="id_drop_dept"/></span>'
+	+'</div>'
+	+'<div id="show_deptment">'
+	+'<div class="title"><span class="close" style="margin-top:1px;" onclick="hideDeptment()"></span></div>'
+	+"<div id='show_dept_tree_dept'>"
+	+"<ul id='showTree_dept' class='ztree' style='margin-left: 0px;overflow:auto;height:250px;'></ul>"
+	+"</div>"
+	+'</div>'
+	
+	
+	
+	
+	);
+	$('#id_DeptID',obj).hide()
+ 	$("#id_drop_dept",obj).click(function(){
+	
+	    ShowDeptTree_employee('dept',true,obj)
+	    showDeptment(obj);
+	
+	
+	});
+	
+	
+	
+	
+	
+	
+    }
+       
+       
+        var ti=$("#id_Title",obj).val()
+        var htl="<option value=' '> </option>"
+        for(var i=0;i<role_json.length;i++){
+            if(ti==role_json[i]){
+                htl+="<option value='"+role_json[i]+"' selected>"+role_json[i]+"</option>"
+            }else{
+                htl+="<option value='"+role_json[i]+"'>"+role_json[i]+"</option>"
+            }
+        }
+       if ({{"opt_basic_approval"|get_params}}=='1'){
+	    $("#id_Title",obj).parent().html("<select id='id_Title' name='Title' class='valid'>"+htl+"</select>");
+       }
+       
+       $('#id_DeptID',obj).prop('readonly',true)
+       
+	if (flag=='add')
+	{
+ 	    var treeObj = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+            var nodes = treeObj.getSelectedNodes();
+	    if (nodes.length>0)
+	    {
+		var deptID=nodes[0].id;
+		var name=nodes[0].name;
+		var value=nodes[0].value;
+		$("#id_DeptID",obj).val(value+' '+name)
+		$("input[type='hidden'][name='DeptID']",obj).val(deptID);
+	    
+	    }
+       }
+datepickerOptionsEmp={
+	dateFormat:'yy-mm-dd',
+	inline: true,
+	changeYear:true,
+	yearRange:'c-50:c+10',
+	changeMonth: true,
+	buttonImage: '/media/img/Calendar.png',
+//	buttonText:gettext("Calendars"),
+	buttonImageOnly: true,		
+	showOn:'button',//ÔÚÊäÈë¿òÅÔ±ßÏÔÊ¾°´Å¥´¥·¢£¬Ä¬ÈÏÎª£ºfocus¡£»¹¿ÉÒÔÉèÖÃÎªboth  
+	showButtonPanel: true,  
+	autoSize:false
+//	showTimepicker:false
+	};
+
+
+	$("#id_Hiredday",obj).datepicker(datepickerOptionsEmp);
+	$("#id_Birthday",obj).datepicker(datepickerOptionsEmp);
+    $("#id_Trialstarttime",obj).datepicker(datepickerOptionsEmp);
+    $("#id_Trialendtime",obj).datepicker(datepickerOptionsEmp);
+    $("#id_Startwork",obj).datepicker(datepickerOptions);
+    $("#id_Worktime",obj).datepicker(datepickerOptions);
+    $("#id_Contractstarttime",obj).datepicker(datepickerOptionsEmp);
+    $("#id_Contractendtime",obj).datepicker(datepickerOptionsEmp);
+    //$("#id_Birthday",obj).val($("#id_Birthday",obj).val().split(" ")[0])
+    if ($("#id_Birthday",obj).val())
+    {
+	$("#id_Birthday",obj).val($("#id_Birthday",obj).val().split(" ")[0])
+    }
+	f=$(obj).find("#id_edit_form").get(0)
+	$(f).validate({
+			rules: {
+					"PIN": {"maxlength":24,"required":true,'alnum':true},
+					"PostCode": {"minlength":6,"digits":true},
+					//"Tele": {"rangelength":[7,18],"digits":true},
+					"Birthday": {"dateISO":true},
+					//"FPHONE":{"rangelength":[7,18],"digits":true},
+					"Mobile": {"minlength":4,"maxlength":15,"digits":true},
+					"National": {"rangelength":[1,8]},
+					"email":{"email":true},
+					"Card":{"digits":true,"maxlength":10},
+					//"SSN":{isIdCardNo:true},
+					"EName":{string:true,"maxlength":20},
+					"Password": {"digits":true,"maxlength":8}
+				}
+			});
+    
+
+
+    
+    
+    
+    
+}
+
+function set_acc_valid_time(isSet)
+{
+	$("#id_acc_startdate").prop('readonly',true)
+	$("#id_acc_enddate").prop('readonly',true)
+       if( isSet==false)
+	{
+	    $("#id_acc_startdate").val("");
+	    $("#id_acc_enddate").val("");
+	    $("#id_acc_startdate").css("backgroundColor","scrollbar");
+	    $("#id_acc_enddate").css("backgroundColor","scrollbar");
+		$("#id_acc_startdate").datetimepicker("destroy");
+		$("#id_acc_enddate").datetimepicker("destroy");
+	}
+	else
+	{
+		$("#id_acc_startdate").css("backgroundColor","");
+		$("#id_acc_enddate").css("backgroundColor","");
+	$("#id_acc_startdate").datetimepicker(datetimepickerOptions);
+	$("#id_acc_enddate").datetimepicker(datetimepickerOptions);
+	    
+	}
+    
+}
+
+function process_dialog_again_employee(temp_data,flag,urlAddr)
+{
+    
+        $("#level_name").keydown(function(event){//按回车键直接查询
+            if(event.keyCode==13)
+            {
+               $("#id_query_level").click();
+            }
+        });
+        $("#id_select_all").click(function(){
+            var select_all = $("#id_select_all").prop("checked");
+            $("#id_level input").each(function(){
+                
+                if(select_all)
+                {
+                    $(this).prop("checked", "checked");
+                }
+                else
+                {
+                    $(this).prop("checked", "");
+                }
+            });
+        });
+    
+    
+	set_acc_valid_time($("#id_set_valid_time").prop("checked"))    
+ 
+
+        $("#id_set_valid_time").click(function(){
+	    
+	    set_acc_valid_time($("#id_set_valid_time").prop("checked"))    
+	    
+        });
+    
+    
+    
+}
+
+function beforePost_employee(obj,actionName)
+{
+	if($("#id_Contractstarttime",obj).val() > $("#id_Contractendtime",obj).val()||$("#id_Trialstarttime",obj).val() > $("#id_Trialendtime",obj).val())
+        {
+                $("#id_error",obj).html('试用期或合同开始时间不能小于结束时间，保存失败').css('color','red').show()
+                return false
+        }
+    if($("#id_set_valid_time",obj).prop("checked"))
+       {
+	if (!moment($("#id_acc_startdate").val(),'YYYY-MM-DD HH:mm').isValid()||!moment($("#id_acc_enddate").val(),'YYYY-MM-DD HH:mm').isValid())
+	{
+	    $("#id_error",obj).html('门禁开始时间和结束时间不能为空，保存失败').css('color','red').show()
+	    return false
+	}
+	
+       }
+
+    return true;
+    
+}
+
+
+
+{% endblock %}
+
+{% block loadData %}
+	html="<span id=id_opt_tree><input type='checkbox' id='id_cascadecheck_"+g_activeTabID+"'"
+	+" checked />{%trans '级联下级单位' %}</span>"
+	$("#"+g_activeTabID+" #id_west").html(html)
+	html="<div id='show_dept_tree_'>"
+		+"<ul id='showTree_"+g_activeTabID+"'"
+		+" class='ztree' style='margin-left: 0px;height:100%;'></ul>"
+		+"</div>"   
+	$("#west_content_tab_iclock_employee").html(html)
+
+	//var h=$("#"+g_activeTabID+" #west_content").height()-20
+	//$('#showTree_'+g_activeTabID).css('height',h)
+
+        ShowDeptData(g_activeTabID,true)
+        loadNULLPage("#id_grid_"+tblName[g_activeTabID]);
+	var zTree = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+	zTree.setting.check.enable = false;
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		var deptID=treeNode.id;
+		var deptName=treeNode.name;
+		$.cookie("dept_ids",deptID, { expires: 7 });
+		var ischecked=0;
+		if($("#id_cascadecheck_"+g_activeTabID).prop("checked"))
+			ischecked=1;
+		var urlStr="/iclock/data/employee/?deptIDs="+deptID+"&isContainChild="+ischecked+'&OffDuty=0'
+		savecookie("search_urlstr",urlStr);
+		var show_style=$("#"+g_activeTabID+' #show_style').val()
+		if(show_style=='photo')
+		{
+		    urlStr=urlStr+'&show_style=photo'
+		    $("#id_grid_picture").jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+		}
+		else		
+		 $("#id_grid_employee").jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+		
+
+	}
+    EmpAndDept={% autoescape off %} {{ ForgetAtt_list }}{% endautoescape %}
+    states_emp_emp= EmpAndDept.states;
+    
+{% endblock %}
+</script>
+
+{% block otherQuery %}
+<div class="s-info right" id='id_show_style'>			
+
+	<ul>
+	<li class="show_style_table_focus" title="列表" cc="table"></li>
+	<li class="show_style_photo" title="照片" cc="photo"></li>
+	<input id='show_style' type='hidden' value='table' name='show_style'/> 
+	</ul>			
+</div>
+{% endblock %}
+{% block importOp %}
+{% if request|reqHasPerm:"add" %}
+	<LI id="id_import" ><SPAN  class="icon iconfont icon-daoru"></SPAN>{%trans "Import"%}</LI>
+{% endif %}
+{% endblock %}
+
+{% block $function %}
+
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+	    var treeObj = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+            var nodes = treeObj.getSelectedNodes();
+            if(nodes.length==0){alert("{% trans '请首先展开左边的单位树并选择单位' %}");return;}
+		processNewModel();
+	})
+		
+	$("#"+g_activeTabID+" #queryButton").unbind('click').click(function(){
+		createQueryDlg_employee();
+	});	
+		
+	/*{% if user|HasPerm:"iclock.browse_userroles" %}
+		var html="<li id='id_user_role' class='button-set-role' onclick="+"menuClick('/iclock/data/userRoles/');"+"><SPAN></SPAN>{%trans 'userRoles'%}</LI>"  
+		$("#id_custom").after(html)
+	{% endif %}
+	*/
+	/*
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('navButtonAdd','#id_pager',{caption:"Add",buttonicon:"ui-icon-add", onClickButton: function(){ alert("Adding Row");
+	   }, 
+	   position:"last"
+	})
+	*/
+
+
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	   searchShowEmp_emp();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	   if(event.keyCode==13)
+	  searchShowEmp_emp();
+	});
+
+
+	
+	//if(hasImport)$("#id_export").before('<LI id="id_import" class="button-import"><SPAN></SPAN>{%trans "Import"%}</LI>');
+	//if(hasImport)$("#id_export").after('<LI id="id_print" class="button-print"> <SPAN></SPAN>{%trans "Print"%}</LI>');
+	$("#"+g_activeTabID+" #id_import").click(function(){
+	  importEmployee();
+	});
+	$("#"+g_activeTabID+" #id_print").click(function(){
+	    var urlstr=loadcookie("search_urlstr");
+	    if(urlstr.indexOf("/data/")!=-1){
+		urlstr=urlstr.replace("/data/","/att/print/");
+	    }else if(urlstr.indexOf("/att/")!=-1){
+		urlstr=urlstr.replace("/att/","/att/print/")
+	    }
+	    window.open(urlstr);
+	});
+	
+	//上传人员照片
+	if(Upload_pictures){
+	    //$("#"+g_activeTabID+" #id_custom").after('<LI id="id_photo_emp"> <SPAN  class="icon iconfont icon-tupian"></SPAN>{%trans "Upload pictures"%}</LI>');
+		//上传人员照片
+		//$("#id_photo_emp").click(function(){
+		//		photo_dialog();
+		//});
+	}
+	//采集指纹
+//	if ({{"opt_basic_enroll"|get_params}}=='1' && RegisterFP){
+//	    $("#"+g_activeTabID+" #id_custom").after('<LI id="id_Register" > <SPAN  class="icon iconfont icon-ic_fingerprint_px"></SPAN>{%trans "Register"%}</LI>');
+		
+		//采集指纹
+//		$("#id_Register").click(function(){
+//				Register_dialog();
+//		});
+//	}
+
+	//批量更改人员验证方式
+	//if (Comverify){
+	//    $("#id_custom").after('<LI id="id_Comverifys" class="button-selop" onclick="edit_comverify();"> <SPAN></SPAN>{%trans "修改验证方式"%}</LI>');
+	//}	
+		
+	
+	
+    $("#"+g_activeTabID+" #id_filtername").css("display","block")
+       createFilter_employee(-1);
+	//$("#id_Register").after('<li id="id_filters" style="border:1px solid #77B7DE;"><a href="#">{%trans "Advanced Searching"%}</a></li>')
+       // $("#id_filters").click(function(){
+	//	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('searchGrid',{multipleSearch:true,search:{top:100,left:100}});
+	
+	//});
+    /** 在人员维护菜单上增加自动传送人员到设备按钮 2011-02-14 cg
+	var emp_to_dev_html='{% if user|HasPerm:"iclock.AutoToDev_employee" %}<li id="id_autoSendEmpToDev" style="border:1px solid #77B7DE;"><a href="#">{%trans "Auto Send Employee To Device"%}</a></li>{% endif %}'
+	$("#"+g_activeTabID+" #id_custom").after(emp_to_dev_html)
+	$("#id_autoSendEmpToDev").click(function(){ 
+	    autoSendEmpToDev()
+	})
+    **/
+
+    $.ajax({
+	type: "POST",
+	url:"/iclock/att/hasRoles/",
+	dataType:"json",
+	success: function(json){
+	     role_json=json;
+	    }});
+
+    $("#"+g_activeTabID+" #id_show_style li").click(function(e){
+	cls=$(this).prop('class')
+	if(cls.indexOf('focus')!=-1) return;
+	indexL=$(this).parent().find(this).index()
+	if(indexL==0){
+	    $("#"+g_activeTabID+" #show_style").val('table')
+	    $(this).removeClass('show_style_table')
+	    $(this).addClass('show_style_table_focus')
+	     $(this).parent().find('li:eq(1)').removeClass('show_style_photo_focus')
+	     $(this).parent().find('li:eq(1)').addClass('show_style_photo')
+	    show_table_data()
+	}
+	else if(indexL==1)
+	{
+	    $("#"+g_activeTabID+" #show_style").val('photo')
+	    $(this).removeClass('show_style_photo')
+	    $(this).addClass('show_style_photo_focus')
+	     $(this).parent().find('li:eq(0)').removeClass('show_style_table_focus')
+	     $(this).parent().find('li:eq(0)').addClass('show_style_table')
+	    show_photo_data()
+	}
+	
+    })
+
+{% endblock %}
+{% block other_area %}
+   {% ifequal "opt_users_start_page"|get_params:request '1' %}
+ 
+	 <div id='id_add_home' onclick="javascript:saveHome();"  style="float: left;cursor:pointer;"> <i class="icon iconfont icon-shezhiweiqishiye" title='{%trans "设置为起始页" %}'></i> </div>
+    {%endifequal%}	
+{% endblock %}

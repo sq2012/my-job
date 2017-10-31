@@ -1,0 +1,37 @@
+{% extends "report_att.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+
+{% block sidxblock %}
+	function getSidx_attRecAbnormite(){
+		return 'UserID__DeptID,UserID__PIN,TTime'
+	}
+{% endblock %}
+
+{% block getDateUrl %}
+
+function getDateUrl()
+{
+	var ComeTime=$("#"+g_activeTabID+" #id_ComeTime").val();
+	var EndDate=$("#"+g_activeTabID+" #id_EndTime").val();
+	var isError=validate_form_att();
+	$.cookie("ComeTime",ComeTime, { expires: 7 });
+	$.cookie("EndDate",EndDate, { expires: 7 });
+	$("#"+g_activeTabID+" #id_con_error").css("display","none");
+
+	var urlStr=g_urls[g_activeTabID]
+	
+	if(!isError){
+		if(urlStr.indexOf("?")!=-1)
+			urlStr+="&TTime__gte="+ComeTime+"&TTime__lt="+EndDate+"&UserID__DelTag__lt=1"
+		else
+			urlStr+="?TTime__gte="+ComeTime+"&TTime__lt="+EndDate+"&UserID__DelTag__lt=1"
+
+	}else{
+		alert(gettext("请检查时间格式是否正确，且最多查询31天！"));
+		urlStr='';
+	}
+	return urlStr
+
+}
+{% endblock %} 

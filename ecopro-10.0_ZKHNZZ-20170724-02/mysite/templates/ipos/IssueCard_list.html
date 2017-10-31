@@ -1,0 +1,352 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+hasImport={% if user|HasPerm:"ipos.import_issuecard" %}true{% else %}false{% endif %}
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='IssueCard';
+jqOptions[g_activeTabID].pager='#id_pager_'+tblName[g_activeTabID];
+jqOptions[g_activeTabID].sortname='id';
+options[g_activeTabID].dlg_width=400;
+options[g_activeTabID].dlg_height=380;
+
+$(function(){
+$("#"+g_activeTabID+" #search_id_user__PIN").val("工号,姓名")
+$("#"+g_activeTabID+" #searchbar").val("工号,姓名")
+$("#"+g_activeTabID+" #search_id_user__PIN").css('color','#CCCCCC')
+$("#"+g_activeTabID+" #search_id_user__PIN").attr('role','defvalue')
+var inputEl = $('#'+g_activeTabID+' #search_id_user__PIN')
+         defVal[g_activeTabID] = inputEl.val();
+	 
+    	 inputEl.bind("focus",function(){
+		             var _this = $(this);
+				if (_this.val() == defVal[g_activeTabID]) {
+				    _this.val('');
+				    _this.css('color','#000000');
+				    //_this.attr('role','disabled')
+				}
+		})
+	inputEl.bind("blur",function(){
+		        var _this = $(this);
+			if (_this.val() == '') {
+			    _this.val(defVal[g_activeTabID]);
+			    _this.css('color','#CCCCCC');
+			    _this.attr('role','defvalue')
+			}
+			else
+			    _this.attr('role','cansearch')
+		})
+	inputEl.bind("keydown",function(event) {
+			if (event.which == 13) {
+			      var _this = $(this);
+			       _this.attr('role','cansearch')
+			 }
+		})
+	$("#"+g_activeTabID+" #queryButton").hide()
+    $("#"+g_activeTabID+" #sear_area").hide()
+
+        $("#"+g_activeTabID+" #id_newrec").click(function(event){
+                processNewModel();
+	});
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowDep_IssueCard();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowDep_IssueCard();
+	});
+	$("#"+g_activeTabID+" #id_export").css('display','none');
+	$("#"+g_activeTabID+" #id_third").html("");
+    $("#"+g_activeTabID+" #id_search").click(function(){
+		 var flag=$("#search_id_user__PIN").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var search_user_pin=$("#search_id_user__PIN")[0].value;
+	else
+	    var search_user_pin=""
+		var search_card_privage=$("#search_id_card_privage").val();
+		var search_cardstatus=$("#search_id_cardstatus").val();
+		var search_cardno=$("#search_id_cardno").val();
+		var search_sys_card_no=$("#search_id_sys_card_no").val();
+        var urlnew="";
+            if (search_user_pin||search_card_privage||search_cardstatus||search_cardno||search_sys_card_no)
+            {
+                urlnew="q="+escape(search_user_pin)+"&"+"card_privage="+search_card_privage+"&"+"cardstatus="+search_cardstatus+"&"+"cardno="+search_cardno+"&"+"sys_card_no="+search_sys_card_no
+            }
+        var url="/ipos/data/IssueCard/?"
+		if (urlnew!="" &&  urlnew!=null)
+			url+=urlnew;
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+		savecookie("search_urlstr",url);
+	});
+    $("#"+g_activeTabID+" #id_search_clean").click(function(){
+        $("#search_id_user__PIN").val('');
+        $("#search_id_card_privage").val('');
+        $("#search_id_cardstatus").val('');
+        $("#search_id_cardno").val('');
+        $("#search_id_sys_card_no").val('');
+
+        var url="/ipos/data/IssueCard/"
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+		savecookie("search_urlstr",url);
+    });
+});
+
+function searchShowDep_IssueCard(){
+    var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+    var url="/ipos/data/batchtime/?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+
+function strOfData_IssueCard(data)
+{
+	return stripHtml(data.PIN)+" "+data.cardno
+}
+
+function process_dialog_IssueCard(obj,flag)
+{
+	  $(obj).dialog({resizable:false,modal:true})
+}
+
+function beforePost_IssueCard(obj,actionName)
+{
+}
+
+function createOpCardDlg(url,action,title)
+{
+	var block_html="<div id='dlg_to_card'>"
+					+           "<table width=100%>"
+									+"<tr><th>"
+									+"<label class='required' for='id_blance' style='font-size: 25px; font-weight: bold;'>金额:</label>"
+									+"</th><td>"
+									+"<input id='id_blance' class='required' type='text' name='blance' value='' style='height: 30px; font-size: 25px; width: 110px;'>"
+									+"</td>"
+									+"</tr>"
+					+            "</table>"
+					+  "<div  id='id_error'></div>"
+					+       "</div>"
+
+	if (action=='OpUpdateCard')
+	{
+
+	 var block_html=$('#dlg_to_card')
+	}
+	if (action=='OpChangeCard')
+	{
+            retdata=[]
+	    	$.ajax({
+		url:"/ipos/getData/?func=IssueCard&key="+url.ss[0],
+		dataType:"json",
+		type:"POST",
+		async:false,
+		cache:false,
+		success:function(data){
+		retdata=data
+                    }
+		 });
+	    var block_html="<div id='dlg_to_card'>"
+			    +"<table width=100%>"
+			    +"<tr><th> <label for='id_cardno1' class='required'>{% trans '原卡号'%}</label></th>"
+                                +"<td><input id='id_cardno1'  type='text'  value='"+retdata[0].cardno+"' maxlength='19' name='cardno1' readonly style='width:135px !important;'/></td>"
+                                +"<th> <label for='id_cardno' class='required'>{% trans '新卡号'%}</label></th>"
+                                +"<td><input id='id_cardno'  type='text'  value='' maxlength='19' name='cardno'  style='width:135px !important;'/></td></tr>"
+                                
+                                +"<tr><th><label for='id_blance1' class='required'>{% trans '原卡余额'%}</label></th>"
+                                +"<td><input id='id_blance1'  type='text'  value='"+retdata[0].blance+"' maxlength='19'  readonly name='blance' style='width:135px !important;'/></td>"
+                                +"<th><label for='id_blance' class='required'>{% trans '新卡金额'%}</label></th>"
+                                +"<td><input id='id_blance'  type='text'  value='"+retdata[0].blance+"' maxlength='19' name='blance' style='width:135px !important;'/></td></tr>"
+                          
+                                +"<tr><th><label for='id_card_cost1' class='required'>{% trans '退还成本'%}</label></th>"
+                                +"<td><input id='id_card_cost1'  type='text'  value='"+retdata[0].card_cost+"' maxlength='19' name='card_cost1' style='width:135px !important;'/></td>"
+                                +"<th><label for='id_card_cost' class='required'>{% trans '新卡成本'%}</label></th>"
+                                +"<td><input id='id_card_cost'  type='text'  value='0' maxlength='19' name='card_cost' style='width:135px !important;'/></td></tr>"
+			  
+                                
+                                +"<tr><th><label for='id_mng_cost' class='required'>{% trans '新卡管理费'%}</label></th>"
+                                +"<td><input id='id_mng_cost'  type='text'  value='0' maxlength='19' name='mng_cost' style='width:135px !important;'/></td>"
+                                +"<th><label for='id_Password' class='required'>{% trans '新卡密码'%}</label></th>"
+                                +"<td><input id='id_Password'  type='text'  value='"+retdata[0].pwd+"' maxlength='19' name='Password' style='width:135px !important;'/></td></tr>"
+		    
+			    +"</table>"
+					+  "<div  id='id_error'></div>"
+					+ "</div>"
+	
+	
+	
+	}
+
+	$(block_html).dialog({modal:true,
+						    resizable:false,　
+						  width: 500,
+						  height:260,
+						  title:title,
+						  buttons:[{id:"btnShowOK",text:'{%trans "Submit" %}',
+								  click:subdata},
+								 {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }
+								}],
+						  close:function(){$(this).dialog("destroy"); }		
+						})
+	function subdata(){
+		var blance=$("#id_blance").val();
+		if((action!='OpUpdateCard'&&action!='OpChangeCard')&&(blance==''||Number(blance)<=0)){
+			$("#id_error").html("<ul class='errorlist'><li>{%trans '金额不正确'%}</li></ul>").show();
+			return false;
+		}else{
+			var queryStr=url.ret
+			if(action=='OpUpdateCard')
+			{
+
+			    var urlStr=g_urls[g_activeTabID]+ '?action='+action+'&cardtype='+$('#id_itype').val();
+			
+			}
+			else if(action=='OpChangeCard')
+			{
+                if ($('#id_cardno').val()==''){
+                    $("#id_error").html("<ul class='errorlist'><li>{%trans '新卡号不能为空'%}</li></ul>").show();
+                    return false
+                }
+                var reg = /^[0-9]*$/;
+                if (!reg.test($('#id_cardno').val())) {
+                    $("#id_error").html("<ul class='errorlist'><li>{%trans '新卡号只能为数字'%}</li></ul>").show();
+                    return false;
+                }
+			   queryStr=url.ret+'&cardno='+$('#id_cardno').val()+'&blance='+$('#id_blance').val()+'&card_cost='+$('#id_card_cost').val()+'&mng_cost='+$('#id_mng_cost').val()+'&Password='+$('#id_Password').val()+'&card_cost1='+$('#id_card_cost1').val()
+			    var urlStr=g_urls[g_activeTabID]+ '?action='+action;
+			
+			}
+			else
+			    var urlStr=g_urls[g_activeTabID]+ '?action='+action+'&money='+blance;
+			    
+			
+			$.blockUI({title:title,theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}<br /></h1>'});
+			$.ajax({type: "POST",
+				url: urlStr,
+				data:queryStr,
+				dataType:"json",
+				success: function(retdata){
+					$.unblockUI();
+					alert(retdata.message);
+					//$('#dlg_to_card').dialog('destroy')
+                                         if (retdata.ret==0)
+                                        {
+                                            $('#btnShowCancel').click();
+                                            reloadData();
+                                        }
+                                        else
+					$("#"+g_activeTabID+" #id_error").html(retdata.message).css('color','RED')
+				},
+				error: function(){$.unblockUI();alert($.validator.format(gettext('Operating failed for {0} !'),options.title));}
+				});
+		}
+    }
+
+    
+
+
+
+}
+
+function doAction_IssueCard(url,action)
+{	
+	if(url.count>1)
+	{
+	    alert('仅允许选择一人！');
+	    return false;
+	}    
+    if (action=='OpSupplement')
+	createOpCardDlg(url,action,'充值')
+    else if (action=='OpReimburse')
+	createOpCardDlg(url,action,'退款')
+    else if (action=='OpUpdateCard')
+	createOpCardDlg(url,action,'卡资料修改')
+    else if (action=='OpChangeCard')
+    {
+	createOpCardDlg(url,action,'换卡')
+    }
+}
+
+
+{% endblock %}
+
+{% block newrec %}
+{% endblock %}
+{% block aDelete %}
+{% endblock %}
+{% block extractButton %}
+    {% if "POS_ID"|filter_config_option %}
+        {% if user|HasPerm:"ipos.issuecard_supplement" %}
+	<LI id="id_issuecard_supplement"   onclick="batchOp(function(url){doAction_IssueCard(url,'OpSupplement')},undefined,'{%trans "充值"%}');"><SPAN class="icon iconfont icon-chongzhi"></SPAN>{%trans "充值"%}</LI>
+        {% endif %}
+    {% endif %}
+    {% if "POS_ID"|filter_config_option %}
+       {% if user|HasPerm:"ipos.issuecard_reimburse" %}
+	<LI id="id_IssueCard_Reimburse"   onclick="batchOp(function(url){doAction_IssueCard(url,'OpReimburse')},undefined,'{%trans "退款"%}');"><SPAN  class="icon iconfont icon-tuikuan"></SPAN>{%trans "退款"%}</LI>
+        {% endif %}
+    {% endif %}
+
+    {% if user|HasPerm:"ipos.issuecard_oplosecard" %}
+	<LI id="id_LoseCard" onclick="batchOp('?action=OpLoseCard',itemCanBeDelete,'{%trans "挂失"%}');"><SPAN class="icon iconfont icon-guashi"></SPAN>{%trans "挂失"%}</LI>
+    {% endif %}
+    {% if user|HasPerm:"ipos.issuecard_oprevertcard" %}
+	<LI id="id_RevertCard" onclick="batchOp('?action=OprevertCard',itemCanBeDelete,'{%trans "解挂"%}');"><SPAN class="icon iconfont icon-jiegua"></SPAN>{%trans "解挂"%}</LI>
+    {% endif %}
+    {% if user|HasPerm:"ipos.issuecard_cancelmanagecard" %}
+	<LI id="id_CancelManageCard" onclick="batchOp('?action=CancelManageCard',itemCanBeDelete,'{%trans "注销管理卡"%}');"><SPAN class="icon iconfont icon-zhuxiaoguanliqia"></SPAN>{%trans "注销管理卡"%}</LI>
+    {% endif %}
+    
+
+    {% if "POS_ID"|filter_config_option %}
+        {% if user|HasPerm:"ipos.issuecard_nocardretirecard" %}
+        <LI id="id_NoCardRetireCard" onclick="batchOp('?action=NoCardRetireCard',itemCanBeDelete,'{%trans "无卡退卡"%}');"><SPAN class="icon iconfont icon-wuqiatuiqia"></SPAN>{%trans "无卡退卡"%}</LI>
+		<LI id="id_ChangeCard"   onclick="batchOp(function(url){doAction_IssueCard(url,'OpChangeCard')},undefined,'{%trans "换卡"%}');"><SPAN class="icon iconfont icon-huanka"></SPAN>{%trans "换卡"%}</LI>
+	{%endif%}
+
+
+    {%else%}
+        {% if user|HasPerm:"ipos.issuecard_nocardretirecard" %}
+	<LI id="id_NoCardRetireCard" onclick="batchOp('?action=NoCardRetireCard',itemCanBeDelete,'{%trans "无卡退卡"%}');"><SPAN class="icon iconfont icon-wuqiatuiqia"></SPAN>{%trans "无卡退卡"%}</LI>
+	{%endif%}
+    
+    {% endif %}
+
+
+    {% if "POS_ID"|filter_config_option %}
+        {% if user|HasPerm:"ipos.issuecard_updatecard" %}
+
+	<LI id="id_ModifyCard"   onclick="batchOp(function(url){doAction_IssueCard(url,'OpUpdateCard')},undefined,'{%trans "卡资料修改"%}');"><SPAN  class="icon iconfont icon-xiugai"></SPAN>{%trans "卡资料修改"%}</LI>
+        {% endif %}
+    {% endif %}
+
+
+
+
+
+{% endblock %}
+{% block otherQuery %}
+	<span style='float:left;'>
+        <span>
+			<label  >{%trans '人员'%}</label>
+			<input type='text' name=''  id='search_id_user__PIN' style='width:80px;'>
+            <label  >{%trans '卡类型'%}</label>
+			<select name='' id='search_id_card_privage'><option value=''>--------</option><option value='0'>普通卡</option><option value='1'>管理卡</option><option value='2'>操作卡</option></select>
+            <label  >{%trans '卡状态'%}</label>
+			<select name='' id='search_id_cardstatus'><option value=''>--------</option><option value='1'>有效</option><option value='3'>挂失</option><option value='4'>过期</option>
+                <option value='999'>注销</option><option value='6'>无效</option><option value='5'>停用</option></select>
+			<label  >{%trans '卡号'%}</label>
+			<input type='text' name=''  id='search_id_cardno' style='width:100px;'>
+            <label  >{%trans '卡账号'%}</label>
+			<input type='text' name=''  id='search_id_sys_card_no' style='width:120px;'>
+		 </span>
+         <span id='id_search' ><a class='m-btn  zkgreen rnd mini'>{%trans 'Query'%}</a></span>
+         <span id='id_search_clean' ><a class='m-btn  zkgreen rnd mini'>{%trans '清除'%}</a></span>
+	</span>
+    <div id='dlg_to_card' style='display: none;'><table width=100%><tr><td>{{form.itype.as_widget}}</td></tr></table>	</div>
+
+{% endblock %}

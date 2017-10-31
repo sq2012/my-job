@@ -1,0 +1,630 @@
+{% extends "data_list.html" %}
+{% load iclock_tags %}
+{% block tblHeader %}
+{% load i18n %}
+
+
+//hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+//hasImport={% if user|HasPerm:"iclock.import_Group" %}true{% else %}false{% endif %}
+var att_mod={% if 'att'|enabled_module %}true{% else %}false{% endif %}
+var iaccess_mod={% if 'acc'|enabled_module %}true{% else %}false{% endif %}
+var meeting_mod={% if 'meeting'|enabled_module %}true{% else %}false{% endif %}
+var visitors_mod={% if 'visitors'|enabled_module %}true{% else %}false{% endif %}
+var ipos_mod={% if 'ipos'|enabled_module %}true{% else %}false{% endif %}
+
+var device_mod=false    
+var    ic_permission=[]
+var    ic_ids=[];
+var    ic_selected_ids=[];
+
+var ic_ownerpermissions={{ permissions }};   
+options[g_activeTabID].dlg_width=600;
+options[g_activeTabID].dlg_height=560;
+//var jqOptions=copyObj(jq_Options)
+jqOptions[g_activeTabID].sortname='id';
+tblName[g_activeTabID]='group'
+jqOptions[g_activeTabID].pager='#id_pager_'+tblName[g_activeTabID]
+jqOptions[g_activeTabID].colModel=[
+	{name:'id',width:220,sortable:true,align:'left',label:'{% trans "GroupID" %}'},
+	{name:'name',width:220,sortable:true,align:'left',label:'{% trans "Group name" %}'},
+	{name:'Creator',width:220,sortable:false,align:'left',label:'创建者'}
+	];
+$(function(){
+
+       var info='<div class="west_info"><p>1.管理组类似于角色的功能</p><p>2.预先将某些权限分成管理组,方便为不同用户配置同样的权限</p><p>3.管理组被使用后不允许删除</p><p>4.管理组名称不能重复</p><p>5.单位和人员浏览的权限被自动赋予</p></div>'
+        renderLeftInformation(info);
+        smenu="<ul><li  class='subnav_on' onclick=submenuClick('/iclock/data/group/',this);><a href='#'>管理组</a></li></ul>"
+        //$('#menu_div').html(smenu)	
+	savecookie("search_urlstr",g_urls[g_activeTabID])
+
+
+   $("#"+g_activeTabID+" #queryButton").hide()
+    $("#"+g_activeTabID+" #searchButton").click(function(){
+        searchShowGroup();
+    });
+    $("#"+g_activeTabID+" #searchbar").keypress(function(event){
+        if(event.keyCode==13){
+         searchShowGroup();
+        }
+    });
+    $("#"+g_activeTabID+" #searchbar").val("组名")    
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+		processNewModel();
+	});
+	$("#"+g_activeTabID+" #id_custom").hide()
+});
+function strOfData_group(data)
+{
+	return stripHtml(data.id)+' '+data.name;
+}
+
+function process_dialog_group(obj)
+{
+	f=$(obj).find("#id_edit_form").get(0)
+	$(f).validate({
+			rules: {
+					"name":{string:true,"maxlength":50}
+				}
+			});
+
+
+
+}
+function process_dialog_again_group(obj)
+{
+	//return;
+    if (att_mod||iaccess_mod||ipos_mod||meeting_mod||visitors_mod)
+    device_mod=true
+    $("#tabs_group").tabs()
+    disable_mod=[]
+    if(!att_mod)
+    disable_mod.push(2)
+    if(!iaccess_mod)
+    disable_mod.push(3)
+    if(!meeting_mod)
+    disable_mod.push(4)
+//    if(!device_mod)
+//    disable_mod.push(1)
+    if(!visitors_mod)
+    disable_mod.push(5)
+    if(!ipos_mod)
+    disable_mod.push(6)
+    $("#tabs_group").tabs( "option", "disabled", disable_mod );
+    
+    ic_permission=[]
+    ic_ids=[];
+    ic_selected_ids=[];
+    ic_allowed_perm=[
+                {id:"department",name:"{% trans ' department ' %}",'mod':'basic'},
+                {id:"employee",name:"{% trans ' employee ' %}",'mod':'basic'},
+		{id:"attcalclog",name:"{% trans '系统选项'%}",'mod':'system'},
+		{id:"announcement",name:"{% trans 'Announcement-table'%}",'mod':'basic'},
+		{id:"userroles",name:"{% trans 'userRoles' %}",'mod':'basic'},
+
+
+                {id:"group",name:"{% trans 'group' %}",'mod':'system'},
+		{id:"myuser",name:"{% trans 'User' %}",'mod':'system'},
+		{id:"adminlog",name:"{% trans ' administration log ' %}",'mod':'system'},
+		{id:"devcmds",name:"{% trans ' log of command to device ' %}",'mod':'basic'},
+		{id:"employeelog",name:"{% trans '员工登陆日志' %}",'mod':'system'},
+		{id:"devlog",name:"{% trans '其他日志' %}",'mod':'system'},
+
+
+
+		{% if "msg"|enabled_module %}
+		{id:"iclockmsg",name:"{% trans ' information subscription ' %}",'mod':'basic'},
+		{id:"messages",name:"{% trans ' public information ' %}",'mod':'basic'},
+		{% endif %}
+	//	{id:"itemdefine",name:"{% trans 'Reports' %}",'mod':'basic'},
+            
+                {id:"iclock",name:"{% trans ' device ' %}",'mod':'device'},
+		//{id:"fptemp",name:"{% trans '指纹信息管理' %}",'mod':'device'},
+		{id:"biodata",name:"{% trans '特征模板管理' %}",'mod':'device'},
+		{id:"transactions",name:"{% trans '考勤记录' %}",'mod':'device'},
+		//{id:"devlog",name:"{% trans ' log of data from device ' %}",'mod':'device'},
+		{id:"oplog",name:"{% trans ' device operation log ' %}",'mod':'device'},
+		//{id:"attdataproofcmd",name:"{% trans 'attdata proof cmd' %}",'mod':'device'},
+                {id:"empofdevice",name:"{% trans '查看设备上的人员' %}",'mod':'device'},
+
+		{id:"schclass",name:"{% trans ' shift time-table ' %}",'mod':'att'},
+		{id:"num_run",name:"{% trans ' shift ' %}",'mod':'att'},
+		{id:"user_of_run",name:"{% trans ' empoyee shift ' %}",'mod':'att'},
+		{id:"user_speday",name:"{% trans ' special leave ' %}",'mod':'basic'},
+		{id:"user_overtime",name:"{% trans 'User OverTime' %}",'mod':'att'},
+		{id:"checkexact",name:"{%trans "补签处理"%}",'mod':'device'},
+		//{id:"accounts",name:"{% trans ' Posting ' %}",'mod':'att'},
+		//{id:"itemdefine",name:"{% trans 'Reports' %}",'mod':'att'},
+		{id:"holidays",name:"{% trans ' holidays ' %}",'mod':'basic'},
+		{id:"leaveclass",name:"{% trans ' Leave Class ' %}",'mod':'basic'},
+		{id:"attparam",name:"{% trans ' attendance rule ' %}",'mod':'att'},
+                {id:"days_off",name:"{% trans '调休' %}",'mod':'att'},
+                {id:"iclockdept",name:"{% trans '数据查询' %}",'mod':'basic'},
+	
+//		{id:"acgroup",name:"{% trans 'ACGroup-table'%}",'mod':'acc'},
+		//{id:"acunlockcomb",name:"{% trans 'ACUnlockComb-table'%}",'mod':'acc'},
+//		{id:"useracprivilege",name:"{% trans 'UserACPrivilege-table'%}",'mod':'acc'},
+                {id:"zone",name:"{% trans '区域'%}",'mod':'basic'},
+                {id:"accdoor",name:"{% trans '门管理'%}",'mod':'acc'},
+                {id:"timezones",name:"{% trans '门禁时间段'%}",'mod':'acc'},
+                {id:"level",name:"{% trans '权限组'%}",'mod':'acc'},
+                //{id:"level_emp",name:"{% trans '权限组人员'%}",'mod':'acc'},
+                {id:"interlock",name:"{% trans '互锁'%}",'mod':'acc'},
+                {id:"linkage",name:"{% trans '联动'%}",'mod':'acc'},
+                {id:"antipassback",name:"{% trans '反潜'%}",'mod':'acc'},
+                {id:"firstopen",name:"{% trans '首人常开'%}",'mod':'acc'},
+                {id:"combopen",name:"{% trans '多人开门人员组'%}",'mod':'acc'},
+                {id:"combopen_door",name:"{% trans '多人开门'%}",'mod':'acc'},
+                
+                {id:"records",name:"{% trans '数据查询' %}",'mod':'acc'},
+		{id:"mapmanage",name:"{% trans '地图管理'%}",'mod':'acc'},
+//		{id:"iaccdevitemdefine",name:"{% trans '设备与记录报表'%}",'mod':'acc'},
+		{id:"IaccEmpItemDefine",name:"{% trans '人员与记录报表'%}",'mod':'acc'},
+		{id:"iaccessoplog",name:"{% trans '门禁设备操作日志'%}",'mod':'acc'},
+		
+		{id:"user_contract",name:"{% trans ' 用户合同 ' %}",'mod':'basic'},
+		{id:"annual_settings",name:"{% trans '年休假管理' %}",'mod':'att'},
+		{id:"meetlocation",name:"{% trans '会议室' %}",'mod':'meeting'},
+		{id:"participants_tpl",name:"{% trans '参会人员模板' %}",'mod':'meeting'},
+                {id:"participants_details",name:"{% trans '模板人员数据' %}",'mod':'meeting'},
+		{id:"meet_order",name:"{% trans '会议预约' %}",'mod':'meeting'},
+                {id:"meet",name:"{% trans '会议' %}",'mod':'meeting'},
+		{id:"meetmessage",name:"{% trans '会议通知' %}",'mod':'meeting'},
+                {id:"meet_devices",name:"{% trans '会议室设备' %}",'mod':'meeting'},
+		{id:"minute",name:"{% trans '会议纪要' %}",'mod':'meeting'},
+                {id:"meet_details",name:"{% trans '参会人员' %}",'mod':'meeting'},
+                
+                {id:"reason",name:"{% trans '来访事由' %}",'mod':'visitors'},
+                {id:"reservation",name:"{% trans '预约访客' %}",'mod':'visitors'},
+                {id:"visitionlogs",name:"{% trans '访客登记' %}",'mod':'visitors'},
+                
+                {id:"splittime",name:"{% trans '分段定值' %}",'mod':'ipos'},
+                {id:"batchtime",name:"{% trans '消费时间段' %}",'mod':'ipos'},
+                {id:"dininghall",name:"{% trans '餐厅资料' %}",'mod':'ipos'},
+                {id:"meal",name:"{% trans '餐别资料' %}",'mod':'ipos'},
+                {id:"merchandise",name:"{% trans '商品资料' %}",'mod':'ipos'},
+                {id:"keyvalue",name:"{% trans '键值资料' %}",'mod':'ipos'},
+                {id:"iccard",name:"{% trans '卡类资料' %}",'mod':'ipos'},
+                {id:"allowance",name:"{% trans '补贴' %}",'mod':'ipos'},
+                {id:"handconsume",name:"{% trans '手工补消费' %}",'mod':'ipos'},
+                {id:"issuecard",name:"{% trans '发卡管理' %}",'mod':'ipos'},
+                {id:"icconsumerlist",name:"{% trans '消费明细' %}",'mod':'ipos'},
+                {id:"iclockdininghall",name:"{% trans '数据查询' %}",'mod':'ipos'}
+	]   
+                
+	getInitData(obj);
+        var setting = {
+                check: {enable: true,chkboxType:{ "Y": "s", "N": "s" },chkStyle: "checkbox"},
+
+                data: {simpleData: {enable: true,idKey: "id", pIdKey: "pid",  rootPId: 0}
+                }
+        };
+        treedata=getPermissionTreeEx('basic',"{%trans '基本权限' %}");
+	$.fn.zTree.init($("#tabs-basic #basic-permissions",obj), setting, treedata);
+        
+        treedata=getPermissionTreeEx('device',"{%trans '设备操作权限' %}");
+	$.fn.zTree.init($("#tabs-device #device-permissions",obj), setting, treedata);
+        
+        treedata=getPermissionTreeEx('att',"{%trans '考勤权限' %}");
+	$.fn.zTree.init($("#tabs-att #att-permissions",obj), setting, treedata);
+        
+        treedata=getPermissionTreeEx('acc',"{%trans '门禁权限' %}");
+	$.fn.zTree.init($("#tabs-acc #acc-permissions",obj), setting, treedata);
+        
+        treedata=getPermissionTreeEx('meeting',"{%trans '会议权限' %}");
+	$.fn.zTree.init($("#tabs-meeting #meeting-permissions",obj), setting, treedata);
+
+        treedata=getPermissionTreeEx('visitors',"{%trans '访客权限' %}");
+	$.fn.zTree.init($("#tabs-visitors #visitors-permissions",obj), setting, treedata);
+
+        treedata=getPermissionTreeEx('ipos',"{%trans '消费权限' %}");
+	$.fn.zTree.init($("#tabs-ipos #ipos-permissions",obj), setting, treedata);
+        
+        treedata=getPermissionTreeEx('system',"{%trans '系统' %}");
+	$.fn.zTree.init($("#system-permissions",obj), setting, treedata);
+        
+       // treedata=getPermissionTreeEx('auth',"{%trans '管理员' %}");
+	//$.fn.zTree.init($("#tabs-auth #auth-permissions",obj), setting, treedata);
+
+	f=$(obj).find("#id_edit_form").get(0)
+	$(f).validate({
+			rules: {
+					"name": {"required":true}
+				}
+			});
+}
+
+
+
+function getOptions_html_Group(obj)
+{
+	var html="";
+        var selected_ids=[]
+        var perm_names=["basic-permissions","device-permissions","att-permissions","acc-permissions","meeting-permissions","visitors-permissions","ipos-permissions","ihr-permissions","finance-permissions","system-permissions","auth-permissions"]
+        for(var i in perm_names)
+        {
+            selected_ids=$.merge(selected_ids,getSelected_dept(perm_names[i]));
+        
+        }
+ 
+	for(var i in selected_ids)
+	{
+		if (selected_ids[i]>-1)
+			html+="<option value='"+selected_ids[i]+"' selected>"+selected_ids[i]+"</option>"
+	}
+ 	return html;
+}
+
+function getInitData(obj)
+{	
+
+        //不需要显示配置的权限
+        //var filterNames='change_transaction,add_devcmds,change_devcmds,add_devlog,change_devlog,'+
+        //'add_oplog,change_oplog,change_fptemp,change_facetemp,'+
+        //'add_attshifts,change_attshifts,delete_attshifts,add_itemdefine,change_itemdefine,delete_itemdefine'
+
+
+
+	var gp_Obj=$("#id_permissions",obj).get(0).options;
+	for(var i=0;i<gp_Obj.length;i++)
+		if(gp_Obj[i].selected)
+			ic_selected_ids.push(gp_Obj[i].value);
+        var ic_allowed_perm_str=""                
+	for(var i=0;i<ic_allowed_perm.length;i++)
+           ic_allowed_perm_str+=ic_allowed_perm[i].id +"|"
+	for(var i=0;i<gp_Obj.length;i++)
+	{
+		var texts=(gp_Obj[i].innerHTML).split("|");
+		if($.trim(texts[0])=="iclock" || $.trim(texts[0])=="auth"|| $.trim(texts[0])=="accounts"|| $.trim(texts[0])=="acc"|| $.trim(texts[0])=="meeting"|| $.trim(texts[0])=="ipos"|| $.trim(texts[0])=="visitors" || $.trim(texts[0])=="base")
+		{
+        		if(ic_allowed_perm_str.indexOf($.trim(texts[1])+"|")>=0){
+			//alert($.trim(texts[2]))
+                                        //if (filterNames.indexOf($.trim(texts[2]))==-1)
+                                        //{
+						ic_permission.push(texts);
+						ic_ids.push(gp_Obj[i].value);
+					//}
+				}
+		}
+	}
+}
+function getPermissionTreeEx(perms,text){ 
+        var tree=[{  
+                        id:-10000,
+                        name:text,
+                        pid:0,
+                        open:true
+        }];
+        for(var i in ic_allowed_perm)
+	{
+            if (ic_allowed_perm[i].mod.indexOf(perms)!=-1)
+	    {
+	        var sub_tree=getTreeStringEx(ic_allowed_perm,i)
+		if (sub_tree.length>1)
+                tree=$.merge(tree,sub_tree);
+	    }
+	}
+        return tree;	
+}
+//权限翻译
+var general_perm={
+				"add_":	"{% trans 'Add' %}",
+				"browse_":	"{% trans 'Browse' %}",
+				"change_":	"{% trans 'Modify' %}",
+				"delete_":	"{% trans 'Delete' %}"
+};
+
+var third_perm={
+	"employee": {
+
+		"restoreEmpLeave_employee":"{% trans 'Restore Emp leave' %}",
+		'empLeave_employee': "{% trans 'Employee leave' %}",
+		
+		"toDepart_employee": "{% trans "Change employee's department" %}",
+		"ligang": "{% trans "人员离岗" %}",
+		"liganghuifu": "{% trans "离岗恢复" %}",
+		"enroll_employee": "{% trans "Enroll employee's fingerprint" %}",
+                "edit_privilege": "{% trans "编辑设备权限" %}",
+                "edit_MVerifyPass": "{% trans "编辑设备密码" %}",
+                "edit_Card": "{% trans "编辑人员卡号" %}",
+		"Upload_pictures":"{% trans 'Upload pictures' %}"
+//		"import employee": "{% trans "Import employee" %}",
+//		"restore Emp leave":"{% trans 'Restore Emp leave' %}"
+	},
+
+	"iclock": {
+		'cleardata_iclock':			"{% trans 'Clear data in device' %}",
+		'clearlog_iclock':	"{% trans 'Clear transactions in device' %}",
+//		'Copy data between device':		"{% trans 'Copy data between device' %}",备份登记数据到其他设备
+		'Set power suspend':			"{% trans 'Set power suspend' %}",
+		'info_iclock':	"{% trans 'Refresh device information' %}",
+		'loaddata_iclock':				"{% trans 'Upload new data' %}",
+		'pause_iclock':					"{% trans 'Pause device' %}",
+		'reboot_iclock':				"{% trans 'Reboot device' %}",
+		'reloaddata_iclock':			"{% trans 'Upload data again' %}",
+		'reloadlogdata_iclock':	"{% trans 'Upload transactions again' %}",
+                'browselogPic':	"{% trans '查看考勤记录照片' %}",
+                
+//		'Reset Password in device':		"{% trans 'Reset Password in device' %}",重新设置人员在设备上的考勤密码
+//		'Restore employee to device':	"{% trans 'Restore employee to device' %}",恢复设备上的人员数据
+		'resume_iclock':		"{% trans 'Resume a resumed device' %}",
+		'unlock_iclock':			"{% trans 'Output unlock signal' %}",
+		'unalarm_iclock':		"{% trans 'Terminate alarm signal' %}",
+//		'Upgrade firmware':				"{% trans 'Upgrade firmware' %}",升级固件
+		'deptEmptoDev_iclock':				"{% trans 'Transfer employee of department to the device' %}",
+		'Upload_Iclock_Photo':			"{% trans '上传设备图片' %}",
+		'deptEmptoDelete_iclock':		"{% trans 'Delete employee from the device order by department' %}",//按单位人员从设备中删除人员
+//		'delFingerFromDev_iclock':		"{% trans 'Only Delete fingers of employee from the device order by department' %}",
+//		'delFaceFromDev_iclock':		"{% trans 'Only Delete face of employee from the device order by department' %}",
+//-		'clearpic_iclock':		"{% trans '清除设备上的现场照片' %}",		
+
+//		'Delete fingers of employee the device':		"{% trans 'Only Delete fingers of employee from the device order by department' %}",//按单位人员从设备中删除人员指纹
+//		'Delete face of employee the device':		"{% trans 'Only Delete face of employee from the device order by department' %}",//按单位人员从设备中删除人员面部
+		'attdataProof_iclock':		"{% trans 'Attendance data proofreading' %}",//考勤数据校对
+		'devoption_iclock':		"{% trans 'Set options of device' %}",
+//-		"toDevPic_iclock":"{% trans 'Transfer employee PIC to the device' %}",
+		'toDevWithin_iclock': "{% trans 'Transfer to the device templately' %}",
+//		"delDevPic_iclock":"{% trans 'Delete employee PIC from the device' %}",
+		'AutoToDev_employee':"{% trans 'Auto transfer employee to the device' %}",
+		{% if "acc"|enabled_module %}
+		'Upload_AC_Options':			"{% trans 'Upload AC Options' %}",
+		'Upload_User_AC_Options':		"{% trans 'Upload User AC Options' %}",
+                {%endif%}
+            
+		{% if "ipos"|enabled_module %}
+		'Upload_pos_all_data':			"{% trans '同步所有数据至设备(消费)' %}",
+		'Upload_pos_Merchandise':		"{% trans '上传商品资料至设备' %}",
+		'Upload_pos_Meal':		"{% trans '上传餐别资料至设备' %}",
+                {%endif%}
+            
+		'mvToDev_iclock': "{% trans 'Move employee to a new device' %}"
+		},
+	"transactions":
+	{
+//		'Audited Transaction':					"{% trans 'Audit Transaction' %}",审核
+//		'Clear_Obsolete_Data':					"{% trans 'Clear Obsolete Data' %}",
+//		'Forget_transaction':	"{% trans 'Forgetting to Clock in/out' %}"
+//		'Init database':			"{% trans 'Init database' %}"
+		'monitor_oplog':			"{% trans 'Transaction Monitor' %}"
+	},
+	"user_of_run":
+	{
+		'Employee_shift_details':			"{% trans 'Employee shift details' %}"
+	},
+	"user_speday":
+	{
+		'leaveAudit_user_speday':			"{% trans 'Audit Sepcial Leave' %}",
+                'setprocess':			"{% trans '多级审批流程设置'%}"
+	},
+        
+        "checkexact":
+	{
+                'TransAudit_checkexact':			"{% trans '审核' %}"
+        },
+        
+	"user_overtime":
+	{
+		'overtimeAudit_user_overtime':			"{% trans 'Audit OverTime' %}"
+	},
+
+	
+
+	"itemdefine": {
+		},
+	"num_run":
+			{
+				'addShiftTimeTable_num_run':			"{% trans 'Add time-table' %}",
+				'deleteAllShiftTimeTbl_num_run':		"{% trans 'Delete time-table' %}"
+			},
+	"user_temp_sch":
+			{
+				'user_temp_sch_add':		"{% trans '增加'%}",
+				'user_temp_sch_modify':		"{% trans '修改'%}",
+				'user_temp_sch_delete':		"{% trans '删除'%}"
+				/*
+				'Data_Management':			"{% trans 'Data Management'%}",
+				'Init database':			"{% trans 'Init database'%}",
+				'modify_basic_set':			"{% trans '基本设置'%}",
+				'modify_Email_set':			"{% trans '修改Email设置'%}",
+				'modify_recordstatus_set':		"{% trans '修改记录状态'%}",
+				'Clear_Obsolete_Data':		"{% trans '编辑清除过期数据'%}",
+				'Backup_Database':			"{% trans 'Backup Database'%}",
+				'import_department_data':	"{% trans 'import department data'%}",
+				'import_employee_data':	"{% trans 'import employee data'%}",
+				'Import_Finger_data':		"{% trans 'Import Finger data'%}",
+				'U_Disk_Data_Manager':		"{% trans 'U_Disk Data Manager'%}",
+				'Database_Options':			"{% trans 'Database Options'%}",
+				'System_Options':			"{% trans 'System Options'%}",
+				'preferences_user':			"{% trans 'Preferences' %}",
+				'setprocess':			"{% trans '多级审批'%}"
+				*/
+			},
+                        
+ 	"iclockdept":{
+//		'IclockDept_transactions': "{% trans '考勤记录' %}",
+//		'IclockDept_monitor': "{% trans '实时记录监控' %}",
+		'IclockDept_calcreports': "{% trans '统计报表' %}",
+		'IclockDept_reports': "{% trans '考勤报表' %}"
+	},
+                       
+	"level":
+			{
+				'addemps_level':			"{% trans 'Add emps' %}",
+				'delallemps_level':		"{% trans 'Delete allemps' %}"
+			},  
+  
+                        
+        "UserACPrivilege-table":{
+                    'setdevice': "{% trans 'Distribution Device' %}",
+                    'Employee_to_device': "{% trans 'Employee to device' %}"
+        },
+	"mapmanage":{
+		'MapManage_SetMap': "{% trans '设置地图' %}",
+		'MapManage_SaveStyle': "{% trans '保存样式' %}",
+		'MapManage_RemoveMap': "{% trans '清除地图' %}",
+		'Map_Monitor': "{% trans '电子地图监控' %}"
+	},
+	"records":{
+		'acc_records': "{% trans '门禁记录' %}",
+                'monitor_oplog': "{% trans '实时监控' %}",
+                'acc_reports': "{% trans '门禁报表' %}"
+	},
+
+	"iaccdevitemdefine":{
+		'iaccMonitor_iaccdevitemdefine': "{% trans '监控记录表' %}",
+		'iaccAlarm_iaccdevitemdefine': "{% trans '报警记录表' %}",
+		'iaccUserRights_iaccdevitemdefine': "{% trans '用户权限表' %}"
+	},
+	"iaccempitemdefine":{
+		'iaccRecordDetails_iaccempitemdefine': "{% trans '记录明细' %}",
+		'iaccSummaryRecord_iaccempitemdefine': "{% trans '记录汇总' %}",
+		'iaccEmpUserRights_iaccempitemdefine': "{% trans '用户权限明细' %}",
+		'iaccEmpDevice_iaccempitemdefine': "{% trans '用户设备' %}"
+	},
+        //"visitionlogs":{
+        //        'search_visitionlogs':"{%trans '访客记录查询'%}"
+        //},
+	"issuecard":{
+		'issuecard_issuecard': "{% trans '发卡' %}",
+		'issuecard_oplosecard': "{% trans '挂失' %}",
+		'issuecard_oprevertcard': "{% trans '解挂' %}",
+		'issuecard_cancelmanagecard': "{% trans '注销管理卡' %}",
+		'issuecard_nocardretirecard': "{% trans '无卡退卡' %}",
+		'issuecard_supplement': "{% trans '充值' %}",
+		'issuecard_reimburse': "{% trans '退款' %}",
+		'issuecard_retreatcard': "{% trans '退卡' %}",
+		'issuecard_updatecard': "{% trans '卡资料修改' %}",
+		'issuecard_initcard': "{% trans '卡初始化' %}"
+	},
+    "allowance":{
+        'allowanceAudit_allowance':"{% trans '审核' %}"
+    },
+        
+	"iclockdininghall":{
+		'iclockdininghall_cardcashsz': "{% trans '卡现金收支' %}",
+		'iclockdininghall_icconsumerlist': "{% trans '消费明细' %}",
+		'iclockdininghall_reports': "{% trans '报表' %}"
+	},
+
+        "meet_order":{
+		'orderAudit_meet_order': "{% trans '会议预约审核' %}"
+	},  
+	"meet":{
+		'meeting_reports': "{% trans '会议报表' %}",
+		'meeting_monitor': "{% trans '会议实时显示' %}"
+	},        
+
+
+	"attcalclog":{
+		'sys_basic_setting': "{% trans '基本及设备参数设置' %}",
+		'sys_email_setting': "{% trans 'Email设置' %}",
+		'sys_state_setting': "{% trans '记录显示状态' %}",
+		'sys_api_setting': "{% trans '数据对接设置' %}",
+		'sys_calc_setting': "{% trans '统计任务设置' %}",
+		'sys_del_setting': "{% trans '清除数据任务' %}",
+		'sys_pos_setting': "{% trans '消费参数设置' %}",
+		'sys_sap_setting': "{% trans 'SAP对接设置' %}",
+		'sys_acc_setting': "{% trans '门禁设置' %}",
+		'sys_app_setting': "{% trans 'APP设置' %}"
+                
+	}
+        
+
+}
+
+
+function getTransText(table, permName)
+{
+
+	for(n in general_perm)
+	{
+		if(permName.indexOf(n)!=-1)
+                {
+                    return general_perm[n];
+                }
+	}
+	if(table in third_perm)
+	{
+		var permss=third_perm[table];
+		for(n in permss) if(permName==n) return permss[n];
+	}
+	return ""//permName;
+}
+
+
+        
+function getTreeStringEx(perms,index)
+{
+        var tree_sub=[{  
+                        id:(index+1)*(-1),
+                        name:perms[index].name,
+                        pid:-10000,
+                        open:true
+        }];
+
+        for(var i in ic_permission)
+        {
+		id=ic_ids[i]*1;
+		if (!isExist_permissions(id))continue
+                if($.trim(ic_permission[i][1])==perms[index].id)
+                {
+                        var ttext=getTransText($.trim(ic_permission[i][1]), $.trim(ic_permission[i][2]));
+                        var tree_sub_sub={
+                                        id:id,
+                                        name:ttext,
+                                        checked:isSelected(ic_ids[i])?true:false,
+                                        pid:(index+1)*(-1)
+                                    
+                                    };
+                        if (ttext!="")
+                        tree_sub.push(tree_sub_sub);		
+                }
+        }
+        
+        return tree_sub;
+}
+
+function isSelected(selected_id)
+{	var flag=0;
+	for(var i=0;i<ic_selected_ids.length;i++){
+		if(ic_selected_ids[i]==selected_id)
+			{
+				flag=1;
+				break;
+			}
+		else
+			flag=0;
+	}
+	return flag;
+}
+
+function isExist_permissions(id)
+{
+	for(var i=0;i<ic_ownerpermissions.length;i++){
+		if (id==ic_ownerpermissions[i]) return true
+	}
+	if(ic_ownerpermissions.length>0)
+		return false
+	else
+		return true
+
+}
+
+function beforePost_group(obj,actionName){
+	$("#id_permissions",obj).html(getOptions_html_Group(obj));
+}
+
+//模糊查询
+function searchShowGroup(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+	var url="/iclock/data/Group/?name__icontains="+escape(v)
+	savecookie("search_urlstr",url);
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+
+{% endblock %}

@@ -1,0 +1,21 @@
+{% load iclock_tags %}
+{% load i18n %}
+<script>
+
+
+$(function(){
+
+
+{% autoescape off %}
+	
+var html={{sub_menu}}
+
+{% endautoescape %}
+
+$("#west_content").html(html)
+
+//$("#menu_div ul").find('li').get(0).click()	
+
+});
+
+</script>

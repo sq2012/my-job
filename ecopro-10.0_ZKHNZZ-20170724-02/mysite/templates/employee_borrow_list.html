@@ -1,0 +1,447 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+
+var role_json2=[]
+{% block tblHeader %}
+        dtFields = "{{ dtFields }}"
+        tblName[g_activeTabID]='employee_borrow';
+        
+        jqOptions[g_activeTabID].colModel={{colModel}}
+        jqOptions[g_activeTabID].sortname='userID';
+        jqOptions[g_activeTabID].sortorder="desc";
+        jqOptions[g_activeTabID].pager="id_pager_"+tblName[g_activeTabID]
+        
+        options.edit_col=1;
+        function createNewDlg_employee_borrow(){
+                var title="{%trans '新增借调' %}";
+                createDlgdeptfor('employee_borrow_off_add',1)
+                $('#dlg_for_query_employee_borrow_off_add').dialog({title:title,
+                        height:450,
+                        buttons:[
+                                {id:"btnShowOK",text:"{% trans 'save and return' %}",
+									click:function(){ 
+										if(typeof beforePost_employee_borrow=="function")
+											{if(beforePost_employee_borrow(this,"_new_")==false) return ;}  
+										SaveFormData(this,g_urls[g_activeTabID]+"_new_/",'add',"employee_borrow");  
+											}},
+                                {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}
+                        ]
+                });
+                createDlgother_employee_borrow('employee_borrow_off_add');
+        }
+        
+        
+        function createDlgother_employee_borrow(page){
+            var html="<div id='id_form'><div class='module' style='position:relative;'>"
+                +"<table id='id_employee_borrow'><tr>"
+                +"<td style='vertical-align:top;color:black;'><div id='show_dept_emp_tree'></div></td></tr><tr><td style='vertical-align:top;'><div id='id_conditions'>"
+                +"<form id='id_edit_form' method='POST'>"
+                +"<table id='id_setField' style='margin-top: 0px;'>"
+                               +"<tr><td><label for='id_toDeptName' class='required'>{% trans '借调单位'%}</label></td>"
+                                       +"<td><input id='id_toDeptName'  type='text'  value='' maxlength='40' name='toDeptName'  style='width:120px !important;'/>"
+									   +"<img alt='{%trans 'open department tree'%}' src='/media/img/sug_down_on.gif' id='id_drop_borrow_dept'/></td></tr>"
+									   +'<tr><td><div id="show_deptment">'
+									   +'<div class="title"><span class="close" style="margin-top:1px;" onclick="hideDeptment_borrow()"></span></div>'
+										+"<div id='show_dept_tree_dept'>"
+										+"<ul id='showTree_ebtree' class='ztree' style='margin-left: 0px;overflow:auto;height:250px;'></ul>"
+										+"</div>"
+										+'</div></td></tr>'
+							   +"<tr><td><br></td></tr><tr><td><label for='id_toTitle' class='required3'>{% trans '借调职位'%}</label></td>"
+                                       +"<td><input id='id_toTitle'  type='text'  value='' maxlength='40' name='toTitle'  style='width:120px !important;'/></td></tr>"
+								+"<tr><td><br></td></tr><tr><td><label for='id_fromDate' class='required'>{% trans '借调日期'%}</label></td>"
+                                       +"<td><input id='id_fromDate'  type='text'  value='' maxlength='40' name='fromDate'  style='width:120px !important;' readonly='readonly'/></td></tr>"
+								+"<tr><td><br></td></tr><tr><td><label for='id_toDate' class='required'>{% trans '调至日期'%}</label></td>"
+                                       +"<td><input id='id_toDate'  type='text'  value='' maxlength='40' name='toDate'  style='width:120px !important;' readonly='readonly'/></td></tr>"
+								+"<tr><td><br></td></tr><tr><td><label for='id_reason' class='required3'>{% trans '借调原因'%}</label></td>"
+                                       +"<td><input id='id_reason'  type='text'  value='' maxlength='40' name='reason'  style='width:120px !important;'/></td></tr>"
+								+"<tr><td><br></td></tr><tr><td><label for='id_remark' class='required3'>{% trans '备  注'%}</label></td>"
+                                       +"<td><input id='id_remark'  type='text'  value='' maxlength='40' name='remark'  style='width:120px !important;'/></td></tr>"
+								+"<tr><td><br></td></tr><tr><td><label for='id_OpTime' class='required3'>{% trans '操作日期'%}</label></td>"
+                                       +"<td><input id='id_OpTime'  type='text'  value='' maxlength='40' name='OpTime'  style='width:120px !important;' readonly='readonly'/></td></tr>"
+                        +"<tr><td></td></tr>"
+                        +"<tr><td colspan='2'>"
+                        +"<input type='hidden' id='id_userID' value='' name='userID' />"
+						+"<input type='hidden' id='id_fromTitle' value='' name='fromTitle' />"
+						+"<input type='hidden' id='id_toDept' value='' name='toDept' />"
+                        +"</td></tr>"
+                        +"<tr><td colspan='2'><span id='id_error'></span></td>"
+                +"</table></form></td>"
+                +"</tr></table></div></div>";
+        
+            $("#dlg_other_body_"+page).html(html)
+			$("#dlg_other_"+page).css("width",'250')
+			$("#dlg_emp_"+page).css("width",'470')
+			$("#dlg_emp_"+page).css("height",'339')
+			$("#dlg_other_"+page).css("height",$("#dlg_emp_"+page).height())
+			$("#dlg_other_"+page).addClass('dlgempdiv')
+			$("#dlg_for_query_"+page).dialog({dialogClass: "",width:'1000',height:'460'})
+			$("#dlg_other_"+page).position({
+					my: "left top",
+					at: "right top",
+					of: "#dlg_emp_"+page
+			});
+			var tpickerOptions=copyObj(datetimepickerOptions)
+			tpickerOptions.showSecond=true
+			tpickerOptions.timeFormat='HH:mm:ss'
+			$("#id_OpTime").css('background','#E3E3E3').css('color','#B8AF9F');
+            var date=moment().format("YYYY-MM-DD HH:mm:ss")
+            $("#id_fromDate").val(date)
+			$("#id_fromDate").datetimepicker(tpickerOptions);
+			$("#id_toDate").datetimepicker(tpickerOptions);
+			$("#id_OpTime").val(date)
+			$('#id_toDeptName').prop('readonly',true)
+			//$('#id_toTitle').prop('readonly',true)
+			$('#id_drop_borrow_dept').click(function(){
+				ShowDeptTree_borrow('ebtree',true)
+				showDeptment_borrow();
+			});
+			var ti=$("#id_toTitle").val()
+			var htl="<option value=' '> </option>"
+			for(var i=0;i<role_json2.length;i++){
+				if(ti==role_json2[i]){
+					htl+="<option value='"+role_json2[i]+"' selected>"+role_json2[i]+"</option>"
+				}else{
+					htl+="<option value='"+role_json2[i]+"'>"+role_json2[i]+"</option>"
+				}
+			}
+			if ({{"opt_basic_approval"|get_params}}=='1'){
+				$("#id_toTitle").parent().html("<select id='id_toTitle' name='toTitle' class='valid'>"+htl+"</select>");
+			}
+        }
+		
+		function ShowDeptTree_borrow(page,tag)
+		{
+			var d_url="/iclock/att/getDeptData/?func=department"
+			var setting = {
+					check: {enable: true,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},          
+				async: {
+						enable: true,
+						url: d_url,
+						autoParam: ["id"]
+					}
+			};
+			$.fn.zTree.init($("#showTree_"+page), setting,null);	
+			if(tag){
+				var zTree = $.fn.zTree.getZTreeObj("showTree_"+page);
+				zTree.setting.check.enable = false;
+				zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+						var id=treeNode.id;
+						$("#id_toDeptName").val(treeNode.name);
+						$("#id_toDept").val(id);
+						hideDeptment_borrow();
+					
+				}
+			}
+		}
+		function showDeptment_borrow (page) {
+			var top =  $("#id_toDeptName").position().top;
+			var left =  $("#id_toDeptName").position().left-180;
+			var d_height=$("#id_toDeptName").height();
+			$("#show_deptment").css("display","block").css({position: 'absolute',"top": top+d_height+6+'px',"left": left+'px'});
+		}
+		function hideDeptment_borrow () {
+			$("#show_deptment").css("display","none").css("top", -1000).css("left",  -1000);
+		}
+        function validate_form_employee_borrow(){   
+                var t_ComeTime=$("#id_qstart_employee_borrow").val();
+                var cTime=t_ComeTime.split("-");
+                var t_EndDate=$("#id_qend_employee_borrow").val();
+                var eTime=t_EndDate.split("-");
+                cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+                edate=new Date(parseInt(eTime[0],10),parseInt(eTime[1],10)-1,parseInt(eTime[2],10));
+                var days=(edate.valueOf()-cdate.valueOf())/(1000*3600*24)+1;
+                if(cdate>edate || t_ComeTime=="" || t_EndDate==""||!valiDate(t_ComeTime)||!valiDate(t_EndDate)){
+                        return 1;
+                }else{
+                        return 0
+                }
+        }
+		
+		function createQueryDlg_employee_borrow(){
+			createDlgdeptfor10('employee_borrow_search',1)
+			$('#dlg_for_query_employee_borrow_search').dialog({
+			buttons:[{id:"btnShowOK",text:gettext('搜索'),
+			  click:function(){searchbydept_employee_borrow('employee_borrow_search');$(this).dialog("destroy"); }},
+			 {id:"btnShowCancel",text:gettext('Return'),click:function(){$(this).dialog("destroy"); }
+			}] })
+		}
+		
+		function searchbydept_employee_borrow(page){
+			var dept_ids=getSelected_dept("showTree_"+page)
+			if (dept_ids!=null){
+				if(dept_ids==undefined||dept_ids==''){
+					alert("{% trans "请选择单位" %}")
+					return false;
+				}
+			}else{
+				alert("{% trans "请选择单位" %}")
+				return false;
+			}
+			var ischecked=0;
+			if($("#id_cascadecheck_"+page).prop("checked"))
+				ischecked=1;
+			urlStr="deptIDs="+dept_ids+"&isContainChild="+ischecked
+			var emp=getSelected_emp_ex("sel_employee_borrow_search");
+			if(emp.length>0){
+				urlStr +="&UserID__id__in="+emp
+			}
+			var url="/iclock/data/employee_borrow/?"+urlStr
+			savecookie("search_urlstr",url);
+			$("#id_grid_employee_borrow").jqGrid('setGridParam',{url:url,datatype:'json'}).trigger("reloadGrid");
+		}
+		
+		//模糊查询
+        function searchShow_employee_borrow(){
+            var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+            if (flag!='cansearch'&&flag!='defvalue') return;
+            if (flag!='defvalue')
+                var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+            else
+                var v=""
+			if(v=='考勤编号,身份证号,姓名'){
+				v=''
+			}
+            var ComeTime=$("#id_qstart_employee_borrow").val();
+            var EndDate=$("#id_qend_employee_borrow").val();
+            $.cookie("ComeTime",ComeTime, { expires: 7 });
+            $.cookie("EndDate",EndDate, { expires: 7 });
+            var isError=validate_form_employee_borrow();
+            var urlTime1='';
+            if(!isError){
+				urlTime1='&fromDate__gte='+ComeTime+'&fromDate__lte='+EndDate
+			}
+			var ischecked=0;
+			if($("#id_cascadecheck_"+g_activeTabID).prop("checked"))
+				ischecked=1;
+			var zTree = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+			nodes = zTree.getSelectedNodes()
+			if(nodes.length>0){
+				deptID=nodes[0].id
+			}else{
+				return
+			}
+            var url="/iclock/data/employee_borrow/?q="+escape(v)+"&deptIDs="+deptID+"&isContainChild="+ischecked+urlTime1
+            savecookie("search_urlstr",url);
+            $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+        }
+
+
+        function beforePost_employee_borrow(obj,actionName){
+
+            f=$('#id_form').find("#id_edit_form")
+            if(!f.valid()) return false;
+            if(actionName=="_new_"){
+					var fromdate=$('#id_fromDate').val()
+					var todate=$('#id_toDate').val()
+					if(fromdate>todate){
+						$("#id_error",obj).css("display","block");
+						$("#id_error",obj).html("<ul class='errorlist'><li>{%trans '借调日期不能大于调至日期!'%}</li></ul>");
+						return false;
+					}
+                    var emp=getSelected_emp_ex("employee_borrow_off_add");
+                    if(emp.length==0){
+                            $("#id_error",obj).css("display","block");
+                            $("#id_error",obj).html("<ul class='errorlist'><li>{%trans '请选择人员!'%}</li></ul>");
+                            return false;
+                    } else if(emp.length>1){
+							$("#id_error",obj).css("display","block");
+                            $("#id_error",obj).html("<ul class='errorlist'><li>{%trans '一次仅允许选取一个人!'%}</li></ul>");
+                            return false;
+					} else {
+							var rowData = $("#id_grid_employee_borrow_off_add").jqGrid('getRowData',emp);
+                            $("#id_error",obj).css("display","none");
+                            $("#id_userID").val(rowData.id);
+							$("#id_fromTitle").val(rowData.Title);
+                    }
+                    if($('#id_fromDate').val()==''||$('#id_toDate').val()==''){
+						$("#id_error",obj).css("display","block");
+						$("#id_error",obj).html("<ul class='errorlist'><li>{%trans '借调日期或调至日期不能为空!'%}</li></ul>");
+						return false
+					}
+            }else {
+				var todate=$('#id_toDate').val()
+				if(todate==''){
+					$("#id_error",obj).css("display","block");
+					$("#id_error",obj).html("<ul class='errorlist'><li>{%trans '调至日期不能为空!'%}</li></ul>");
+					return false
+				}
+				var date=moment().format("YYYY-MM-DD HH:mm:ss")
+				$("#id_OpTime").val(date)
+            }
+                
+        }
+        
+        function strOfData_employee_borrow(data)
+        {
+	        return stripHtml(data.PIN)+" "+data.EName;
+        }
+		
+		$(function(){
+			$.ajax({
+					type: "POST",
+					url:"/iclock/att/hasRoles/",
+					dataType:"json",
+					success: function(json){
+						 role_json2=json;
+						}
+			});
+			$("#id_qstart_employee_borrow").datepicker(datepickerOptions);
+			$("#id_qend_employee_borrow").datepicker(datepickerOptions);
+
+            var currDate=new Date();
+            var dateTime=currDate.getFullYear()
+                    +"-"
+                    +(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+                    +"-01"
+            $("#id_qstart_employee_borrow").val(dateTime)
+            var dateTime=currDate.getFullYear()
+                    +"-"
+                    +(currDate.getMonth()+1<10?"0"+(currDate.getMonth()+1):currDate.getMonth()+1)
+                    +"-"
+                    +(currDate.getDate()<10?"0"+currDate.getDate():currDate.getDate())
+            $("#id_qend_employee_borrow").val(dateTime)
+            $("#"+g_activeTabID+" #queryButton").hide()
+            $("#"+g_activeTabID+" #searchButton").click(function(){
+               searchShow_employee_borrow();
+            });
+            $("#"+g_activeTabID+" #searchbar").keypress(function(event){
+               if(event.keyCode==13){
+                   searchShow_employee_borrow();
+				}
+            });
+			
+            $("#"+g_activeTabID+" #searchbar").val(gettext("考勤编号,身份证号,姓名"))
+            $("#"+g_activeTabID+" #id_newrec").click(function(){
+                    createNewDlg_employee_borrow();
+            });
+            var width=$("#"+g_activeTabID+" #id_content").width();
+            
+            $("#"+g_activeTabID+" #id_filtername").css("display","none");
+        });
+		
+		function creatBorrowRestore(){
+			var ids=$('#id_grid_employee_borrow').jqGrid('getGridParam','selarrrow');
+			if(ids.length==0){
+				alert('请选取一条数据')
+				return
+			}
+			else if(ids.length>1){
+				alert('一次仅允许选取一条数据')
+				return
+			}else{
+				var rowData = $("#id_grid_employee_borrow").jqGrid('getRowData',ids[0]);
+				if(rowData.workcode.indexOf('>')!=-1){
+					workcode = stripHtml(rowData.workcode)
+				}
+				var block_html="<div id='dlg_to__log'>"
+								+"<table width=100%>"
+								+"<tr><td colspan='2'><div style=''><label for='id_workcode' class='required3'>{%trans '考勤编号'%}&nbsp;</label><input  type='text' id='id_workcode' style='width:135px !important;background:#E3E3E3;color:#B8AF9F;' readonly='readonly' value='"+workcode+"'/></div></td>"
+								+"</tr><tr><td colspan='2'><div style=''><label for='id_pin' class='required3'>{%trans '工号'%}&nbsp;</label><input  id='id_pin' type='text' style='width:135px !important;'value='"+rowData.PIN+"'/></div></td>"
+								+"</tr><tr><td colspan='2'><div style=''><label for='id_username' class='required3'>{%trans '人员姓名'%}&nbsp;</label><input id='id_username' type='text' style='width:135px !important;background:#E3E3E3;color:#B8AF9F;'readonly='readonly'value='"+rowData.EName+"'/></div></td>"
+								+"</tr><tr><td colspan='2'><div style=''><label for='id_fromDept' class='required3'>{%trans '借调单位'%}&nbsp;</label><input id='id_fromDept' type='text' style='width:135px !important;background:#E3E3E3;color:#B8AF9F;'readonly='readonly'value='"+rowData.toDeptName+"'/></div></td></tr>"
+								+"<tr><td colspan='2'><div style=''><label for='id_toDept' class='required3'>{%trans '恢复到单位'%}</label><input id='id_toDept' style='width:135px !important;background:#E3E3E3;color:#B8AF9F;'type='text' readonly='readonly' value='"+rowData.fromDeptName+"'/></div></td></tr>"
+								+"<tr><td><input id='id_id' type='hidden' value='"+rowData.id+"' /></td><td><input id='id_title' type='hidden' type='text' value='"+rowData.fromTitle+"' /></td></tr>"
+								+"</table>"
+								+""
+								+"<span id='id_error'></span>"
+								+"</div>"
+
+				$("#id_workcode").css('background','#E3E3E3').css('color','#B8AF9F');
+				$("#id_username").css('background','#E3E3E3').css('color','#B8AF9F');
+				$("#id_fromDept").css('background','#E3E3E3').css('color','#B8AF9F');
+				$("#id_toDept").css('background','#E3E3E3').css('color','#B8AF9F');
+				
+				$(block_html).dialog({modal:true,
+									  resizable:false,
+									  width: 250,
+									  height:260,
+									  title:"{% trans '借调恢复' %}",
+									  buttons:[{id:"btnShowOK",text:'{%trans "Submit" %}',
+											  click:subdata_borrow},
+											 {id:"btnShowCancel",text:'{%trans "Return" %}',click:function(){$(this).dialog("close"); }
+											}],
+									  close:function(){$("#dlg_to__log").remove();}		
+									})
+				
+				function subdata_borrow(){
+					id = parseInt($("#id_id").val())
+					pin = $('#id_pin').val()
+					title = $('#id_title').val()
+					if(title==undefined){
+						title = ''
+					}
+					if(pin==undefined){
+						pin = ''
+					}
+					datas = 'id='+id+'&pin='+pin+'&title='+title
+					if(pin!=''){
+						$.ajax({type: "POST",
+							url: '/iclock/data/employee_borrow/?action=Empborrowrestore',
+							data:datas,
+							dataType:"json",
+							success: function(retdata){
+									if(retdata.ret==0)
+									{	
+										$("#dlg_to__log").remove();
+										reloadData();
+									}else{
+										$('#id_error').html('<ul class="errorlist"><li>'+retdata.message+'</li></ul>').show();
+									}
+							}
+						});
+					}else{
+						$('#id_error').html('<ul class="errorlist"><li>工号不能为空</li></ul>').show();
+					}
+				}
+			}
+		}
+
+{% endblock %}
+
+
+
+{% block loadData %}
+	html="<span id=id_opt_tree><input type='checkbox' id='id_cascadecheck_"+g_activeTabID+"'/>{%trans '级联下级单位' %}</span>"
+	$("#"+g_activeTabID+" #id_west").html(html)
+	html="<div id='show_dept_tree_'>"
+		+"<ul id='showTree_"+g_activeTabID+"' class='ztree' style='margin-left: 0px;height:100%;'></ul>"
+		+"</div>"   
+	$("#west_content_tab_iclock_employee_borrow").html(html)
+
+    ShowDeptData(g_activeTabID,true)
+    loadNULLPage('#id_grid_'+tblName[g_activeTabID]);
+    
+	var zTree = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+	zTree.setting.check.enable = false;
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		var deptID=treeNode.id;
+		var deptName=treeNode.name;
+		$.cookie("dept_ids",deptID, { expires: 7 });
+		var ischecked=0;
+		if($("#id_cascadecheck_"+g_activeTabID).prop("checked"))
+			ischecked=1;
+
+		var urlStr="/iclock/data/employee_borrow/?deptIDs="+deptID+"&isContainChild="+ischecked
+                
+		savecookie("search_urlstr",urlStr);
+		 $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+	}
+{% endblock %}
+
+{% block otherQuery %}
+    <div class="s-info left" id="time_area">			
+        <span>
+            <label  >{%trans '开始时间'%}</label>
+            <input type='text' name='leavedate' maxlength='10' id='id_qstart_employee_borrow' style='width:80px !important;'>
+            <label  >{%trans '结束时间'%}</label>
+            <input type='text' name='leavedate' maxlength='10' id='id_qend_employee_borrow' style='width:80px !important;'>
+        </span>
+    </div> 
+{% endblock %}
+
+{% block extractButton %}
+{% if request|reqHasPerm:"delete" %}
+<LI id="empborrowrestore"  onclick="creatBorrowRestore()"><SPAN class="icon iconfont icon-huifushiyong"></SPAN>{%trans "借调恢复"%}</LI>
+{% endif %}
+{% endblock %}

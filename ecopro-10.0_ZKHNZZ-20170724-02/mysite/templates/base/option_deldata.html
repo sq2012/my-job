@@ -1,0 +1,139 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+
+<div id='id_option' style='padding: 20px;'>
+	<form id='id_edit_form_deldata' method='post'>
+       <div class='ui-widget-header' style='width: 500px; height: 28px;margin-left: 100px;margin-top: 10px;'><h3 style="padding-top: 8px;padding-left: 10px"><a>{%trans '数据清除任务设置'%}</a></h3></div>
+		<table style="margin-left: 100px;margin-top: 20px;"><tr>
+            <td><input  type='checkbox' maxlength='30'  id='id_auto_deldata' name='auto_deldata'/>{%trans '启用自动清除数据任务'%}</td>
+        </tr>
+		<tr >
+			<td><label for='id_lock_date' >{%trans '开始启用日期'%}</label><input type='text' maxlength='30' name='start_date' id='id_start_date' value=''/></td>
+		</tr>
+        <tr>
+        <td colspan=2><div class='ui-widget-header' style='width: 500px; height: 28px;margin-top: 10px;'><h3 style="padding-top: 6px;"><a>{%trans '数据清除项目设置'%}</a></h3></div></td>
+        </tr>
+		<tr>
+                <td><select id='id_items' size='8' style='width:150px;'></select>
+                {% trans "Remove X days before data" %}<input type='text' size='4px' id='id_days' name='days' value='30' />({% trans "0 not remove" %})
+		</td>
+		<td>
+		<input type='hidden' id='id_Data' value='' name='ItemData'/>
+		<input type='hidden' id='hidden_itemId' value='' name='itemId'/>
+		</td>
+		</tr>
+        <tr>
+        <td colspan=2><div class='ui-widget-header' style='width: 500px; height: 28px;margin-top: 10px;'><h3 style="padding-top: 6px;"><a>{%trans '设备上数据定时清除设置'%}</a></h3></div></td>
+        </tr>
+         <tr><td>{% trans "Remove of equipment on the attendance record monthly X Executive" %}<input type="text" id ="trans_day" name="trans_day"  value="{{trans_day}}">({% trans "0 not remove" %})</td></tr>
+         <tr><td>{% trans "Remove of equipment on the photos monthly X Executive" %}<input type="text" id ="photo_day" name="photo_day"  value="{{photo_day}}">({% trans "0 not remove" %})</td></tr>
+	</table></form>
+</div>
+<div><ul class='errorlist'><li id='option_deldata_id_error' style='display:none;'></li></ul></div>
+	{% if user|HasPerm:"iclock.sys_del_setting" %}
+    <div style="margin-left: 100px;margin-top: 10px;"><input id='id_submit' type='button' class='m-btn  zkgreen rnd' value='{%trans "Save" %}'/></div>
+    {% endif %}
+
+
+<script>
+{% autoescape off %}
+var del_data={{ params }}
+{% endautoescape %}
+
+function getItems(Data)
+{
+        var options_html="";
+	for(i=0;i<Data.length;i++)
+	   if(i==0)
+            options_html+="<option value='"+Data[i].id+"' selected>"+(Data[i].name)+"</option>";
+        else
+            options_html+="<option value='"+Data[i].id+"'>"+(Data[i].name)+"</option>";
+//	alert(options_html)
+    return options_html;
+} 
+
+var SaveOptions=function(obj,keys){
+	$("#option_deldata_id_error").html('')
+	var formStr=formToRequestString(obj.get(0));
+	var url='/iclock/isys/options/'
+	$.post(url+'?action='+keys, 
+		formStr,
+		function (ret, textStatus) {
+			$("#"+g_activeTabID+" #option").remove()
+				if (keys=='status')
+				reloadData();
+				$("#option_deldata_id_error").css("display","block");
+				$("#option_deldata_id_error").html(ret.message);
+		},
+		"json");
+}
+
+function getChange_lClass(lClass)   //得到最新修改的字典lClass
+{
+    
+    var item_id=$("#"+g_activeTabID+" #hidden_itemId").val();
+    
+    lClass.st=$("#"+g_activeTabID+" #id_start_date").val()
+    if($("#"+g_activeTabID+" #id_auto_deldata").prop("checked"))
+           lClass.is_=1;
+    else
+           lClass.is_=0;
+    
+    for(i=0;i<lClass.items.length;i++)
+            if(lClass.items[i].id==item_id){
+                lClass.items[i].days=$("#"+g_activeTabID+" #id_days").val();
+            }
+    return lClass;
+}
+
+
+
+
+$(function(){
+	$("#"+g_activeTabID+" #id_start_date").datepicker(datepickerOptions)
+        if(del_data.is_=='1'){ $("#"+g_activeTabID+" #id_auto_deldata").prop("checked","checked");}  
+	$("#"+g_activeTabID+" #id_start_date").val(del_data.st)
+	 $("#"+g_activeTabID+" #id_days").val(del_data.items[0].days);
+	
+	$("#"+g_activeTabID+" #id_items").html(getItems(del_data.items))
+	$("#"+g_activeTabID+" #hidden_itemId").val(del_data.items[0].id)
+	$("#"+g_activeTabID+" #id_Data").val(JSON.stringify(del_data))
+            $("#"+g_activeTabID+" #id_items").click(function(){
+                item_id=$("#"+g_activeTabID+" #id_items").val();
+                del_data=getChange_lClass(del_data);
+                $("#"+g_activeTabID+" #id_Data").val(JSON.stringify(del_data));
+                $("#"+g_activeTabID+" #hidden_itemId").val(item_id);
+                for(i=0;i<del_data.items.length;i++)
+                    if(del_data.items[i].id==item_id)
+                        $("#"+g_activeTabID+" #id_days").val(del_data.items[i].days);
+
+
+            });
+
+            $("#"+g_activeTabID+" #id_submit").click(function(){
+				$.blockUI({title:'',theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans '正在更新系统配置......'%}</br></h1>'});
+
+        			del_data=getChange_lClass(del_data);
+				$("#"+g_activeTabID+" #id_Data").val(JSON.stringify(del_data))
+        			var queryStr=$("#"+g_activeTabID+" #id_edit_form_deldata").formSerialize();
+                               //var queryStr=formToRequestString($("#id_edit_form_deldata").get(0));
+        			$.ajax({ 
+        				type: "POST",
+        				url:"/base/isys/option_deldata/",
+        				data:queryStr,
+        				dataType:"json",
+        				success:function(retdata){
+						$.unblockUI();
+                                var message=retdata.message
+        						$("#option_deldata_id_error").html(message).show();
+        					}
+        				});
+        		});
+
+	
+	
+});
+
+</script>
+

@@ -1,0 +1,175 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% block tblHeader %}
+
+hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+hasImport=false
+//jqOptions=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{ colModel }}
+options[g_activeTabID].canAdd=false;
+tblName[g_activeTabID]='devcmds';
+jqOptions[g_activeTabID].sortname='id';
+jqOptions[g_activeTabID].sortorder='desc';
+jqOptions[g_activeTabID].pager='#id_pager_devcmds';
+
+using_m='{{app }}'
+
+var currentState=-1;
+var State_devcmd=['{%trans "成功"%}','{%trans "失败"%}','{%trans "其它"%}']
+function showState_devcmds(value)
+{
+//	if(currentState==value) return;
+	currentState=value;
+	createFilter_devcmds();
+	if (value==0){
+		if(g_urls[g_activeTabID].indexOf("?")!=-1){
+			var url=g_urls[g_activeTabID]+"&CmdReturn__gte=0";
+		}else{
+			var url=g_urls[g_activeTabID]+"?CmdReturn__gte=0";
+		}
+        //成功
+	 }else if (value==1){
+		if(g_urls[g_activeTabID].indexOf("?")!=-1){
+			var url=g_urls[g_activeTabID]+"&CmdReturn__lt=0";
+		}else{
+			var url=g_urls[g_activeTabID]+"?CmdReturn__lt=0";
+		}		
+	}else if (value==2){
+		if(g_urls[g_activeTabID].indexOf("?")!=-1){
+			var url=g_urls[g_activeTabID]+"&CmdReturn__isnull=true";
+		}else{
+			var url=g_urls[g_activeTabID]+"?CmdReturn__isnull=true";
+		}	    
+	}else{
+		var url=g_urls[g_activeTabID];
+	}
+    savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function strOfData_devcmds(data)
+{
+	return "{%trans "at"%} "+data.CmdCommitTime+" {%trans "to device "%} "+(data.Device.split("(")[0])+"{%trans "send command"%} "+data.CmdContent.split("<")[0];
+}
+
+function getRet(data)
+{
+	if(data[7]=="") return removeNone(data[6]);
+	return "<a href='"+data[7]+"'>"+removeNone(data[6])+"</a>"; 
+}
+//模糊查询
+function searchShowDevcmds(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+	var url=g_urls[g_activeTabID]+"?q="+escape(v)
+	savecookie("search_urlstr",url);
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+$(function(){
+	//if(IsShowLeftInfo)
+	//{
+		var info='<div class="west_info"><p>1.服务器下发命令日志:服务器下发给设备的命令信息</p><p>2.提交时间：用户提交下达命令的时间</p><p>3.传送时间：设备读取命令的时间</p><p>4.返回时间：设备执行完命令返回执行结果的时间</p><p>5.返回值：设备执行下发命令的执行结果，一般大于等于0为正常</p></div>'
+	
+		renderLeftInformation(info);
+		smenu="<ul><li  class='subnav_on' onclick=submenuClick('/iclock/data/devcmds/',this);><a href='#'>服务器下发命令</a></li></ul>"
+		//$('#menu_div').html(smenu)
+	//}
+	//savecookie("search_urlstr",g_urls[g_activeTabID])
+
+	$("#"+g_activeTabID+" #queryButton").hide()
+	if(!options.canAdd)$("#"+g_activeTabID+" #id_newrec").css('display','none');
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowDevcmds();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowDevcmds();
+	});
+	$("#"+g_activeTabID+" #id_filtername").css("display","block")
+	   createFilter_devcmds(-1);
+	   
+	$('#id_ComeTime_devcmds').val(moment().startOf('month').format('YYYY-MM-DD HH:mm'))
+	$('#id_EndTime_devcmds').val(moment().endOf('day').format('YYYY-MM-DD HH:mm'))   	   
+	$("#id_ComeTime_devcmds").datetimepicker(datetimepickerOptions);
+	$("#id_EndTime_devcmds").datetimepicker(datetimepickerOptions);
+	$("#"+g_activeTabID+" #id_search").click(function(){
+		var ComeTime=$("#id_ComeTime_devcmds").val();
+		var EndDate=$("#id_EndTime_devcmds").val();
+		//$.cookie("ComeTime",ComeTime, { expires: 7 });
+		//$.cookie("EndDate",EndDate, { expires: 7 });
+		var isError=validate_form_devcmds();
+		var urlTime="";
+		var urlTime1="";
+		if(!isError){
+			urlTime1=$("#"+g_activeTabID+" #id_date").val()+"__gte="+ComeTime+"&"+$("#id_date").val()+"__lt="+EndDate
+		}
+		urlTime=urlTime1
+		var url="/iclock/data/devcmds/?"
+		if (urlTime!="" &&  urlTime!=null)
+			url+=urlTime;
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+		savecookie("search_urlstr",url);
+	});
+	
+	
+	
+})
+function createFilter_devcmds(){
+
+	html="<li style=' border: 0px solid white;'><a href='#' style='color: #000;background:white;padding-left:0;height: 22px;'>{% trans '执行状态' %}</a>"
+		+"<ul><li "+(currentState==-1?"class='selected'":"")+"><a href='#' onclick='showState_devcmds(-1)'>{%trans "All"%}</a></li>";// "+(currentState==-1?"class='selected'":"")+"
+	for(i=0;i<=2;i++)
+		html+="<li "+(currentState==i?"class='selected'":"")+"><a href='#' onclick='showState_devcmds("+i+")'>"+State_devcmd[i]+"</a></li>";// "+(currentState==i?"class='selected'":"")+"
+    
+	$("#"+g_activeTabID+" #id_filterbar").html(html+'</ul></li>');
+}
+function validate_form_devcmds(){   //验证表单的合法性(、开始时间、结束时间)
+	var t_ComeTime=$("#id_ComeTime_devcmds").val();
+	var cTime=t_ComeTime.split("-");
+	var t_EndDate=$("#id_EndTime_devcmds").val();
+	var eTime=t_EndDate.split("-");
+	cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+	edate=new Date(parseInt(eTime[0],10),parseInt(eTime[1],10)-1,parseInt(eTime[2],10));
+	if(cdate>edate || t_ComeTime=="" || t_EndDate==""){
+		return 1;
+	}else{
+		return 0
+	}
+}
+
+{% endblock %}
+{% block allDelete %}
+{% if request.user.is_superuser %}
+ <LI id="allDelete" onclick="delAllRec();"><SPAN class="icon iconfont icon-shanchuquanbu"></SPAN>{%trans "Clear All"%}</LI>
+{% endif %}
+
+{% endblock %}
+
+{% block otherQuery %}
+	<span style='float:left;'>
+			<label  >{%trans 'Begin Date'%}</label>
+			<input type='text' name='ComeTime' maxlength='10' id='id_ComeTime_devcmds' style='width:120px !important;'>
+			<label >{%trans 'End Date'%}</label>
+			<input type='text' name='EndTime' maxlength='10' id='id_EndTime_devcmds' style='width:120px !important;'>
+			<span>
+		</span>
+		<span style='width:80px'>
+			<select name='id_date' id='id_date'><option value='CmdCommitTime'>提交时间</option><option value='CmdTransTime'>传送时间</option><option value='CmdOverTime'>返回时间</option></select>
+		</span>
+		<span id='id_search' ><a class='m-btn  zkgreen rnd mini'>{%trans 'Query'%}</a></span>
+
+		</span>
+	
+
+{% endblock %} 
+
+{% block initwindow %}
+	
+		initwindow_tabs('',true);
+	
+{% endblock %}
+

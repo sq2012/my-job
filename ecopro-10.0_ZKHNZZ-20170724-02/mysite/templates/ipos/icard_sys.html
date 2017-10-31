@@ -1,0 +1,20 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+<script>
+
+$(function(){
+{% autoescape off %}
+	
+var html={{sub_menu}}
+
+{% endautoescape %}
+$("#west_content_tab_ipos_IssueCard").html(html)
+$("#"+g_activeTabID+" #menu_div ul").find('li').get(0).click()	
+		
+});
+
+</script>
+
+
+

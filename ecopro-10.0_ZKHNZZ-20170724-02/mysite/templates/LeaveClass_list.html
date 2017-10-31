@@ -1,0 +1,560 @@
+{% load iclock_tags %}
+{% load i18n %}
+
+<script>
+leaveEdit={% if request|reqHasPerm:"change" %}true{% else %}false{% endif %}
+var lClass_lcs;
+var title="{%trans 'Leave Class'%}";
+function getLeaveNames(lcData)
+{   var options_html="";
+	for(i=0;i<lcData.length;i++)
+		if(i==0)
+            options_html+="<option value='"+lcData[i].LeaveID+"' selected>{% trans '"+lcData[i].LeaveName+"' %}</option>";
+        else
+            options_html+="<option value='"+lcData[i].LeaveID+"'>{% trans '"+lcData[i].LeaveName+"' %}</option>";
+
+    return options_html;
+}
+function getClearance(clearance){
+    html="";
+    if(clearance=="" || clearance==0)
+        html+="<option value='0' selected>{%trans 'No'%}</option>"
+    else
+        html+="<option value='0'>{%trans 'No'%}</option>"
+    if(clearance==1)
+        html+="<option value='1' selected>{%trans 'Yes'%}</option>"
+    else
+        html+="<option value='1'>{%trans 'Yes'%}</option>"
+    return html;
+    
+
+}
+
+var LeaveType=[
+			 "{% trans '--------' %}",	
+			"{% trans 'Sick Leave' %}",
+			 "{% trans 'Private Affair Leave' %}",
+			"{% trans 'Home Leave' %}",
+			"{% trans 'Maternity Leave' %}",
+			"{% trans 'Annual leave' %}"
+ ];
+
+function getLeaveType()
+{   var options_html="";
+	for(i=0;i<LeaveType.length;i++)
+		if(i==0)
+            options_html+="<option value='"+i+"' selected>{% trans '"+LeaveType[i]+"' %}</option>";
+        else
+            options_html+="<option value='"+i+"'>{% trans '"+LeaveType[i]+"' %}</option>";
+
+    return options_html;
+}
+
+function show_selected_item_lcs(sdata){
+
+	if(sdata.LeaveType==null)
+		sdata.LeaveType=0
+	if(sdata.clearance==null)
+			sdata.clearance=0
+	
+	$("#id_LeaveName").val(sdata.LeaveName);
+	$("#id_LeaveType").val(sdata.LeaveType);
+	if(sdata.LeaveType==5){
+		$("#"+g_activeTabID+" #id_Unit").html(get_Unit1())
+	}else{
+		$("#"+g_activeTabID+" #id_Unit").html(get_Unit())
+	}
+	$("#id_clearance").val(sdata.clearance);
+    $("#"+g_activeTabID+" #id_MinUnit").val(sdata.MinUnit);
+    $("#"+g_activeTabID+" #id_Unit").val(sdata.Unit);
+	
+	$("#"+g_activeTabID+" #id_RemaindProc"+sdata.RemaindProc).click();
+    $("#"+g_activeTabID+" #id_ReportSymbol").val(sdata.ReportSymbol);
+    if(sdata.RemaindCount==1)
+        $("#"+g_activeTabID+" #id_RemaindCount").prop("checked","checked");
+	else
+		$("#"+g_activeTabID+" #id_RemaindCount").removeAttr("checked");
+	if(sdata.Classify==0)
+		$("#id_Classify").prop("checked","checked");
+	else
+		$("#id_Classify").removeAttr("checked");
+	is_by_times(sdata.Unit);
+}
+
+function get_lClass_lcs_String_lcs(lc)
+{
+    var result = "["
+    for(var i=0; i <lc.length; i++){
+        row = lc[i];
+        row_string = "{";
+        for (var j in row){
+            if(j=="ReportSymbol" || j=="LeaveName")
+                row_string += "\""+j + "\":\""+  row[j] + "\",";
+            else
+                row_string += "\""+j + "\":"  +  row[j] + ",";
+            }
+        row_string = row_string.substring(0, row_string.length-1)+"}";
+    result += row_string + ",";
+    }
+result = result.substring(0, result.length-1);
+result+="]";
+return result;
+}
+
+function getChange_lClass_lcs_lcs(lClass_lcs)
+{
+
+    var LeaveId=$("#hidden_LeaveId").val();
+	var LeaveName=$("#id_LeaveName").val();
+	var LeaveType=$("#id_LeaveType").val();
+	var clearance=$("#id_clearance").val();
+	var Unit=$("#"+g_activeTabID+" #id_Unit").val();
+    var MinUnit=$("#"+g_activeTabID+" #id_MinUnit").val();
+    var ReportSymbol=$("#"+g_activeTabID+" #id_ReportSymbol").val();
+	var Classify=$("#id_Classify").val();
+	var RemaindProc=$("input[name='RemaindProc']").val();
+	$("input[type=radio]").each(function(i){
+		if(this.checked) 
+			RemaindProc=this.value;
+	});
+    if($("#"+g_activeTabID+" #id_RemaindCount").prop("checked"))
+           RemaindCount=1;
+    else
+           RemaindCount=0;
+	if($("#id_Classify").prop("checked"))
+           Classify=0;
+    else
+           Classify=128;
+    for(i=0;i<lClass_lcs.length;i++)
+            if(lClass_lcs[i].LeaveID==LeaveId){
+				lClass_lcs[i].LeaveName=LeaveName;
+				lClass_lcs[i].LeaveType=LeaveType;
+				lClass_lcs[i].clearance=clearance;
+                lClass_lcs[i].MinUnit=MinUnit;
+                lClass_lcs[i].Unit=Unit;
+		if (RemaindProc=='on')
+		RemaindProc=1
+                lClass_lcs[i].RemaindProc=RemaindProc;
+                lClass_lcs[i].RemaindCount=RemaindCount;
+				lClass_lcs[i].Classify=Classify;
+                lClass_lcs[i].ReportSymbol=ReportSymbol;
+            }
+    return lClass_lcs;
+}
+function getLastlClass_lcs(lClass_lcs){  //取得最后一个页面的最新值并更新lClass_lcs为最新
+    lClass_lcs=getChange_lClass_lcs_lcs(lClass_lcs);
+    $("#"+g_activeTabID+" #id_LeaveClass").val(get_lClass_lcs_String_lcs(lClass_lcs));
+    return true;
+}
+
+function is_by_times(Unit)
+{
+    if(Unit==4){
+		$("#"+g_activeTabID+" #id_MinUnit").prop("disabled","disabled");
+		$("#"+g_activeTabID+" #id_Unit").val(Unit);
+		$("#"+g_activeTabID+" #id_Unit").prop("disabled","disabled");
+		$("#"+g_activeTabID+" #id_RemaindCount").prop("disabled","disabled");
+		$("#"+g_activeTabID+" #id_RemaindCount").prop("checked",false);
+		$("input[type=radio]").prop("disabled","disabled");
+		$("#"+g_activeTabID+" #id_Round_byTime").prop("checked","checked");
+	}else{
+		if($("#"+g_activeTabID+" #id_MinUnit").prop("disabled")){
+			$("#"+g_activeTabID+" #id_MinUnit").prop("disabled",false);
+		}
+		if($("#"+g_activeTabID+" #id_Unit").prop("disabled")){
+			$("#"+g_activeTabID+" #id_Unit").prop("disabled",false);
+		}
+		$("#"+g_activeTabID+" #id_Unit").val(Unit);
+		if($("#"+g_activeTabID+" #id_RemaindCount").prop("disabled")){
+			$("#"+g_activeTabID+" #id_RemaindCount").prop("disabled",false);
+			$("#"+g_activeTabID+" #id_RemaindCount").prop("checked",true);
+		}
+		if($("input[type=radio]").prop("disabled")){
+			$("input[type=radio]").prop("disabled",false);
+		}
+		if($("#"+g_activeTabID+" #id_Round_byTime").prop("checked")){
+			$("#"+g_activeTabID+" #id_Round_byTime").prop("checked",false);
+		}
+	}
+}
+var unit=[
+			 "{% trans 'Hour' %}",
+			 "{% trans 'Minute' %}",
+			 "{% trans 'Workday' %}",
+             "{% trans ' ' %}"
+
+ ];
+ function get_Unit()
+ {
+	var options_html="";
+    for(i=1;i<=unit.length;i++)
+        options_html+="<option value='"+i+"'>"+unit[i-1]+"</option>";
+
+    return options_html;
+ }
+
+function get_Unit1()
+{
+var options_html="";
+   for(i=1;i<=unit.length;i++){
+       if(i!=2){
+			options_html+="<option value='"+i+"'>"+unit[i-1]+"</option>";
+		}
+	}
+   return options_html;
+}
+
+function newLeaveClass()
+{
+	 window.location.href='_new_/';
+}
+function initPage(message){
+	$("#content_leaveClass").html("");
+	$.ajax({ 
+			type: "POST",
+			url:"/iclock/att/getData/?func=leaveClass",
+			dataType:"json",
+			success:function(json){
+				lClass_lcs=json;
+				$("#content_leaveClass").html("<div id='id_toolbar'><table id='changelist' border='0' style='margin-bottom: 0px; width: 100%;'>"
+				+"<tr id='titleId' style='border:0px solid #77B7DE;'><td><span style='font-size: 15px; padding-right: 20px;'><b><img src='/media/img/blogmarks.png' title={%trans 'LeaveClass setting' %}></img></b></span></td></tr>"
+				+"<tr id='toolbar' style='border:0px solid #77B7DE;'><td id='divPage'><div id='id_toolbar'><UL class='toolbar' id='navi'>"
+				+"<LI id='id_reload'><SPAN  class='icon iconfont icon-shuaxin'></SPAN>{%trans 'Reload'%}</LI>"
+				{% if request|reqHasPerm:"add" %}
+				+"<LI id='id_newrec'><SPAN class='icon iconfont icon-xinzeng'></SPAN>{%trans 'Append'%}</LI>"
+				{% endif %}
+				{% if request|reqHasPerm:"delete" %}
+				+"<LI id='id_delete' ><SPAN class='icon iconfont icon-shanchu'></SPAN>{%trans 'Delete'%}</LI>"
+				{% endif %}
+				{% if request.user.is_superuser %}
+				+"<LI id='id_delete_all' onclick='delAllRec_lc();'><SPAN class='icon iconfont icon-shanchuquanbu'></SPAN>{%trans 'Clear All'%}</LI>"
+				{% endif %}
+				+"</ul></div></td></tr></table></div>"
+				+"<form id='id_edit_form_leaveClass' method='post'><table><tr><td>"
+				+"<h4>{%trans 'Leave Name:'%}</h4><div id='id_lName_cont'><select id='id_items_lcs' size='15' style='width:150px;'>"+getLeaveNames(lClass_lcs)+"</select></div></td>"
+				+"<td width='50px'> </td>"
+				+"<td width='450px'><font color='red'>*</font>{%trans 'Leave Name:'%}<input type='text' value=''  id='id_LeaveName' style='width:100px !important;' name='LeaveName'/>&nbsp;&nbsp;{%trans 'Leave Class Type'%}:<select id='id_LeaveType' name='LeaveType' style='width:100px;'>"+getLeaveType()+"</select><br>"
+				+"<fieldset style='float:left;'><legend ><font size='4px'>{%trans 'Statistic rule'%}</font></legend><div id='tabs'>"
+				+"<h4><font color='red'>*</font>{%trans 'Min.Unit:'%}</h4>"
+				+"<input type='text' style='width:100px !important;' id='id_MinUnit' name='MinUnit'value=''>&nbsp;&nbsp;"
+				+"<select id='id_Unit' name='Unit'>"+get_Unit()+"</select><br /><span id='id_validate_Min' class='error' /></span><br />"
+				+"<h4>{%trans 'Round-off control:'%}</h4><input type='radio' id='id_RemaindProc0' name='RemaindProc' value='0'>{%trans 'Round down'%}&nbsp;&nbsp;"
+				+"<input type='radio' id='id_RemaindProc1' name='RemaindProc' value='1'>{%trans 'Round off'%}&nbsp;&nbsp;"
+				+"<input type='radio' id='id_RemaindProc2' name='RemaindProc' value='2'>{%trans 'Round up'%}<br /><br />"
+				+"<input type='checkbox' id='id_Round_byTime' name='Round_byTime' >{%trans 'Acc.by times'%}&nbsp;&nbsp;"
+				+"<input type='checkbox' id='id_RemaindCount' name='RemaindCount'>{%trans 'Round at Acc.'%}<br /><br />"
+				+"<h4><font color='red'>*</font>{%trans 'ReportSymbol in report:'%}</h4><input type='text' style='width:100px !important;' value='' id='id_ReportSymbol' name='ReportSymbol'>&nbsp;&nbsp;"
+				+'{%trans "Leave clearance" %}:<select id="id_clearance" name="clearance">'+getClearance()+'</select>'
+				+"&nbsp;&nbsp;<input type='checkbox' size='5px' id='id_Classify' name='Classify'>{%trans 'Count to leave'%}"
+
+				+"</div></fieldset></td></tr>"
+				+"<tr><td colspan='2' id='id_error' style='display:none;'></td></tr>"
+				+"<tr align='center'>"
+				+"<td><input type='hidden' id='id_LeaveClass' value='"+get_lClass_lcs_String_lcs(getChange_lClass_lcs_lcs(lClass_lcs))+"' name='LeaveClass'/>"
+				+"<input type='hidden' id='hidden_LeaveId' value='"+(lClass_lcs.length>0?lClass_lcs[0].LeaveID:"")+"' name='Leave'/>"
+				+"</td></tr>"
+				+"</table></form>"
+				+(leaveEdit?"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button id='id_submit_leaveClass' class='m-btn zkgreen rnd'>{% trans 'Submit' %}</button>":"")
+
+				);
+				if(lClass_lcs.length>0)
+					show_selected_item_lcs(lClass_lcs[0]);
+				$("#"+g_activeTabID+" #id_items_lcs").click(function(){
+					item_id=$("#"+g_activeTabID+" #id_items_lcs").val();
+					lClass_lcs=getChange_lClass_lcs_lcs(lClass_lcs);
+					$("#"+g_activeTabID+" #id_LeaveClass").val(get_lClass_lcs_String_lcs(lClass_lcs));
+					$("#hidden_LeaveId").val(item_id);
+					$("#id_validate_Min").css("display","none");
+					for(var i=0;i<lClass_lcs.length;i++){
+						if(lClass_lcs[i].LeaveID==item_id){
+							show_selected_item_lcs(lClass_lcs[i]);
+						}
+					}
+				});
+				$("#"+g_activeTabID+" #id_Unit").change(function(){
+	
+					 if($("#"+g_activeTabID+" #id_Unit").val()==4)
+						 is_by_times(4);
+					 else
+						$("#id_validate_Min").css("display","none");
+				 });
+			$("#id_LeaveType").change(function(){
+
+			 if($("#id_LeaveType").val()==5){
+				$("#"+g_activeTabID+" #id_Unit").html(get_Unit1())
+			}else{
+				$("#"+g_activeTabID+" #id_Unit").html(get_Unit())
+			}
+		 });
+
+				 $("#"+g_activeTabID+" #id_Round_byTime").click(function(){
+	
+					 if($("#"+g_activeTabID+" #id_Round_byTime").prop("checked"))
+					 {
+						 is_by_times(4);
+						$("#id_validate_Min").css("display","none");
+					 }
+					 else{
+						is_by_times(0);
+						$("#id_validate_Min").html("<font  size='2'>{%trans 'Please select unit!' %} </font>");
+						$("#id_validate_Min").css("display","block");
+	
+						}
+				 });
+	
+			$("#id_submit_leaveClass").click(function(){
+				getLastlClass_lcs(lClass_lcs);	
+				if(!$("#id_LeaveName").val()){
+					$("#tab_iclock_LeaveClass #id_error").html('假类名称不能为空').css('color','red').css("display","block");
+					return
+				}
+				if(!$("#"+g_activeTabID+" #id_ReportSymbol").val()){
+					$("#tab_iclock_LeaveClass #id_error").html('报表中的表示符号不能为空').css('color','red').css("display","block");
+					return
+				}
+				var symbol={}
+				var sindex=[]
+				for(var i=0;i<lClass_lcs.length; i++) {
+					sb = lClass_lcs[i].ReportSymbol
+					if (sb in symbol) {
+						index = sindex.indexOf(sb)
+						$("#tab_iclock_LeaveClass #id_error").html('假类 '+lClass_lcs[i].LeaveName+' 和 '+lClass_lcs[index].LeaveName+' 报表中的表示符号重复').css('color','red').css("display","block");
+						return
+					}else{
+						symbol[sb]=sb
+						sindex.push(sb)
+					}
+				}
+				if(!$("#"+g_activeTabID+" #id_MinUnit").val()){
+					$("#tab_iclock_LeaveClass #id_error").html('最小单位不能为空').css('color','red').css("display","block");
+					return
+				}
+				var queryStr=formToRequestString($("#id_edit_form_leaveClass").get(0));
+				$.ajax({ 
+					type: "POST",
+					url:"/iclock/att/submitLeaveClass/",
+					data:queryStr,
+					dataType:"json",
+					success:function(retdata){
+						//if(retdata.ret==0){		
+							
+//							$("#id_error").show();
+//							$("#id_error").css("display","block");
+//							$("#id_error").html("{%trans 'Save LeaveClass Succes'%}").css("color","red");
+							$("#tab_iclock_LeaveClass #id_error").html('')
+							$("#tab_iclock_LeaveClass #id_error").hide();
+							alert(retdata.message)
+							//initPage();
+							//window.location.href="/iclock/data/LeaveClass/"
+						//}
+						
+						
+						}
+					});
+			});
+			$("#"+g_activeTabID+" #id_delete").click(function(){
+			LeaveId=$("#"+g_activeTabID+" #id_items_lcs").val();
+			Leavenames = $("#"+g_activeTabID+" #id_items_lcs").find("option:selected").text();
+			if(LeaveId==null)
+				alert(gettext('Please Select LeaveClass to delete'));
+			else{
+				if(confirm(window.delAllHint?delAllHint():"{%trans '确信要删除【'%}"+Leavenames+"】假类?")){
+				$.ajax({ 
+						type: "POST",
+						url:"/iclock/att/deleteLeaveClass/?LeaveID="+LeaveId,
+						dataType:"json",
+						success:function(reldata){
+								if(reldata.ret==1) {
+									alert(reldata.message)
+								} else{
+									initPage();
+								}
+								//alert(gettext('Delete data success！'));
+							}
+						});
+			}
+				}
+			});
+			$("#"+g_activeTabID+" #id_newrec").click(function(){
+				$.ajax({ 
+						type: "GET",
+						url:g_urls[g_activeTabID]+"_new_/",
+						dataType:"html",
+						success:function(retdata){
+							var htmlObj=$.trim(retdata);
+							if(typeof process_dialog_LeaveClass=="function"){ 
+									process_dialog_LeaveClass(htmlObj);
+								}else{
+									createLeaveClassDlg(retdata);
+								}
+							
+						}
+					});
+			});
+		$("#"+g_activeTabID+" #id_reload").click(function(){
+			initPage();
+		});
+		if (message!=undefined){
+			$("#tab_iclock_LeaveClass #id_error").html(message).css('color','red').css("display","block");
+		}
+	
+	}
+	});
+	
+}
+function delAllRec_lc()
+{	
+	if(confirm(window.delAllHint?delAllHint():"{%trans 'Clear all data, are you sure?'%}"))
+	{	
+		var s_url=loadcookie("search_urlstr")
+		//if (s_url==""||!s_url) return;	
+		i=s_url.indexOf('?')
+		urlstr=g_urls[g_activeTabID]+'_clear_/'
+		if (i>0) urlstr+=s_url.substr(i,s_url.length)
+		$.blockUI({title:'',theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>{%trans 'Please wait...'%}</br></h1>'});
+		$.post(urlstr, 
+			'',
+			function (ret, textStatus) {
+				if(ret.ret==0)
+				{
+					
+					$.unblockUI();
+					initPage();
+					alert(gettext('Delete All Data Success!'));
+				}else{
+					$.unblockUI();
+					alert(ret.message);
+				}
+				
+
+			},
+			"json");
+
+	}
+}
+
+$(function(){
+	
+	
+	initwindow_tabs();
+	
+	
+
+		var info='<div class="west_info"><p>1.假类即为系统平台可供使用的请假类型</p><p>2.可以设置假类的最小单位和在报表中体现的假类符号</p><p>3.自动销假指的是在请假期间正常出勤，考勤统计时按正常出勤算。</p><p>4.不勾选记为请假选项表示该假类不按请假进行统计。</p></div>'
+		renderLeftInformation(info);
+		//smenu="<ul><li  class='subnav_on' onclick=submenuClick('/iclock/data/LeaveClass/',this);><a href='#'>假类</a></li></ul>"
+		//$('#menu_div').html(smenu)
+	initPage();
+});
+function getClearance(clearance){
+    html="";
+    if(clearance=="" || clearance==0)
+        html+="<option value='0' selected>{%trans 'No'%}</option>"
+    else
+        html+="<option value='0'>{%trans 'No'%}</option>"
+    if(clearance==1)
+        html+="<option value='1' selected>{%trans 'Yes'%}</option>"
+    else
+        html+="<option value='1'>{%trans 'Yes'%}</option>"
+    return html;
+}
+
+function process_dialog_LeaveClass(htmlObj){
+	htmlObj=$(htmlObj)
+	$("#id_Unit option:first",htmlObj).remove()
+	$("#id_RemaindProc option:first",htmlObj).remove()
+	$("#id_RemaindCount option:first",htmlObj).remove()
+	clearance=$("#id_clearance",htmlObj).val();
+	$('#id_clearance',htmlObj).parent().parent().html('<th><label for="id_clearance">{%trans "Leave clearance" %}:</label></th>'
+                    +'<td><select id="id_clearance" name="clearance">'+getClearance(clearance)+'</select></td>'
+                    );
+	$('#id_edit_form',htmlObj).after("<div id='id_message'></div>");
+	createLeaveClassDlg(htmlObj);
+	//$("#id_clearance",htmlObj).html("")
+
+	if($("#id_Color",htmlObj).val()==""){
+		var hex="000000"
+	}else{
+		var hex="000000"+parseInt($("#id_Color",htmlObj).val(),10).toString(16)	
+		hex=hex.substring(hex.length-6,hex.length)		
+	}
+//	var hex=parseInt($("#id_Color",htmlObj).val(),10).toString(16)	
+	$('#id_Color',htmlObj).css('background', '#'+hex)	
+	$("#id_Color",htmlObj).ColorPicker({color:'#'+hex,
+		onChange: function (hsb, hex, rgb) {	$('#id_Color',htmlObj).css('backgroundColor', '#' + hex).val(parseInt('0x'+hex));}
+	})
+	$("#id_LeaveType",htmlObj).change(function(){
+	
+	 if($("#id_LeaveType",htmlObj).val()==5){
+		$("#id_Unit",htmlObj).html(get_Unit1())
+	}else{
+		$("#id_Unit",htmlObj).html(get_Unit())
+	}
+	});
+	$("#id_RemaindCount",htmlObj).val(0)
+	$("#id_RemaindCount",htmlObj).change(function(){
+		if($("#id_RemaindCount",htmlObj).val()==1) {
+			$("#id_RemaindProc",htmlObj).val(0)
+			$("#id_RemaindProc",htmlObj).prop('disabled','disabled')
+			$('#id_Unit',htmlObj).val(4)
+			$('#id_Unit',htmlObj).prop('disabled','disabled')
+		} else{
+			if($("#id_RemaindProc",htmlObj).prop('disabled')) {
+				$("#id_RemaindProc",htmlObj).prop('disabled',false)
+				$("#id_RemaindProc",htmlObj).val(1)
+			}
+			if($('#id_Unit',htmlObj).prop('disabled')) {
+				$("#id_Unit",htmlObj).prop('disabled',false)
+				$("#id_Unit",htmlObj).val(1)
+			}
+		}
+	});
+	f=$(htmlObj).find("#id_edit_form").get(0)
+	$(f).validate({
+				rules: {
+					"LeaveName":{"required":true},
+					"ReportSymbol":{"required":true},
+					"MinUnit":{"required":true}
+				}
+	});	
+}
+function createLeaveClassDlg(dlgData,dlgTitle){
+	  if(dlgTitle=="")  dlgTitle=title;
+	  $(dlgData).dialog({	
+			  modal:true,
+          　 resizable:false,　
+			  width: 420,
+			  height:420,
+			  title:title,
+			  buttons:[{id:"btnSubmit",text:gettext("Submit"),click:function(){subdatalc(this);$(this).dialog("destroy");}},
+					 {id:"btnCancel",text:gettext("Cancel"),click:function(){$(this).dialog("destroy");}
+					}],
+			  close:function(){$("#id_edit_form").remove();}		
+			})
+}
+function subdatalc(htmldata){
+		
+		if (!$('#id_edit_form',htmldata).valid()){$("#id_message",htmldata).html(gettext("occur error!")).css("color","red").css('display','block'); return 0;}
+		getLastlClass_lcs(lClass_lcs);	
+		var queryStr=formToRequestString($(htmldata).find("#id_edit_form").get(0));
+		$.blockUI({theme: true ,baseZ:10000,message: '<h1><img src="/media/img/loading.gif" /> <br>'+gettext("Please wait...")+'</br></h1>'});					
+		$.ajax({ 
+			type: "POST",
+			url:g_urls[g_activeTabID]+"_new_/",
+			data:queryStr,
+			dataType:"json",
+			success:function(retdata){
+				$.unblockUI();
+				if(retdata.ret==0){
+					//$("#id_edit_form").remove();
+					initPage(retdata.message);
+				}else{
+					alert(retdata.message)
+				}
+			}
+		});	
+   }
+
+</script>
+<div id="content_leaveClass" >
+</div>

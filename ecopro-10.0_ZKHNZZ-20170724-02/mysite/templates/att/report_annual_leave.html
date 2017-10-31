@@ -1,0 +1,79 @@
+{% extends "report_att.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+
+{% block sidxblock %}
+	function getSidx_annual_leave(){
+		return 'PIN'
+	}
+{% endblock %}
+
+{% block date_range %}
+
+		<div id="search_Year" style='display:inline;width:315px'><label style="line-height:18px;padding:1px;">{%trans "查询年份:"%}</label>
+			<select id="id_year" name="year"></select>
+		</div>	
+
+{% endblock %}
+
+{% block date_set_range %}	
+
+var times=parseInt(moment().format("YYYY"))
+
+var html=""
+for(var i=0;i<16;i++){
+	if(i==6){
+		html+="<option selected>"+(times+i-6)+"</option>"
+	}else{
+		html+="<option>"+(times+i-6)+"</option>"
+	}
+}
+$("#"+g_activeTabID+" #id_year").html(html)
+
+
+{% endblock %}
+
+
+{% block getDateUrl %}
+
+function getDateUrl()
+{
+
+
+	var urlStr=g_urls[g_activeTabID]
+	var CheckYear=$("#"+g_activeTabID+" #id_year").val();
+	var isError=moment(CheckYear, "YYYY").isValid()
+	if (isError)
+	{
+		if(urlStr.indexOf("?")!=-1)
+			urlStr+="&y="+CheckYear+'-01'
+		else
+			urlStr+="?y="+CheckYear+'-01'
+	
+		
+	}else{
+		alert(gettext("请检查年份格式是否正确！"));
+		urlStr='';
+	}
+	return urlStr
+
+}
+{% endblock %}
+
+
+{% block search %}
+<div class="s-info right" id="sear_area">			
+	<div class="nui-ipt nui-ipt-hasIconBtn " >
+		<input id="searchbar" class="search-input" type="text"  value="考勤编号,身份证号,姓名" role='defvalue' autocomplete="off" />
+		<span id ="queryButton" class="nui-ipt-iconBtn">
+			<b id="_icon_2_28" class="nui-ico nui-ico-dArr "></b>
+		</span>
+		
+	</div>
+	
+	<div class="main-search-btn">
+	
+		<span><img id="searchButton" src="/media/img/s.gif" title="{%trans "Search"%}" style="cursor:hand;"></span>
+	</div>
+</div>
+{% endblock %}	

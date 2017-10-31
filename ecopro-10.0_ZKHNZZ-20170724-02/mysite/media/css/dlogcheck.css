@@ -1,0 +1,110 @@
+	#dlogcheck_id table th{
+	color:#000000;
+	width: 60px;
+	}
+	#id_edit_form table th{
+	color:#000000;
+	width: 120px;
+	text-align: right;
+	padding-top: 10px;
+	font-size: 13px;
+	}
+	#id_edit_form img{
+	margin-top: 8px;
+	border-radius: 6px;
+	}
+#titleId img{
+	padding-top: 4px;
+}
+	.alarm td{
+	color: red;
+	}
+	
+	.trans td{
+	color: #000c00;
+	}
+	.first td{
+	background:#90EE90;
+	}
+	.emplyee td{
+	width:100px;
+	vertical-align: middle;
+	}
+	#returnhome{
+	float:left;
+	margin-bottom: 5px;
+	font-size: 15px;
+	padding-right: 20px;
+	box-shadow: 5px 5px 3px #888888;
+	}
+	#id_check{
+	width:900px;
+	height:400px;
+	background-color: #e5e6e8;
+	border-radius: 10px;
+	padding: 14px;
+	position: relative;
+	text-align: center;
+	box-shadow: 10px 10px 5px #888888;
+	}
+	#id_edit_form{
+	width:260px;
+	height:400px;
+	background-color: #e5e6e8;
+	border-radius: 10px;
+	padding: 14px;
+	position: relative;
+	text-align: center;
+	box-shadow: 10px 10px 5px #888888;
+	}
+	.frame{
+	width:120px;
+	height:130px;
+	border-radius: 6px;
+	background-color: #cbccce;
+	box-shadow: 10px 10px 5px #888888;
+	}
+.footer-title {
+    margin: 0 0 22px;
+    padding-top: 5px;
+    font-size: 24px;
+    font-weight: 700;
+}
+#id_edit_form tr th{
+	border-bottom: 1px solid #d9d9d9;
+}
+#dlogcheckId  h3 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    margin-top: 2px;
+    padding-bottom: 15px;
+}
+	#tbl tbody td{
+	text-align: left;
+	border-right: 1px solid #A6C9E2;
+	border-left: 1px solid #A6C9E2;
+	border-bottom: 1px solid #A6C9E2;
+	overflow: hidden;
+	vertical-align: middle !important;
+	}
+	#tbl {
+	border:1px solid #A6C9E2;
+	
+	}
+	#tbl thead tr th,#tbl tbody tr td{
+	padding:5px;
+	height:20px;
+	}
+	
+	#id_ret tr td,#id_ret tr th{
+		border:1px solid #A6C9E2;
+		text-align: center;
+	}
+	
+	#id_photo table{
+		margin-top: -25px; margin-bottom: 0px;
+	}
+	#tbl thead th{
+		border: 1px solid #A6C9E2;
+	}

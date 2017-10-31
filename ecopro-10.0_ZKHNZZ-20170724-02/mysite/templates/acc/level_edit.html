@@ -1,0 +1,47 @@
+{% extends "data_edit.html" %}
+{% load i18n %}
+ 
+{% block form %}
+{% autoescape off %}
+<tr>
+    {{ form.name|field_as_td_h:1}} 
+</tr>
+<tr>
+    {{ form.timeseg|field_as_td_h:1}} 
+
+    <!--
+    <th> <font color='red'>*</font>&nbsp;{{ form.StartTime.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.StartTime.as_widget }} </td>
+    <th> <font color='red'>*</font>&nbsp;{{ form.EndTime.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.EndTime.as_widget }} {{ form.NextDay.as_widget }}{{ form.NextDay.help_text }}</td>
+-->
+</tr>
+<tr>
+ <td>
+    <div style='display:none;'><input id='id_AuthedDoor' name='AuthedDoor' type='hidden' /></div>
+    
+ </td>   
+    
+</tr>
+
+
+
+
+
+
+{% endautoescape %}
+{% endblock %}
+{% block add_contents %}
+ <div></div>   
+{% endblock %}
+{% block addfields %}
+<tr>
+    <th>控制范围</th>
+</tr>
+<tr>
+ <td colspan=2>
+         <div style='border: 1px solid  #aed0ea; width:355px;height:260px;color:black;overflow:auto;' class='ztree' id='level_door_tree' ></div>
+    
+ </td>   
+</tr>    
+    
+    
+    {% endblock %}

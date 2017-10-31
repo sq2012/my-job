@@ -1,0 +1,13 @@
+#格式说明
+#数据模型_导出数据格式名称.文件名:生成数据模板
+employee_号码姓名对照表.pin.txt:{{ item.PIN }}	{{ item.EName }}	{{ item.Dept.DeptID }}	{{ item.Dept.DeptName }}	{{ item.fpCount }}
+employee_人员登记设备表.employeeEnroll.txt:{{ item.PIN }}	{{ item.EName }}	{{ item.Dept.DeptID }}	{{ item.Dept.DeptName }}	{{ item.Device }}	{{ item.fpCount }}
+department_部门CSV表.department.csv:{% load iclock_tags %}{{ item.DeptID }}, {{ item.DeptName }}, {{ item.parent }}, {{ item.Parent }}, {{ item.empCount }}
+department_部门TXT表.department.txt:{% load iclock_tags %}{{ item.DeptID }}	{{ item.DeptName }}	{{ item.parent }}	{{ item.Parent }}	{{ item.empCount }}
+transaction_考勤记录表.logs.csv:{% load iclock_tags %}{{ item.employee.Dept.DeptName }}, {{ item.employee.PIN }}, {{ item.employee.EName }}, {{ item.TTime }}, {{ item.Device.SN }}, {{ item.Device.Alias }}
+transaction_考勤记录简表.attlogs.txt:{% load iclock_tags %}{{ item.employee.Dept.DeptName }}	{{ item.employee.PIN }}	{{ item.TTime|shortTime }}
+devcmds_逗号分隔.devcmds.csv:{% load iclock_tags %}{{ item.Device.SN }}, {{ item.Device.Alias }}, {{ item.CmdContent|cmdName }}, {{ item.CmdCommitTime|isoTime }}, {{ item.CmdTransTime|isoTime }}, {{ item.CmdOverTime|isoTime }}, {{ item.CmdReturn|isoTime }}
+devcmds_制表符分隔.devcmds.txt:{% load iclock_tags %}{{ item.Device.SN }}	{{ item.Device.Alias }}	{{ item.CmdContent|cmdName }}	{{ item.CmdCommitTime|isoTime }}	{{ item.CmdTransTime|isoTime }}	{{ item.CmdOverTime|isoTime }}	{{ item.CmdReturn|isoTime }}
+devlog_逗号分隔.devlog.csv:{% load iclock_tags %}{{ item.Device }}, {{ item.OpTime|isoTime }}, {{ item.OP }}, {{ item.Cnt }}, {{ item.ECnt }}
+devlog_制表符分隔.devlog.txt:{% load iclock_tags %}{{ item.Device }}	{{ item.OpTime|isoTime }}	{{ item.OP }}	{{ item.Cnt }}	{{ item.ECnt }}
+

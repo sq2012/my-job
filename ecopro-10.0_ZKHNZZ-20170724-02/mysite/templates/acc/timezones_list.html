@@ -1,0 +1,325 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+hasImport={% if user|HasPerm:"iclock.import_ACTimeZones" %}true{% else %}false{% endif %}
+jqOptions[g_activeTabID]=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='timezones';
+isNew='';
+jqOptions[g_activeTabID].sortname='id';
+jqOptions[g_activeTabID].pager="#id_pager_"+tblName[g_activeTabID];
+
+options[g_activeTabID].dlg_width=770;
+options[g_activeTabID].dlg_height=500;
+
+function   onlyNum(event)
+{
+    if(!((event.keyCode>=48&&event.keyCode<=57)||(event.keyCode == 8)||(event.keyCode == 9)))
+    event.returnValue=false;
+    return event.returnValue;
+}
+
+$.fn.onlyNum = function () {
+      $(this).keydown(function (event) {
+          var eventObj = event || e;
+          var keyCode = eventObj.keyCode || eventObj.which;
+
+          if (keyCode==39||keyCode==13) {//右箭头
+            var $inp = $('input[class*=acctimezone]');
+            event.preventDefault();
+            var nxtIdx = $inp.index(this) + 1;
+	    nxtIdx=(nxtIdx>=120)?0:nxtIdx
+            $(":input[class*=acctimezone]:eq(" + nxtIdx + ")").select();
+            //return true
+            //alert(nxtIdx)
+	    //alert(event.returnValue)
+         }
+	 else if (keyCode==37)
+	 {
+            var $inp = $('input[class*=acctimezone]');
+            event.preventDefault();
+            var nxtIdx = $inp.index(this) - 1;
+	    nxtIdx=(nxtIdx<=0)?0:nxtIdx
+            $(":input[class*=acctimezone]:eq(" + nxtIdx + ")").select();
+ 
+	 }
+	 else if (keyCode==38)
+	 {
+            var $inp = $('input[class*=acctimezone]');
+            event.preventDefault();
+            var nxtIdx = $inp.index(this) - 12;
+	    if(nxtIdx<0)
+		nxtIdx=nxtIdx+12
+            $(":input[class*=acctimezone]:eq(" + nxtIdx + ")").select();
+	 }
+	 else if (keyCode==40)
+	 {
+            var $inp = $('input[class*=acctimezone]');
+            event.preventDefault();
+            var nxtIdx = $inp.index(this) + 12;
+	    if(nxtIdx>120)
+		nxtIdx=nxtIdx-12
+            $(":input[class*=acctimezone]:eq(" + nxtIdx + ")").select();
+	 }
+         else if ((keyCode >= 48 && keyCode <= 57)||(keyCode >= 96 && keyCode <= 105)||(keyCode == 8)||(keyCode == 9)||(keyCode==46))
+             return true;
+         else
+             return false;
+     }).focus(function () {
+         this.style.imeMode = 'disabled';
+     }).on("paste", function () {
+         var clipboard = window.clipboardData.getData("Text");
+         if (/^\d+$/.test(clipboard))
+             return true;
+         else
+             return false;
+     }).change(function(){
+     
+        var min_val = 0;
+        var max_val = 0;
+        if(this.className.indexOf("hour")!=-1)
+        {
+            max_val = 23;
+        }
+        else
+        {
+            max_val = 59;
+        }
+
+        var v = parseInt(this.value, 10);
+        if( v >= min_val && v <= max_val )
+        {
+            if(v != this.value)
+            {
+                this.value = v;
+            }
+        }
+        else
+        {
+	    if(v>max_val)
+            this.value=max_val;
+	    else
+	    this.value='00'
+        }
+	
+     
+     }).on("mouseup",function(){
+                // event.preventDefault();
+
+        $('#'+this.id).select();
+        return true;
+           //  event.preventDefault();
+     }).on("mousedown",function(){
+     
+     });
+ };
+
+
+
+
+
+
+
+function afterPost_timezones(flag,obj)
+{
+	$("#"+g_activeTabID+" #id_edit_form",obj).find(":input[type=text]").each(function(i,elem){
+		$(this).val("");})
+}
+$(function(){
+
+	var info='<div class=west_info><p>1.门禁时间段用于设置开门时间，在设定时间段内才能正常开门</p><p>2.时间段可以用于设置门禁权限，指定用户只能在指定时间段之内开指定门（含门禁权限组和首人常开设置）</p><p>3.系统默认存在一个名为“24小时全天通行”的时间段，该时间段只能被修改，不能被删除。用户可以新增门禁时间段，新增的时间段可以被修改或删除</p></div>'
+	
+	$('#west_content_tab_acc_timezones').html(info)
+	//renderLeftInformation(info);
+	smenu="<ul><li  class='subnav_on' onclick=submenuClick('/acc/data/timezones/',this);><a href='#'>门禁时间段</a></li></ul>"
+//	$('#menu_div').html(smenu)
+
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+		//isNew='new';
+		processNewModel();
+                
+                
+                
+	});
+	$("#"+g_activeTabID+" #queryButton").hide()
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowACCTimeZone();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowACCTimeZone();
+	});
+	$("#"+g_activeTabID+" #id_export").css('display','none');
+	$("#"+g_activeTabID+" #id_custom").hide()
+	$("#"+g_activeTabID+" #id_third").html("");
+
+
+
+    $("#"+g_activeTabID+" #to_device").click(function(){
+     setToDevs('ACTimeZones')
+    })
+});
+
+//模糊查询
+function searchShowACCTimeZone(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+	var url=g_urls[g_activeTabID]+"?q="+escape(v)
+	savecookie("search_urlstr",url);
+	$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+function strOfData_timezones(data)
+{
+	return stripHtml(data.tzid)+" "+stripHtml(data.Name);
+}
+function processGrid()
+{
+    $(".acctimezone").onlyNum();
+ var ids = $("#id_grid_timezone").jqGrid('getDataIDs');
+    for ( var i=0; i<10;i++ ){                             
+                   var val = $("#id_grid_timezone").getCell( ids[i],"id" );   
+                  var bkcolor = "#CCCCCC";
+                   $("#id_grid_timezone").setCell( ids[i],"id",val,{background:bkcolor});          
+            };     
+    $('#'+g_activeTabID+' #id_grid_timezone_id').html("<div class='corner'></div>")
+    $('#'+g_activeTabID+' #id_remark').css('width',300)
+}
+
+function getOptions_html(obj)
+{
+    //alert($('#timezone0_0').val())
+    rt=''
+    for(var i=0;i<10;i++)
+    {
+	fieldname='timezone'+i+'_'
+	for(var j=0;j<12;j++)
+			     {
+			     fname='#'+fieldname+j
+			     v=$(fname).val()
+				 if(v<10&&v>0&&v.length==1){
+					v='0'+v
+				 }
+			     if (j%2==0)
+			     rt=rt+v+':';
+			     else if(j%4==1)
+			     rt=rt+v+'-';
+			     else if(j%4==3)
+			     rt=rt+v+';'
+			     
+			     }
+    
+    
+    
+    }
+	tz=rt.split(';')
+	//mid=[]
+	//x=0,y=1,z=2
+	for(var k=0; k<tz.length-1; k++){
+		time=tz[k].split('-')
+		time0=time[0].split(':')[0]
+		time1=time[0].split(':')[1]
+		time2=time[1].split(':')[0]
+		time3=time[1].split(':')[1]
+		if(time0>time2||(time0==time2&&time1>time3)) {
+			alert('开始时间不能大于结束时间')
+			return ''
+		}
+		//if (k==x){
+		//	x+=3
+		//	mid.push(time2)
+		//	mid.push(time3)
+		//}else if (k==y) {
+		//	y+=3
+		//	mid.push(time0)
+		//	mid.push(time1)
+		//	mid.push(time2)
+		//	mid.push(time3)
+		//} else if (k==z) {
+		//	z+=3
+		//	mid.push(time0)
+		//	mid.push(time1)
+		//}
+		//if (k%3==0) {
+		//	if(mid[0]>mid[2]||mid[4]>mid[6]||(mid[0]==mid[2]&&mid[1]>mid[3])||(mid[4]==mid[6]&&mid[5]>mid[7])) {
+		//		alert('时间区间的结束时间不能大于另一时间区间的开始时间')
+		//		return ''
+		//	} else{
+		//		mid=[]
+		//	}
+		//}
+	}
+return rt
+}
+function beforePost_timezones(obj,actionName){
+	$("#id_tz",obj).html(getOptions_html(obj));
+}
+
+function afterPost_timezones(flag,FormObj){
+$("#id_tz",FormObj).val('')
+$('#id_Name',FormObj).val('')
+$('#id_remark',FormObj).val('')			     
+
+}
+
+function process_dialog_timezones(obj) {
+	$(obj).dialog({resizable:false,modal:true});
+}
+
+function process_dialog_again_timezones(obj,flag,key)
+{
+     var urlStr='/acc/getData/?func=timezones_edit'
+    urlStr+='&key='+key
+     $.ajax({
+	    type:"GET",
+	    url:urlStr+"&stamp="+moment().unix(),
+	    dataType:"json",
+	    success:function(json){
+		    jqOptionsT=copyObj(jq_Options)
+		    jqOptionsT.colModel=json['colModel']
+			var groupHeaders=json['groupHeaders']
+		    
+		    jqOptionsT.url=urlStr 
+		    var height=250;
+		    jqOptionsT.multiselect=false
+		    jqOptionsT.width='auto'
+		    jqOptionsT.height=height;
+		    jqOptionsT.pager='#'
+		    jqOptionsT.gridComplete=function(){ processGrid();}
+		    $("#id_grid_timezone").jqGrid(jqOptionsT);
+		    $("#id_grid_timezone").jqGrid('setGroupHeaders', {useColSpanStyle: true,groupHeaders:groupHeaders})
+	    
+	   
+
+	 }
+    });        
+	    
+    
+    
+    
+ 
+	
+	
+	f=$(obj).find("#id_edit_form").get(0)
+	$(f).validate({
+			rules: {
+					"Name": {"required":true,string:true,"maxlength":30}
+				}
+			});
+
+}
+
+
+{% endblock %}
+{% block extractButton %}
+      {% if user|HasPerm:"iclock.Upload_AC_Options" %}
+  <!--
+    <LI id="id_to_device" class="button-timezone"  onclick='setToDevs("ACTimeZones");'><SPAN></SPAN>{%trans "上传设置到设备"%}</LI>
+-->
+{%endif%}
+
+{% endblock %}

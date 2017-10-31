@@ -1,0 +1,63 @@
+{% load iclock_tags %}
+{% load i18n %}
+<script type="text/javascript">
+totalRecCnt_emp={{ item_count }};
+item_from_emp={{ from }}
+page_index_emp={{ page }};
+page_limit_emp={{ limit }};
+page_number_emp={{ page_count }};
+$(function(){
+var page_style=1;
+$("#id_pages").html(getPagers("", item_from_emp-1, totalRecCnt_emp, page_limit_emp, page_index_emp, page_number_emp,page_style));
+$("#"+g_activeTabID+" #id_search_emp").click(function(){
+        searchEmp();
+    });
+    
+$("#"+g_activeTabID+" #id_searchbar_emp").keypress(function(event){
+        if(event.keyCode==13)
+        searchEmp();
+    });
+
+});
+function searchEmp(){
+    var v=$("#"+g_activeTabID+" #id_searchbar_emp")[0].value;
+    deptID=$.cookie("dept_ids");
+    var ischecked=0;
+    if($("#id_contain_chl").prop("checked"))
+        ischecked=1;
+    $.cookie("q",v,{expires:10})
+    var text=$.ajax({
+            type:"POST",
+            url: "/iclock/att/getData/?func=employees&l=50&t=empsInDepts.html&DeptID__DeptID__in="+deptID+"&p="+page_index_emp+"&q="+escape(v)+"&isContainChild="+ischecked,
+            async: false
+            }).responseText;
+    if ($("#id_form").is("div")){
+       $("#id_form").find("#id_emp").html(text);
+    }else if($("#show_dept_emp_tree").is("div")){
+		$("#show_dept_emp_tree").find("#id_emp").html(text)
+	}
+    else
+        $("#id_emp").html(text);
+    
+    return false;
+    
+}
+</script>
+
+<table style="width: 100%;">
+{% autoescape off %}
+<tr id="id_toolbar_emp"><td id="divPage_emp" colspan="4">
+<div id="line"><!-- DIV needed for valid HTML -->
+<label for="id_searchbar_emp"></label>
+<input type="text" title="{%trans 'Search by: Pin,Name,Title' %}" size="10" style="width:150px !important;" name="q_emp" value="" id="id_searchbar_emp"/>
+<input type="button"id="id_search_emp" value="{%trans 'Query'%}"/>
+</div>
+</td></tr>
+<tr><td colspan="4">
+<span id="id_pages"></span>({%trans 'Selected:'%} <span id="selected_count">0</span>)
+</td></tr>
+<tr><td><input type='checkbox' id='is_select_all_emp' onclick='check_all_for_row_emp(this.checked);' /></td><td>{% trans 'PIN' %}</td><td>{% trans 'EName' %}</td><td>{% trans 'Title' %}</td><td>{% trans 'department name' %}</td></tr> {% endautoescape %}
+{% for item in latest_item_list %}
+<tr><td><input type='checkbox' class='class_select_emp' onclick='showSelected_emp();'  name='{{ item.EName }}' id='{{ item.id }}' alt='{{item.PIN}}' /></td><td>{{ item.PIN  }}</td><td>{{ item.EName }}</td><td>{{ item.Title|default:"" }}</td><td>{{ item.Dept.DeptName  }}</td></tr>
+{% endfor %}
+</table>

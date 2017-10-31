@@ -1,0 +1,237 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+hasImport={% if user|HasPerm:"ipos.import_merchandise" %}true{% else %}false{% endif %}
+//jqOptions=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='Merchandise';
+jqOptions[g_activeTabID].pager = "id_pager_"+tblName[g_activeTabID]
+jqOptions[g_activeTabID].sortname='code,name';
+options[g_activeTabID].dlg_width=400;
+options[g_activeTabID].dlg_height=380;
+
+$(function(){
+	$("#"+g_activeTabID+" #queryButton").hide()
+
+
+        var info='<div class="west_info"><p>1.商品资料的操作主要包括：新增商品、商品编辑、删除商品等</p>' +
+                '<p>2.在商品资料页面，单击“商品编号”，进入编辑商品资料页面</p>'+
+                '<p>3.“商品编号”：输入商品编号，不可重复；“商品名称”：输入商品名称；“单价”：输入商品单价；“折扣”：输入商品折扣。默认状态下为0（代表不打折即原价）。可输入的折扣范围是0-99。如果输入折扣，商品价格为单价*折扣*1%</p></div>'
+
+        renderLeftInformation(info);
+        smenu="<ul><li  class='subnav_on' onclick=submenuClick('/ipos/data/merchandise/',this);><a href='#'>商品资料</a></li></ul>"
+        //$('#menu_div').html(smenu)
+        $("#"+g_activeTabID+" #id_newrec").click(function(event){
+                processNewModel();
+	});
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowDep_Merchandise();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowDep_Merchandise();
+	});
+    $("#"+g_activeTabID+" #id_import").click(function(){
+	  importMerchandise();
+	});
+	$("#"+g_activeTabID+" #id_third").html("");
+
+     $("#"+g_activeTabID+" #id_search").click(function(){
+		var search_code=$("#"+g_activeTabID+" #search_id_code").val();
+		//var search_name=$("#"+g_activeTabID+" #search_id_name").val();
+		var search_money=$("#"+g_activeTabID+" #search_id_money").val();
+        var urlnew="";
+        //if (search_code||search_name||search_money)
+        //  {urlnew="code="+search_code+"&"+"name="+search_name+"&"+"money="+search_money}
+		if(search_code||search_money)
+		{urlnew="code="+search_code+"&"+"money="+search_money}
+		var url="/ipos/data/merchandise/?"
+		if (urlnew!="" &&  urlnew!=null)
+			url+=urlnew;
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+		savecookie("search_urlstr",url);
+	});
+    $("#"+g_activeTabID+" #id_search_clean").click(function(){
+        $("#"+g_activeTabID+" #search_id_code").val('');
+        //$("#"+g_activeTabID+" #search_id_name").val('');
+        $("#"+g_activeTabID+" #search_id_money").val('');
+        var url="/ipos/data/merchandise/"
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+		savecookie("search_urlstr",url);
+    });
+});
+
+function download_merchandise_xls(){
+
+	window.location.href="iclock/media/img/ipos/ic_Merchandise_import.xls"
+
+
+
+
+}
+
+function process_dialog_Merchandise(obj,flag)
+{
+    $(obj).dialog({resizable:false,modal:true})
+}
+
+
+
+function showResponse_merchandise(ret, statusText, xhr, $form){
+	$("#id_message").css("display","block")
+	$("#id_message").html(unescapeHTML(ret.message))
+	reloadData();
+	$.unblockUI();
+}
+
+
+function importMerchandise(){
+var block_html=""
+           +"<form id='frmComebackDb_Merch' name='frmComebackDb' method='POST' action='/ipos/tasks/import_Merchandise/' enctype='multipart/form-data'>"
+           +"<table><tr>"
+                +'<th>'
+                     +'<table style="margin-top: 20px;">'
+                            +'<tr><th>'+gettext("Support Upload Fields" )+'</th><th>'+gettext("Index in File" )+'</th></tr>'
+                            +'<tr><td><input id="id_code" name="code" type="checkbox" checked disabled/>'+gettext("商品编号")+'</td>'
+                            +'<td><input name="code2file" id="id_code2file" type="text"  style="width:100px !important;"/></td>'
+                            +'</tr>'
+                            +'<tr><td><input id="id_name" name="name"  type="checkbox" checked disabled/>'+gettext("商品名称")+'</td>'
+                            +'<td><input name="name2file" id="id_name2file" type="text" style="width:100px !important;"/></td>'
+                            +'</tr>'
+                            +'<tr><td><input id="id_money" name="money" type="checkbox" checked disabled/>'+gettext("单价（元）")+'</td>'
+                            +'<td><input name="money2file" id="id_money2file" type="text"  style="width:100px !important;"/></td>'
+                            +'</tr>'
+                            +'<tr><td><input id="id_rebate" name="rebate" type="checkbox"/>'+gettext("折扣")+'</td>'
+                            +'<td><input name="rebate2file" id="id_rebate2file" type="text"  style="width:100px !important;"/></td>'
+                            +'</tr>'
+                             +'<tr><td><input id="id_barcode" name="barcode" type="checkbox"/>'+gettext("商品条码")+'</td>'
+                            +'<td><input name="barcode2file" id="id_barcode2file" type="text"  style="width:100px !important;"/></td>'
+                            +'</tr>'
+                            +'<tr><td><input id="id_whatrowid" name="whatrowid" type="checkbox" checked disabled/>'+gettext("whatrowid")+'</td>'
+                            +'<td><input name="whatrowid2file" id="id_whatrowid2file" type="text" value="2"  style="width:100px !important;"/>'+gettext("行开始导入")+'</td>'
+                            +'</tr>'
+                            +'<tr><td cospan="3"><input  type="hidden" name="fields" id="id_fields"/></td></tr>'
+                            +'<tr><td><input type="file" class="text" value="" name="fileUpload" id="fileUpload"/></td></tr>'
+		              +'</table>'
+                +'</th>'
+                +'<td>'
+				      +'<table>'
+                            +'<tr><th ><label>'+'一、'+gettext("导入模板示例：")+'</label></th></tr>'
+                            +'<tr><td ><img src="/media/img/ipos/ic_import_Merchandise.jpg" ></td></tr>'
+                            +'<tr><td ><a onclick="download_merchandise_xls();" href="#" ><label style="color:red;">>>> 获取导入模版</label></a></td></tr>'
+                            +'<tr><th ><label>'+'二、'+gettext("导入模板说明：")+'</label></th></tr>'
+                            +'<tr><td >&nbsp;&nbsp;&nbsp;&nbsp;<label>'+'1、'+gettext("支持上传的文件格式有三种:以制表符分隔的TXT文件,编码是ANSI格式；以逗号分隔的CSV文件；Excel的标准格式")+'</label></td></tr>'
+                            +'<tr><td >&nbsp;&nbsp;&nbsp;&nbsp;<label>'+'2、'+gettext("'商品编号'，'商品名称'，'单价'是必选字段。")+'</label></td></tr>'
+                            +'<tr><td >&nbsp;&nbsp;&nbsp;&nbsp;<label>'+'3、'+gettext("导入成功后，消费机如果是商品模式，可在设备管理中手动把商品资料下发到设备。")+'</label></td></tr>'
+                            +'<tr><td ><div id="id_message"></div>'
+                            +"</td></tr>"
+                       +"</table>"
+                +'</td>'
+           +'</tr></table>'
+           +'</form>'
+        $(block_html).dialog({modal:true,resizable:false,
+					width: 820,
+					height:515,
+					buttons:[{id:'btnShowOK',text:gettext("Submit"),click:function(){$(this).submit();}},{text:gettext("Cancel"),click:function(){$(this).dialog("close"); }}],
+							  title:gettext("导入商品资料"),
+							  close:function(){$(this).dialog("destroy");}
+							});
+		var opts = {
+				url:'/ipos/tasks/import_Merchandise/',
+				dataType:'json',
+				success: showResponse_merchandise
+			};
+		var fields=["code","name","money","rebate",'barcode'];
+		for(var i=0;i<fields.length;i++){
+			value=$.cookie("merchandise"+fields[i]+"_value");
+			if(value)
+				$("#id_"+fields[i]+"2file").val(value);
+			else
+				$("#id_"+fields[i]+"2file").val((i+1));
+		}
+
+		$('#frmComebackDb_Merch').submit(function() {
+			$(".errorlist").css("display","none");
+			var fields=["code","name","money","rebate",'barcode'];
+			$("#id_fields").val(fields);
+			for(var i=0;i<fields.length;i++){
+				 isChecked=($("#id_"+fields[i]).prop("checked"))?true:false
+				 value=$("#id_"+fields[i]+"2file").val();
+				 value1=$("#id_whatrowid2file").val();
+				 if(isChecked && value==""||value.match(/^[1-9]\d*$/)==null){
+					$("#id_"+fields[i]+"2file").after("<ul class='errorlist'><li>Please input selected field index in file</li></ul>");
+					return false;
+				 }
+				if(value1==""||value1.match(/^[1-9]\d*$/)==null){
+					$("#id_whatrowid2file").after("<ul class='errorlist'><li>Please input selected field index in file</li></ul>");
+					return false;
+
+				}
+				 $.cookie("merchandise"+fields[i]+"_checked",isChecked, { expires: 7 });
+				 $.cookie("merchandise"+fields[i]+"_value",value, { expires: 7 });
+			}
+			var flag=checkForm();
+			if(flag){
+				$(this).ajaxSubmit(opts);
+			}
+			return false;
+		});
+}
+function searchShowDep_Merchandise(){
+    var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+    var url="/ipos/data/merchandise/?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function editDefineclick(key)
+{
+	var Href=g_urls[g_activeTabID].split("?")[0]+key+'/'+"?stamp="+new Date().toUTCString();
+	$.ajax({
+		type:"GET",
+		url:Href,
+		dataType:"html",
+		async:false,
+		success:function(msg){
+                        msg=$.trim(msg)
+			processDefineEdit(msg, Href,key);
+		}
+	});
+}
+
+function strOfData_Merchandise(data)
+{
+	return stripHtml(data.code)+" "+stripHtml(data.name);
+}
+{% endblock %}
+
+{% block importOp %}
+{% if request|reqHasPerm:"add" %}
+		    <LI id="id_import" ><SPAN class="icon iconfont icon-daoru"></SPAN>{%trans "Import"%}</LI>
+{% endif %}
+
+{% endblock %}
+
+{% block otherQuery %}
+	<span style='float:left;'>
+        <span>
+			<label  >{%trans '商品编号'%}</label>
+			<input type='text' name=''  id='search_id_code' style='width:120px;'>
+            <!-- &nbsp; &nbsp; <label class='required' >{%trans '商品名称'%}</label>
+			<input type='text' name=''  id='search_id_name' style='width:120px;'> -->
+            &nbsp; &nbsp;  <label  >{%trans '单价（元）'%}</label>
+			<input type='text' name=''  id='search_id_money' style='width:120px;'>
+		 </span>
+          &nbsp; &nbsp;<span id='id_search' ><a class='m-btn  zkgreen rnd mini'>{%trans 'Query'%}</a></span>
+         <span id='id_search_clean' ><a class='m-btn  zkgreen rnd mini'>{%trans '清除'%}</a></span>
+	</span>
+
+
+{% endblock %}

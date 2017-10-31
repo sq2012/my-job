@@ -1,0 +1,186 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+hd='({%trans 'After the submission of the operation need to be about half a minute or so of device in the entry into force'%})'
+hasImport={% if user|HasPerm:"ipos.import_dininghall" %}true{% else %}false{% endif %}
+//jqOptions=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{colModel}}
+tblName[g_activeTabID]='CardCashSZ';
+jqOptions[g_activeTabID].pager='#id_pager_'+tblName[g_activeTabID];
+jqOptions[g_activeTabID].sortname='checktime';
+options[g_activeTabID].dlg_width=400;
+options[g_activeTabID].dlg_height=380;
+
+$(function(){
+$("#"+g_activeTabID+" #search_id_user__PIN").val("工号,姓名")
+$("#"+g_activeTabID+" #searchbar").val("工号,姓名")
+$("#"+g_activeTabID+" #search_id_user__PIN").css('color','#CCCCCC')
+$("#"+g_activeTabID+" #search_id_user__PIN").attr('role','defvalue')
+var inputEl = $("#"+g_activeTabID+" #search_id_user__PIN")
+         defVal[g_activeTabID] = inputEl.val();
+	 
+    	 inputEl.on("focus",function(){
+		             var _this = $(this);
+				if (_this.val() == defVal[g_activeTabID]) {
+				    _this.val('');
+				    _this.css('color','#000000');
+				    //_this.attr('role','disabled')
+				}
+		})
+	inputEl.on("blur",function(){
+		        var _this = $(this);
+			if (_this.val() == '') {
+			    _this.val(defVal[g_activeTabID]);
+			    _this.css('color','#CCCCCC');
+			    _this.attr('role','defvalue')
+			}
+			else
+			    _this.attr('role','cansearch')
+		})
+	inputEl.on("keydown",function(event) {
+			if (event.which == 13) {
+			      var _this = $(this);
+			       _this.attr('role','cansearch')
+			 }
+		})
+	$("#"+g_activeTabID+" #queryButton").hide()
+    $("#"+g_activeTabID+" #sear_area").hide()
+    if (pos_start_date)
+        $("#"+g_activeTabID+" #search_id_starttime").val(pos_start_date+" 00:00")
+    else
+        $("#"+g_activeTabID+" #search_id_starttime").val(moment().startOf('month').format('YYYY-MM-DD HH:mm'))
+     if(pos_end_date)    
+        $("#"+g_activeTabID+" #search_id_endtime").val(pos_end_date+" 23:59")
+    else
+        $("#"+g_activeTabID+" #search_id_endtime").val(moment().endOf('month').format('YYYY-MM-DD HH:mm'))
+//    $("#"+g_activeTabID+" #search_id_starttime").val(moment().startOf('month').format('YYYY-MM-DD HH:mm'))
+//    $("#"+g_activeTabID+" #search_id_endtime").val(moment().endOf('day').format('YYYY-MM-DD HH:mm'))      
+    $("#"+g_activeTabID+" #search_id_starttime").datetimepicker(datetimepickerOptions);
+    $("#"+g_activeTabID+" #search_id_endtime").datetimepicker(datetimepickerOptions);
+        var info=''
+
+        renderLeftInformation(info);
+        smenu="<ul><li  class='subnav_on' onclick=submenuClick('/ipos/data/CardCashSZ/',this);><a href='#'>卡现金收支</a></li></ul>"
+        //$('#menu_div').html(smenu)
+        $("#"+g_activeTabID+" #id_newrec").click(function(event){
+                processNewModel();
+	});
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	    searchShowDep_CardCashSZ();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	    if(event.keyCode==13)
+	    searchShowDep_CardCashSZ();
+	});
+	$("#"+g_activeTabID+" #id_third").html("");
+
+    $("#"+g_activeTabID+" #id_search").click(function(){
+                var flag=$("#"+g_activeTabID+" #search_id_user__PIN").attr('role');
+                if (flag!='cansearch'&&flag!='defvalue') return;
+                if (flag!='defvalue')
+                    var search_user_pin=$("#"+g_activeTabID+" #search_id_user__PIN").val();
+                else
+                    var search_user_pin=""
+		var search_hide_column=$("#"+g_activeTabID+" #search_id_hide_column").val();
+		var search_sn=$("#"+g_activeTabID+" #search_id_sn").val();
+		var search_starttime=$("#"+g_activeTabID+" #search_id_starttime").val();
+		var search_endtime=$("#"+g_activeTabID+" #search_id_endtime").val();
+        var isError=validate_form_CardCashSZ();
+        var urlnew="";
+        if(!isError){
+            if (search_user_pin||search_hide_column||search_sn||search_starttime||search_endtime){
+                urlnew="q="+escape(search_user_pin)+"&"+"hide_column="+search_hide_column+"&"+"sn="+search_sn+"&"+"checktime__gte="+search_starttime+"&"+"checktime__lte="+search_endtime
+            }
+		}
+        else{alert('起始时间大于结束时间')}
+		var url="/ipos/data/CardCashSZ/?"
+		if (urlnew!="" &&  urlnew!=null)
+			url+=urlnew;
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+                
+                
+		savecookie("search_urlstr",url);
+	});
+    $("#"+g_activeTabID+" #id_search_clean").click(function(){
+        $("#"+g_activeTabID+" #search_id_user__PIN").val('');
+        $("#"+g_activeTabID+" #search_id_hide_column").val('');
+        $("#"+g_activeTabID+" #search_id_sn").val('');
+        $("#"+g_activeTabID+" #search_id_starttime").val('');
+        $("#"+g_activeTabID+" #search_id_endtime").val('');
+
+        var url="/ipos/data/CardCashSZ/"
+		$("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+		savecookie("search_urlstr",url);
+    });
+});
+function validate_form_CardCashSZ(){   //验证表单的合法性(、开始时间、结束时间)
+	var t_ComeTime=$("#"+g_activeTabID+" #search_id_starttime").val();
+	var cTime=t_ComeTime.split("-");
+	var t_EndDate=$("#"+g_activeTabID+" #search_id_endtime").val();
+	var eTime=t_EndDate.split("-");
+	cdate=new Date(parseInt(cTime[0],10),parseInt(cTime[1],10)-1,parseInt(cTime[2],10));
+	edate=new Date(parseInt(eTime[0],10),parseInt(eTime[1],10)-1,parseInt(eTime[2],10));
+	if(cdate>edate){
+		return 1;
+	}else{
+		return 0
+	}
+}
+function searchShowDep_CardCashSZ(){
+    var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+    var url="/ipos/data/CardCashSZ/?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+function editDefineclick(key)
+{
+	var Href=g_urls[g_activeTabID].split("?")[0]+key+'/'+"?stamp="+new Date().toUTCString();
+	$.ajax({
+		type:"GET",
+		url:Href,
+		dataType:"html",
+		async:false,
+		success:function(msg){
+                        msg=$.trim(msg)
+			processDefineEdit(msg, Href,key);
+		}
+	});
+}
+
+function strOfData_CardCashSZ(data)
+{
+	return data[1];
+}
+{% endblock %}
+{% block otherQuery %}
+	<span style='float:left;'>
+        <span>
+			<label  >{%trans '人员'%}</label>
+			<input type='text' name=''  id='search_id_user__PIN' style='width:80px;'>
+            <label >{%trans '类型名称'%}</label>
+			<select name='' id='search_id_hide_column'><option value=''>--------</option><option value='1'>充值</option><option value='2'>补贴</option><option value='7'>卡成本</option>
+            <option value='4'>支出卡成本</option><option value='5'>退款</option><option value='11'>管理费</option><option value='13'>充值优惠</option><option value='14'>无卡退卡</option></select>
+			<label  >{%trans '设备序列号'%}</label>
+			<input type='text' name=''  id='search_id_sn' style='width:100px;'>
+            <label >{%trans '起始时间'%}</label>
+			<input type='text' name='checktime__gte'  id='search_id_starttime' style='width:110px;'>
+            <label  >{%trans '结束时间'%}</label>
+			<input type='text' name='checktime__lte'  id='search_id_endtime' style='width:110px;'>
+		 </span>
+         <span id='id_search' ><a class='m-btn  zkgreen rnd mini'>{%trans 'Query'%}</a></span>
+         <span id='id_search_clean' ><a class='m-btn  zkgreen rnd mini'>{%trans '清除'%}</a></span>
+	</span>
+
+
+{% endblock %}
+{% block newrec %}
+{% endblock %}
+{% block aDelete %}
+{% endblock %}

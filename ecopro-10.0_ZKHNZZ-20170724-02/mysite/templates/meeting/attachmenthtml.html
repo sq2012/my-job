@@ -1,0 +1,14 @@
+{% load iclock_tags %}
+{% load i18n %}
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<script>
+	
+{% autoescape off %}
+	var val='{{filename}}'
+{% endautoescape %}
+setTimeout("getNewTrans()", 100)
+function getNewTrans(){
+        window.location.href='/iclock/file/minute/'+val
+}
+</script>
+

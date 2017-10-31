@@ -1,0 +1,174 @@
+{% load i18n %}
+{% load iclock_tags %}
+<script>
+{% autoescape off %}
+	var email={{ email }}
+{% endautoescape %}
+jqOptions[g_activeTabID]=copyObj(jq_Options);
+tblName[g_activeTabID]='records_state'
+jqOptions[g_activeTabID].width=300;
+jqOptions[g_activeTabID].colModel=[
+		{'name':'id','hidden':true},
+		{'name':'ItemName','sortable':false,'width':80,'label':'{%trans 'ItemName'%}'},
+		{'name':'Value','width':100,'sortable':false,'label':'{% trans 'Value' %}'},
+		{'name':'Operation','width':100,'sortable':false,'label':'{% trans 'Operation' %}'}
+		]
+
+jqOptions[g_activeTabID].height=200;
+
+jqOptions[g_activeTabID].gridComplete= function(){
+			canEdit_State();
+		}
+
+
+	var html="<div id='id_option1' style='padding:20px; width:400px;margin-left: 100px;' >"
+        +"<div class='ui-widget-header' style='width:700px;height: 28px;margin-top: 10px;margin-bottom: 10px'><h3 style='padding-top: 8px;padding-left: 10px'><a>{%trans '记录显示状态设置'%}</a></h3></div>"
+		+"<table id='id_grid_records_state'>"+"</table></div>"
+		+"<div style='margin-top:10px;'>"
+		+"<div><ul class='errorlist'><li id='records_state_id_error' style='display:none;'></li></ul></div>"
+		{% if user|HasPerm:"iclock.sys_state_setting" %}
+		+"<div style='margin-left: 120px;margin-top: 10px;'><button id='id_check_add' class='m-btn  zkgreen rnd' onclick='createOptionDlg()'>{%trans 'Add' %}</button>"
+		{% endif %}
+		{% if user|HasPerm:"iclock.sys_state_setting" %}
+		+"<button id='id_check_delete' class='m-btn  zkgreen rnd' onclick='delete_records_Status()'>{%trans 'delete' %}</button>"
+		{% endif %}
+		+"</div>"
+	
+
+var SaveOptions=function(obj,keys){
+	$("#records_state_id_error").html('')
+	var formStr=formToRequestString(obj.get(0));
+	var url='/base/isys/options/'
+	$.post(url+'?action='+keys, 
+		formStr,
+		function (ret, textStatus) {		
+			$("#option_state").remove()
+				if (keys=='status')	
+				reloadData();
+				$("#records_state_id_error").css("display","block");
+				$("#records_state_id_error").html(ret.message);
+					
+		},
+		"json");
+	
+
+}
+
+function canEdit_State(){
+//	if(!options[g_activeTabID].canEdit) return;
+	var rows=$("#id_grid_records_state").jqGrid("getCol",1,true);
+	for(var i=0;i<rows.length;i++)
+	{
+		var id=rows[i].id;
+		var itemname=$("#id_grid_records_state").jqGrid("getRowData",id).ItemName
+		var itemvalue=$("#id_grid_records_state").jqGrid("getRowData",id).Value
+		var itemid=$("#id_grid_records_state").jqGrid("getRowData",id).id
+		var apages ="<a class='can_edit' href='#' onclick=javascript:createOptionDlg('"+itemname+"','"+itemvalue+"','"+itemid+"')>"
+					+itemname+"</a>"
+		$("#id_grid_records_state").jqGrid('setRowData',id,{ItemName:apages})
+	}
+
+}
+
+
+function createOptionDlg(name,value,id){
+	$("#records_state_id_error").hide()
+	var html="<div id='option_state' align='center'><form id='dlg_option_state'><table>"
+			+"<tr><td><label>{% trans 'ItemName'%}</label></td>"
+			+"<td></td><td><label>{% trans 'Value'%}</label></td></tr>"
+			+"<tr><td><input id='id_option_title' name='option_title'/></td>"
+			+"<td>=</td><td><input id='id_option_value' name='option_value'/></td></tr>"
+			+"<tr><td><input type='hidden' id='old_option_title' name='old_option_title'/></td>"
+			+"<td></td><td><input type='hidden' id='old_option_value' name='old_option_value'/></td></tr>"
+			+"<tr><td colspan='2'><input type='hidden' id='id' name='id' value='100'/></td></tr>"
+			+"</table><table><tr rowspan='2'><td colspan='3'><div id='id_message'></div></td></tr></table></form></div>"
+	var title=""
+	var obj=$(html)
+	if(typeof name !="undefined"&&typeof value !="undefined"){
+				title=gettext("Edit Option")
+			}else{
+				title=gettext("Add Option")
+			}
+	$(html).dialog({title:title,resizable:false,
+					modal:true,
+					width:360,
+					height:200,
+					buttons:[{id:'id_status_add',text:'{%trans "save and return" %}',click:function(){f=$("#option_state").find("#dlg_option_state");SaveOptions(f,"status")}},
+							 {text:'{%trans "Return" %}',click:function(){$(this).dialog("destroy"); }}],
+					close:function(){$(this).dialog("destroy");}});
+	if(typeof name!="undefined"){
+			$("#old_option_title").val(name);
+			$("#old_option_value").val(value);
+			
+			if (id<100)
+				$("#id_option_title").attr({disabled:"disabled"})
+			$("#id").val(id)
+		}
+	$("#id_option_title").val(name);
+	$("#id_option_value").val(value);
+
+
+
+
+
+}
+
+function delete_records_Status(){
+	ids=getSelectedIDs()
+	
+	$("#records_state_id_error").html('')
+	var url='/base/isys/options/'
+	formStr=''
+	for(i=0;i<ids.length;i++)
+	{
+		formStr=formStr+'&K='+ids[i]
+		}
+	
+	$.post(url+'?action=delete', 
+		formStr,
+		function (ret, textStatus) {		
+			$("#option_state").remove()
+				reloadData();
+				$("#records_state_id_error").css("display","block");
+				$("#records_state_id_error").html(ret.message);
+					
+		},
+		"json");
+	
+
+
+
+	
+	
+}
+
+
+
+
+
+	
+$(function(){
+	$('#'+g_activeTabID+' #id_content').html(html)
+	$("#"+g_activeTabID+" #id_check_add").button({
+            icons: {primary: "ui-icon-check"}
+       });
+	$("#"+g_activeTabID+" #id_check_delete").button({
+            icons: {primary: "ui-icon-close"}
+       });
+	$("#"+g_activeTabID+" #id_check_edit").button({
+            icons: {primary: "ui-icon-check"}
+       });
+	var url='/base/isys/options/'
+	jqOptions[g_activeTabID].url=url+'?action=get_status_rec'
+
+	$("#id_grid_records_state").jqGrid(jqOptions[g_activeTabID]);
+
+	
+
+	
+});	
+	
+	
+	
+</script>
+

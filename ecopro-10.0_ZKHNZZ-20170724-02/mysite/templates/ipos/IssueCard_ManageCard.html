@@ -1,0 +1,373 @@
+{% load i18n %}
+{% load iclock_tags %}
+
+<script>
+jqOptions=copyObj(jq_Options);
+{% if "POS_IC"|filter_config_option %}
+jqOptions.colModel=[
+		{'name':'id','width':50,'sortable':false,'label':'{% trans '序号' %}'},
+		{'name':'card_no','width':100,'sortable':false,'label':'{% trans '卡号' %}'},
+		{'name':'sys_card_no','width':100,'sortable':false,'label':'{% trans '卡账号' %}'},
+		{'name':'dining','width':100,'sortable':false,'label':'{% trans '所属餐厅' %}'}
+		]
+{% elif "POS_ID"|filter_config_option %}
+jqOptions.colModel=[
+		{'name':'id','width':50,'sortable':false,'label':'{% trans '序号' %}'},
+		{'name':'card_no','width':100,'sortable':false,'label':'{% trans '卡号' %}'},
+		{'name':'card_privage','width':100,'sortable':false,'label':'{% trans '卡类型' %}'},
+		{'name':'dining','width':100,'sortable':false,'label':'{% trans '所属餐厅' %}'}
+		]
+{% endif %}
+{% autoescape off %}
+var _data={{params}}
+{% endautoescape %}
+var card_type=_data.itype
+var sys_pwd = _data.pwd
+var main_fan = _data.main
+var minor_fan = parseInt(main_fan)+1;
+var max_money=_data.max_money
+var zk_key=_data.pass_key
+
+var reN = 2;
+var reval = "";
+var private = "";
+curi=0
+
+function afterPost_IssueCard_ManageCard(flag,FormObj){
+	
+	curi+=1
+	$('#id_grid_').jqGrid('addRowData',curi,{id:curi,card_no:$("#id_cardno").val(),card_privage:$("#id_card_privage").find("option:selected").text(),dining:$("#id_dining").find("option:selected").text()});
+	
+	$('#id_cardno').val('')	
+	$('#user_id').val('')
+
+}
+
+
+	{% if "POS_IC"|filter_config_option %}
+
+function write_card()
+{
+    
+        private = $("#id_card_privage").val();
+        if ($('#id_edit_form_consume').valid())
+        {
+            if (sys_pwd != '123456'||sys_pwd!='')
+            {
+                if ($("#id_cardno").val() == reval )//验证卡号是否一致
+                {
+                    var rinfo = isEmptyCard();//验证卡是否为空白卡
+                    var m = Number($("#id_money").val());//写卡金额
+                    if (!rinfo)
+                    {   
+                        $("#id_error").html('<ul class="errorlist"><li>这不是一张空白卡，不能发卡！请先初始化卡！</li></ul>');
+                        return;
+                    }
+                    else if(typeof(rinfo) != "boolean")
+                    {
+                       check_card(rinfo);
+                    }
+                    else
+                    {
+ 				get_sys_card_no()
+				overpwd='938764'
+				var pwdbyte = sys_pwd;//系统密码
+				var cardno = $("#id_sys_card_no").val();//卡编号
+				
+				var rval = ZK_PosIssueICCard(0,pwdbyte,overpwd,cardno,0,255,2,main_fan,minor_fan);
+				if (rval.toString() == '0')//写卡成功
+                                {
+					var return_val = funSaveCardManage()
+					if(return_val == "OK")
+					{
+					    // re_load_from();
+					    $("#id_error").html('<ul class="errorlist"><li>制卡成功</li></ul>');      
+						    curi+=1
+						    $('#id_grid_').jqGrid('addRowData',curi,{id:curi,card_no:$("#id_cardno").val(),sys_card_no:cardno,dining:$("#id_dining").find("option:selected").text()},'first');
+					}
+					else if (return_val == "FAIL")
+					{
+					    ZK_PosClearICCard(0,sys_pwd,main_fan,minor_fan)
+					    $("#id_error").html('<ul class="errorlist"><li>制卡失败</li></ul>');
+					}
+					else
+					{
+					     ZK_PosClearICCard(0,sys_pwd,main_fan,minor_fan)
+					}
+				}
+				else
+                                {
+                                    check_card(rval);
+                                }
+                        }
+    //                    else
+    //                    {
+    //                        $("#id_info").remove();                
+    //                        $("#id_edit_form_consume").append('<div id="id_info" style="display: block;"><ul class="errorlist"><li>系统错误，制卡失败</li></ul></div>');                      
+    //                    }
+                }
+                else
+                {
+                     $("#id_error").html('<ul class="errorlist"><li>卡号不一致，制卡失败！</li></ul>');                
+                     
+                }
+            }
+            else
+            {
+                $("#id_error").html('<ul class="errorlist"><li>当前系统发卡密码为系统默认密码（123456）请到消费参数设置中重新设置密码！</li></ul>');                
+            }
+        }
+    }
+{%endif%}
+
+function SaveFormData_ID_ManageCard(FormObj,url,flag,tableName)
+{
+	f=FormObj.get(0)
+	if (!$(f).valid()){$("#id_error").html(gettext("occur error!")).css("color","red").css('display','block'); return 0;}
+	var formStr=formToRequestString(f);
+	$.post(url, 
+		formStr,
+		function (ret, textStatus) {
+			if(ret.ret==0)
+			{
+				if(flag=='addandcontinue')
+				{
+					if($.isFunction(window['afterPost_'+tableName]))
+					{
+						window['afterPost_'+tableName](flag,FormObj);
+					}
+				}
+				else
+				{
+					if($.isFunction(window['afterPost_'+tableName]))
+					{
+						window['afterPost_'+tableName](flag,FormObj);
+					}
+					$(FormObj).dialog("destroy");
+					reloadData();
+				}		
+			}
+			//$("#id_error").html(ret.message).css("color","red").css('display','block');
+			$("#id_error").html('<ul class="errorlist"><li>'+ret.message+'</li></ul>').show();
+		},
+		"json");
+}
+
+
+		
+		
+		
+$(function(){
+	{% if "POS_IC"|filter_config_option %}
+		addZKOnline()	
+	
+	{%endif%}
+	var hcontent=$("#id_content").height();
+	var hbar=$("#id_top").length>0?$("#id_top").height():0;
+	var h=hcontent-hbar
+	$('.module').css('height',h)
+	$('#id_emp_info').css('height',h)
+	$('#id_card_info').css('height',h)
+	
+	jqOptions.datatype='local'
+	jqOptions.height=h-100
+	jqOptions.multiselect=false
+	jqOptions.width='auto'
+	jqOptions.pager="#id_pager_";
+	jqOptions.caption='已制管理卡或操作员卡'
+	$("#id_grid_").jqGrid(jqOptions);
+
+
+	
+	{% if "POS_IC"|filter_config_option %}
+	$('#id_sys_card_no').css("backgroundColor","scrollbar");
+    $('#id_cardno').css("backgroundColor","scrollbar");
+	if(sys_pwd!=''&&isOnline())
+		$('#read_card').removeProp('disabled')
+	else if(sys_pwd=='')
+		$("#id_error").html('<ul class="errorlist"><li>请首先进行消费参数设置</li></ul>');
+
+	$("#read_card").click(function() {
+		$('#id_error').html('')
+//		if($('#id_dining').val()=='0')
+//		{
+//			$("#id_error").html('<ul class="errorlist"><li>请首先选择餐厅</li></ul>');
+			
+//			return;
+//		}
+		reval = readCard();
+		if (reval.length>4)
+                {
+                    $("#id_cardno").val(parseFloat(reval));
+                    write_card();
+                }
+		else
+                {
+                    check_card(reval);
+                }
+		
+        });
+	{%endif%}
+
+	{% if "POS_ID"|filter_config_option %}
+	$("#id_error").html('<ul class="errorlist"><li>当前系统设置的为ID卡，请核对!</li></ul>');                
+		
+	$("#btnShowOK").click(function() {
+		$("#id_error").html(''); 
+		if ($('#id_edit_form_consume').valid())
+		{
+			var urlAddr='/ipos/data/IssueCard/_new_/?mod_name=ipos'
+		
+			SaveFormData_ID_ManageCard($('#id_edit_form_consume'),urlAddr,'addandcontinue','IssueCard_ManageCard');
+		}
+	});
+
+{%endif%}
+	
+	
+	
+        $.ajax({type: "POST",
+                url: "/ipos/getData/?func=dining&code=issue_managecard",
+                dataType:"json",
+                success: function(retdata){
+                    $("#id_dining").html(retdata['message'])
+                },
+                error: function(){ $.unblockUI();alert($.validator.format(gettext('Operating failed for {0}     !'),options.title));}
+                });
+                
+	
+
+        $('#id_edit_form_consume').validate({
+                                    rules: {
+					"cardno":{required:true,digits:true}
+                                        }
+	})
+
+
+
+	
+	
+});
+
+
+
+</script>
+
+<div id="id_top">
+	<div class="sear-box quick-sear-box" >
+		
+		
+
+		
+		
+		<!--div class="s-info right" id="sear_area">			
+			<div class="nui-ipt nui-ipt-hasIconBtn " >
+				<input id="searchbar" class="search-input" type="text"  value="工号" role='defvalue' autocomplete="off" />
+				<span id ="queryButton" class="nui-ipt-iconBtn">
+					<b id="_icon_2_28" class="nui-ico nui-ico-dArr "></b>
+				</span>
+				
+			</div>
+			
+			<div class="main-search-btn">
+			
+				<span><img id="searchButton" src="/media/img/s.gif" title="{%trans "Search"%}" style="cursor:hand;"></span>
+			</div>
+		</div-->
+	</div>
+
+
+	<!-- <div id="id_toolbar">
+			<UL class="toolbar" id="navi">-->
+				<!--<LI id="id_reload" class="first button-refresh"><SPAN></SPAN>{%trans "Reload"%}</LI>
+				<LI id="id_import" class="button-import"><SPAN></SPAN>{%trans "Import"%}</LI>-->
+
+			<!--</ul>
+        </div> -->
+
+	
+</div>
+
+
+
+
+<div class="module" style="position:relative; width: 99%;margin-top: 2px;">
+		
+		<div id='id_emp_info' class="left" style='width: 400px;margin-right: 10px;'>
+			<table id="id_grid_" >	</table>
+			<div id="id_pager_"></div>
+		</div>
+		
+		<div id='id_card_info' class="left ui-layout-west" style='width: 300px;'>
+			<div id='id_card_title' class="ui-widget-header" style="height: 25px;">
+			</div>
+
+			<div id="id_form" style='padding-left: 20px;'>
+				
+				<form method="post" id="id_edit_form_consume" enctype="multipart/form-data">
+				<table>
+                                {% if "POS_IC"|filter_config_option %}
+				<tr><th><label for='id_cardno' style='font-weight:bold !important; color:#333 !important;'>{% trans '卡号'%}</label></th>
+                                <td><input id='id_cardno' readonly='readonly' type='text'  value='' maxlength='19' name='cardno'  style='width:135px !important;'/></td></tr>
+                                {%else%}
+				<tr><th><label for='id_cardno' class='required'>{% trans '卡号'%}</label></th>
+                                <td><input id='id_cardno'  type='text'  value='' maxlength='19' name='cardno'  style='width:135px !important;'/></td></tr>
+				{%endif%}
+				
+				
+				<tr><th><label for='card_privage' class='required'>{% trans '卡类型'%}</label></th>
+                                <td><select  id='id_card_privage' name='card_privage' style='width:135px !important;'>
+					<option value='1'  selected>{%trans '管理卡'%}</option>	
+					<option value='2'>{%trans '操作卡'%}</option>	
+					
+				</select></td></tr>
+                                {% if "POS_IC"|filter_config_option %}
+
+                                <tr><th><label for='id_sys_card_no' style='font-weight:bold !important; color:#333 !important;'>{% trans '卡账号'%}</label></th>
+                                <td><input id='id_sys_card_no' readonly='readonly' type='text'  value='' maxlength='19' name='sys_card_no'  style='width:135px !important;'/></td></tr>
+				{%endif%}
+                          
+                                <!--<tr><th><label for='id_card_cost' class='required'>{% trans '卡成本'%}</label></th>
+                                <td><input id='id_card_cost'  type='text'  value='0' maxlength='19' name='card_cost' style='width:135px !important;'/></td></tr>
+
+                                <tr><th><label for='id_mng_cost' class='required'>{% trans '卡管理费'%}</label></th>
+                                <td><input id='id_mng_cost'  type='text'  value='0' maxlength='19' name='mng_cost' style='width:135px !important;'/></td></tr>
+			                -->
+                                <tr><th><label for='id_dining' class='required'>{% trans '所属餐厅'%}</label></th>
+                                <td><select  id='id_dining' name='dining' style='width:135px !important;'></select></td></tr>
+
+				<tr><td><input type="hidden" id="id_all_emp" value="filed_card"/></td></tr>
+			       <tr><td><input type="hidden" id="operate_type" name="operate_type"   value="6"/></td></tr>
+			       <tr><td><input type="hidden" id="user_pin" name="user_pin"   value=""/></td></tr>
+			       <tr><td><input type="hidden" id="user_id" name="user_id"   value=""/></td></tr>
+			       <tr><td><input type="hidden" id="card_serial_no" name="card_serial_no"   value="1"/></td></tr>
+                          
+                                
+
+				</table>
+				</form>
+			</div>
+			<div id='id_error'></div>
+			<div style='padding-left: 100px;'>
+			{% if "POS_IC"|filter_config_option %}
+				
+			<button type="button" style='padding-left: 30px;padding-right: 30px;' disabled='disabled' class='m-btn  zkgreen rnd' id="read_card">制卡</button>
+			{%else%}
+			<button type="button" style='padding-left: 30px;padding-right: 30px;'  class='m-btn  zkgreen rnd' id="btnShowOK">保存</button>
+			{%endif%}
+			</div>
+
+		</div>
+		
+		
+		
+	 
+</div>
+
+
+
+
+
+
+
+

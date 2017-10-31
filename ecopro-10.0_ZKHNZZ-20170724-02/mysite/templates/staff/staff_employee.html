@@ -1,0 +1,117 @@
+{% load i18n %}
+{% load iclock_tags %}
+<!--<div>
+	<ul id="breadcrumb">
+		<li><a href='/iclock/staff/'>个人中心</a> <span style='color:#CCCCCC'>/</span> <a href="#">{{ location }}</a></li>
+	</ul>
+</div>
+--><div align="center" style="margin-top: 10px">
+<table border="1"  style="border-width: 0px">
+	<!-- MSTableType="layout" -->
+	<tr>
+		<td style="border-style: none; border-width: medium">　<form class="contact_form" action="" method="post" name="contact_form" id="id_contact_form">
+    <ul>
+        <li>
+              <label for="name" style="margin-top: -15px;"><h3>个人信息</h3></label>
+                <span>&nbsp;</span>
+        </li>
+        <li>
+            <label for="name">{%trans '工号:'%}</label>
+            <span>{{emp.PIN}}&nbsp;</span>
+        </li>
+        <li>
+            <label for="name">{%trans 'Emp Name'%}:</label>
+            <span>{{emp.EName|default:''}}&nbsp;</span>
+        </li>
+        <li>
+            <label for="name">{%trans 'ID Card'%}:</label>
+            <span>{{emp.Card|default:''}}&nbsp;</span>
+        </li>
+        <li id="genders">
+            <label for="gender">{% trans 'Sex'%}:</label>
+            <input name="gender" id="man" type="radio"  value="M" />
+            <span for="man" class="vam">男</span>&nbsp;&nbsp;
+            <input name="gender" id="woman" type="radio"  value="F" />
+            <span for="woman" class="vam">女</span>
+        </li>
+        <li>
+            <label for="Mobile">{% trans 'Mobile'%}:</label>
+            <input type="tel" maxlength='20' id='id_Mobile' title="请填写手机号" name='Mobile' value="{{emp.Mobile|default:''}}" />
+        </li>
+        <li>
+            <label for="Tele">{% trans 'office phone'%}:</label>
+            <input type="tel" maxlength='20' id='id_Tele' title="请填写办公电话" name='Tele'  value="{{emp.Tele|default:''}}" />
+        </li>
+        <li>
+            <label for="Address">{% trans 'address'%}:</label>
+            <input type='text' maxlength='20' name="Address" id='id_Address' title="请填写地址"  value="{{emp.Address|default:''}}" />
+        </li>
+        <li>
+            <label for="insurance">{% trans 'social insurance num'%}:</label>
+            <input type='text' maxlength='20' name="insurance" id='id_insurance' title="请填写身份证号"  value="{{emp.SSN|default:''}}" />
+        </li>
+        <li>
+            <label for="email">{% trans 'e-mail address'%}:</label>
+            <input type="email" maxlength='20' name="email" id='id_email' title="请填写Email地址"  value="{{emp.email|default:''}}" />
+        </li>
+        <li>
+            <div id="id_errors" style="width:300px;font-size:12px;display: none;">
+                <span id="id_error" style="width:280px;float: right;"></span>
+                <img src="../media/img/icon_alert.gif"  />
+            </div>
+        	<button id="id_basic_save" class="m-btn  zkgreen rnd" type="submit" style="width: 100px;" title="保存个人信息">{%trans 'Save'%}</button>
+        	<button id="id_basic_reset" class="m-btn  zkgreen rnd" type="reset" style="width: 100px;" title="重置新编辑的内容">{%trans 'Reset'%}</button>
+        </li>
+    </ul>
+</form></td>
+	</tr>
+</table>
+</div>
+
+<script>
+{% autoescape off %}
+	//var email={{ email }}
+{% endautoescape %}
+
+$(function(){
+	if ("{{emp.Gender}}"=='M')
+	{
+		$("#man").attr("checked","checked");
+	}
+	if ("{{emp.Gender}}"=='F')
+	{
+		$("#woman").attr("checked","checked");
+	}
+});
+
+function hide_errors(){
+	$("#id_errors").css("display","none");
+	$("#id_error").css("display","none");
+}
+
+function showResponsestaff(ret, statusText, xhr, $form){
+	$("#id_errors").css("display","block").css('background',ret.color);
+	$("#id_error").html(ret.message).css('color','black').css("display","block");
+	setTimeout("hide_errors()", 4000);
+}
+
+$("#id_basic_save").click(function(){
+		var gender_s = $("input[name='gender']:checked").val();
+		var Mobiles=$("#id_Mobile").val();
+		var teles=$("#id_Tele").val();
+		var address_s=$("#id_Address").val();
+		var insurances=$("#id_insurance").val();
+		var emails=$("#id_email").val();
+		var opts = {
+					type: "POST",
+					url:'/iclock/staff/staff_basic_save/?gender='+gender_s,
+					dataType:'json',
+					success: showResponsestaff
+					};
+{#        $(".form_hint").css({"display":"none"});#}
+        $("#id_contact_form").ajaxSubmit(opts);
+		return false;
+});
+
+</script>
+

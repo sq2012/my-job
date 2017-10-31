@@ -1,0 +1,150 @@
+{% extends "report_att.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+
+<script>
+{% block queryButton %}	
+	function searchShowReport_aer(){
+		urlStr=getDateUrl()
+		if (urlStr=='') return
+		var ischecked = 0
+		if($("#id_cascadecheck_report").prop("checked"))
+			ischecked=1;
+		var zTree = $.fn.zTree.getZTreeObj("showTree_report");
+		node = zTree.getSelectedNodes()
+		if (node.length>0){
+			deptID = node[0].id
+		}else{
+			deptID = ''
+		}
+		urlStr=urlStr+"&deptIDs="+deptID+"&isContainChild="+ischecked
+		savecookie("search_urlstr",urlStr);
+		$("#id_grid_report").jqGrid('setGridParam',{url:urlStr,datatype:"json"}).trigger("reloadGrid");	
+		
+	}
+
+	$("#"+g_activeTabID+" #queryButton").hide()
+	
+	$('#tab_iclock_reports #id_search').click(function(){
+		searchShowReport_aer();
+	});
+{% endblock %}
+</script>
+{% block RenderReportGrid %}
+
+function RenderReportGrid(urlStr){
+    $("#id_grid_report").jqGrid("GridUnload")
+     //$.jgrid.gridUnload("#id_grid" )
+    if(urlStr.indexOf("?")!=-1){
+		urlStr=urlStr+"&stamp="+moment().unix();
+	}
+	else{
+		urlStr=urlStr+"?stamp="+moment().unix();
+	}
+    $.ajax({
+	    type:"GET",
+	    url:urlStr+"&title=1",
+	    dataType:"json",
+	    success:function(json){
+		    jqOptions[g_activeTabID]=copyObj(jq_Options)
+		    grid_disabledfields[g_activeTabID]=json['disabledcols']
+		    jqOptions[g_activeTabID].colModel=json['colModel']
+		    jqOptions[g_activeTabID].pager='id_pager_report'
+		    var groupHeaders=[]
+
+		    if (json['groupHeaders'])
+			var groupHeaders=json['groupHeaders']
+		    
+		    get_grid_fields(jqOptions[g_activeTabID])
+		    hiddenfields(jqOptions[g_activeTabID])
+		    jqOptions[g_activeTabID].url=urlStr 
+		    var hcontent=$("#"+g_activeTabID+" #id_content").height();
+		    var hbar=$("#id_top_report").height();
+		    var height=hcontent-hbar-70;
+		    if (groupHeaders.length>0)
+		     height=height-30;
+		    if((urlStr.indexOf("dailycalcReport")>= 0)||(urlStr.indexOf("calcReport")>= 0)) {
+			height=height-30;
+		    }
+		    if(typeof(Custom_Jqgrid_Height_report)!='undefined'&&Custom_Jqgrid_Height_report!=""){
+			    jqOptions[g_activeTabID].height=Custom_Jqgrid_Height_report;
+		    }else{jqOptions[g_activeTabID].height=height;}
+			if($.isFunction(window['getSidx_'+tblName[g_activeTabID]])){
+				jqOptions[g_activeTabID].sortname=window['getSidx_'+tblName[g_activeTabID]]()//getSidx('original_records')
+			}else{
+				jqOptions[g_activeTabID].sortname=getSidx()
+			}
+			jqOptions[g_activeTabID].url=urlStr 
+			jqOptions[g_activeTabID].multiselect=false
+		    $("#id_grid_report").jqGrid(jqOptions[g_activeTabID]);
+		    $("#id_grid_report").jqGrid('setFrozenColumns');
+		    $("#id_grid_report").jqGrid('setGroupHeaders', {useColSpanStyle: true,groupHeaders:groupHeaders})
+		    if((urlStr.indexOf("dailycalcReport")>= 0)||(urlStr.indexOf("calcReport")>= 0)) {
+			$("#showReportSymbol").show()
+		    }else{
+			$("#showReportSymbol").hide()
+		    }
+
+
+	 }
+    });        
+}
+{% endblock %} 
+{% block getDateUrl %}
+
+function getDateUrl()
+{
+    var ComeTime=$("#"+g_activeTabID+" #id_ComeTime").val();
+	var EndDate=$("#"+g_activeTabID+" #id_EndTime").val();
+	var isError=validate_form_att();
+	$.cookie("ComeTime",ComeTime, { expires: 7 });
+	$.cookie("EndDate",EndDate, { expires: 7 });
+	$("#"+g_activeTabID+" #id_con_error").css("display","none");
+	var tmp = ComeTime.split("-");
+	var date1 = new Date(tmp[0],tmp[1]-1,tmp[2]);
+	tmp = EndDate.split("-");
+
+	var date2 = new Date(tmp[0],tmp[1]-1,tmp[2]);
+	if(date2>=date1&&(date2.getTime() - date1.getTime() > 365 * 24 * 60 * 60 * 1000)){
+		alert("查询日期不能超过一年");
+		return ''
+	} else if (date2<date1){
+		alert("开始日期不能小于结束日期");
+		return ''
+	}
+	var urlStr=g_urls[g_activeTabID]
+
+	if(urlStr.indexOf("?")!=-1)
+		urlStr+="&startDate="+ComeTime+"&endDate="+EndDate
+	else
+		urlStr+="?startDate="+ComeTime+"&endDate="+EndDate
+	return urlStr
+
+}
+{% endblock %} 
+
+{% block search %}
+		<div>			
+			<span id='id_search' ><a class='m-btn  zkgreen rnd mini'>{%trans 'Query'%}</a></span>
+		</div>
+{% endblock %}
+{% block toolbar %}
+
+	<div id="id_toolbar_report">
+			<UL class="toolbar" id="navi">
+				<LI id="id_reload_report"><SPAN  class="icon iconfont icon-shuaxin"></SPAN>{%trans "Reload"%}</LI>
+				<LI id="id_export_report" ><SPAN  class="icon iconfont icon-daochu"></SPAN>{%trans "Export"%}
+				        <ul id="op_menu_export" class="op_menu">
+						<li><span>{%trans "文件格式"%}</span>
+							<ul>
+							<li onclick="javascript:clickexport(tblName[g_activeTabID],0);"><a href="#">EXCEL</a></li>
+							</ul>
+						</li>
+					</ul>
+				</LI>
+				<LI id="id_custom"><SPAN class="icon iconfont icon-select"></SPAN>{%trans "Preferences"%}</LI>
+
+			</ul>
+        </div>
+
+{% endblock %} 

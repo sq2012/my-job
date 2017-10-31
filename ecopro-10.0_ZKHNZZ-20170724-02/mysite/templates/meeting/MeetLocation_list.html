@@ -1,0 +1,338 @@
+{% extends "data_list.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block tblHeader %}
+jqOptions[g_activeTabID]=copyObj(jq_Options)
+jqOptions[g_activeTabID].colModel={{ colModel }}
+dtFields[g_activeTabID] = "{{ dtFields }}"
+tblName[g_activeTabID]='MeetLocation';
+jqOptions[g_activeTabID].sortname='roomNo';
+jqOptions[g_activeTabID].pager='#id_pager_'+tblName[g_activeTabID];
+
+function afterPost_MeetLocation(flag,obj){
+	ShowMeetRoomData(g_activeTabID,true)
+		$('#id_roomNo',obj).val('')
+		$('#id_roomName',obj).val('')
+		$('#id_Address',obj).val('')
+		$('#id_admin',obj).val('')
+		$('#id_Phone',obj).val('')
+	reloadData()
+        loadNULLPage('#id_grid_'+tblName[g_activeTabID]);
+	var zTree = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+	zTree.setting.check.enable = false;
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		var deptID=treeNode.id;
+		var deptName=treeNode.name;
+                if (deptID==0)
+                    var urlStr="/meeting/data/MeetLocation/"
+                else
+                    var urlStr="/meeting/data/MeetLocation/?id="+deptID
+                
+		savecookie("search_urlstr",urlStr);
+		 $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+	}
+
+}
+
+function ShowMeetRoomData(page,tag,isDiy)
+{
+	var setting = {
+            check: {enable: !tag,chkStyle: "checkbox",chkboxType: { "Y": "", "N": "" }},          
+	    async: {
+			    enable: true,
+			    url: "/meeting/getData/?func=rooms",
+			    autoParam: ["id"]
+		    }
+	};
+	$.fn.zTree.init($("#showTree_"+page), setting,null);	
+}
+
+function strOfData_MeetLocation(data)
+{
+	return stripHtml(data.roomNo)+" "+data.roomName;
+}
+
+function showMeetState(meetID,roomNo)
+{
+	var block_html="<div id='calendar_MeetLocation'>"
+		+ 	"</div>"
+	$(block_html).dialog({	modal:true,
+						  resizable:false,
+						  width: 800,
+						  height:500,
+						  title:roomNo,
+						  close:function(){$(this).dialog("destroy")}
+						})
+
+	$('#calendar_MeetLocation').fullCalendar({
+			       header: {
+				       left: 'prev,next, today',
+				       center: 'title',
+				       right: 'agendaWeek'
+			       },		
+			       buttonText:{
+				       prev:'向前',
+				       next:'向后',
+				       today:'今天',
+				       month:'按月',
+				       agendaWeek:'按周',
+				       agendaDay:'按天'
+			       },
+			       defaultView: 'agendaWeek',
+			       titleFormat:'YYYY年MM月DD日',
+			       allDayText:'整天',
+			       aspectRatio:2.0,
+			       axisFormat:'H(:mm)',
+			       theme:true,
+			       selectable: true,
+			       unselectCancel:'',
+			       eventBackgroundColor:'#ff0000',
+			       unselectAuto:false,
+			       dayNames:['周日','周一','周二','周三','周四','周五','周六'],
+			       dayNamesShort:['周日','周一','周二','周三','周四','周五','周六'],
+			       editable: true,
+			       droppable: true,
+			       diableResizing:false,
+			       	events: {
+				url: '/meeting/getData/?func=latestmeeting&roomNo='+meetID
+				}
+
+							       
+			       
+			       
+			       
+			       
+	   })
+
+
+
+
+}
+function datas(id){
+	var r=$("#id_grid_"+tblName[g_activeTabID]).jqGrid("getRowData",id);
+	var id=id
+	var Name=r.Name
+	var data=[id,Name];
+	return data
+}
+
+function showphotozdiv(obj,photourl)
+{	
+	$("#"+g_activeTabID+" #id_tip").html("<img src="+photourl+" style='width:320px;height:240px;' />");
+	var offset=$(obj).offset();
+	lefts=offset.left-520
+	if($("#"+g_activeTabID+" #id_tip").css("visibility")=="hidden"){
+		$("#"+g_activeTabID+" #id_tip").css({"z-index":1024,"visibility":"visible","position":"absolute","top":(30),"left":(lefts)})
+		$("#"+g_activeTabID+" #id_tip").mouseover(function(){
+			$(this).css({"z-index":1024,"visibility":"visible","position":"absolute","top":(30),"left":(lefts)})
+		}).mouseout(function(){
+			$("#"+g_activeTabID+" #id_tip").css("visibility","hidden");
+		});
+	}
+	else
+		$("#"+g_activeTabID+" #id_tip").css("visibility","hidden");
+}
+function dropphotozdiv()
+{
+	$("#"+g_activeTabID+" #id_tip").css("visibility","hidden")
+}
+function showphotodiv(obj,photourl)
+{	
+	$("#"+g_activeTabID+" #id_tip").html("<img src="+photourl+" style='width:400px;height:400px;' />");
+	var offset=$(obj).offset();
+	lefts=offset.left-460
+	if($("#"+g_activeTabID+" #id_tip").css("visibility")=="hidden"){
+		$("#"+g_activeTabID+" #id_tip").css({"z-index":1024,"visibility":"visible","position":"absolute","top":(30),"left":(lefts)})
+		$("#"+g_activeTabID+" #id_tip").mouseover(function(){
+			$(this).css({"z-index":1024,"visibility":"visible","position":"absolute","top":(30),"left":(lefts)})
+		}).mouseout(function(){
+			$("#"+g_activeTabID+" #id_tip").css("visibility","hidden");
+		});
+	}
+	else
+		$("#"+g_activeTabID+" #id_tip").css("visibility","hidden");
+}
+function dropphotodiv()
+{
+	$("#"+g_activeTabID+" #id_tip").css("visibility","hidden")
+}
+function doAction_MeetLocation(url, action)
+{	
+	var result=getSelected(0,"true");
+	selected_data=datas(result.ss);
+	var shift_id=selected_data[0]
+	if (action == 'add_meet_devices')
+		createDialog(url, '?action=add_meet_devices&SN=', '/iclock/data/iclock/?mod_name='+mod_name, "{%trans "为会议室添加设备"%}", "{%trans "device"%}", 600,true);
+}
+
+function Check_devices(id)
+{
+    createDataDialog('meet_devices', "{%trans '设备列表' %}",  600,'/meeting/data/meet_devices/?LocationID='+id+'&SN__DelTag=0')
+}
+function del_meet_devices(id)
+{
+        $.ajax({type: "POST",
+                        url: "/meeting/data/meet_devices/?action=del",
+                        data: 'K='+id,
+                        dataType:"json",
+                        success: function(){$("#id_grid_mini").jqGrid("delRowData",id);
+},
+                        error: function(request){
+                                alert($.validator.format(gettext('{0} failed!\n\n{1}'), opName, request.statusText)); $.unblockUI(); 
+                                }
+                        });
+}
+function process_dialog_MeetLocation(htmlObj){
+	$(htmlObj).dialog({resizable:false,modal:true})
+	f=$(htmlObj).find("#id_edit_form").get(0)
+	$(f).validate({
+				rules: {
+					roomNo: {required:true,alnum:true},
+					roomName: {required:true,string:true}
+				}
+	});
+}
+
+//会议室模糊查询
+function searchShowMeetLocation(){
+	var flag=$("#"+g_activeTabID+" #searchbar").attr('role');
+	if (flag!='cansearch'&&flag!='defvalue') return;
+	if (flag!='defvalue')
+	    var v=$("#"+g_activeTabID+" #searchbar")[0].value;
+	else
+	    var v=""
+    var url="/meeting/data/MeetLocation/?q="+escape(v)
+	savecookie("search_urlstr",url);
+    $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:url,datatype:"json"}).trigger("reloadGrid");
+}
+
+
+
+$(function(){
+
+	$("#"+g_activeTabID+" #queryButton").hide()
+
+	$("#"+g_activeTabID+" #id_newrec").click(function(event){
+            processNewModel();
+	});
+
+
+	$("#"+g_activeTabID+" #searchButton").click(function(){
+	   searchShowMeetLocation();
+	});
+	$("#"+g_activeTabID+" #searchbar").keypress(function(event){
+	   if(event.keyCode==13)
+	  searchShowMeetLocation();
+	});
+
+
+
+});
+
+function uploadmap_dialog(){
+	var r=$("#id_grid_"+tblName[g_activeTabID]).jqGrid('getGridParam','selrow');
+    var block_html="<div class='module' id='PhotoDb' style='position:relative; width: 100%;'>"
+                    +"<table style='margin-bottom: 2px;'>"
+                    +"<tr>"
+                            +"<td style='vertical-align:top;width:40%;'>"
+                            +"<div id='id_conditions'>"
+                            +"<form id='frmPhotoDb' method='POST' action='/meeting/saveattachment/' enctype='multipart/form-data'>"
+                                +"<table id='id_setField'>"
+                                    +"<tr><td>"
+                                        +"<input type='hidden' id='id_userspeday' value='"+r+"' name='userspeday' />"
+                                        +'<input type="file" id="id_fileUpload" name="fileToUpload" size="15"/>'
+                                    +"</td></tr>"
+                                    +"<tr><td>"
+                                        +"<input class='ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only' type='submit' value="+gettext('Submit')+" />"
+                                        +"&nbsp;<input id='btnCancel' class='ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only' type='button' value="+gettext('Cancel')+" />"
+                                    +"</td></tr>"
+							+"<tr><td>上传平面图的扩展名为jpg</td></tr>"
+                                    +"<tr><td colspan='2'><span id='id_message'></span>"
+                                    +"</td></tr>"
+                                +"</table>"
+                            +"</form>"
+                            +"</div>"
+                        +"</td>"
+                    +"</tr>"
+                    +"</table>"
+                    +"</div>";
+   
+    $(block_html).dialog({modal:true,
+						   resizable:false,
+                          width: 350,
+                          height:150,
+                          title:gettext("上传会议平面图"),
+                          close:function(){$("#PhotoDb").remove();}	
+                        });
+    $("#btnCancel").click(function(){$("#PhotoDb").remove();});
+    var opts = { 
+		url:'/meeting/saveattachment/',
+		dataType:'json',
+		success: function(data){
+			if(data.ret==0){ 
+				alert("{%trans '保存成功'%}");
+				$("#PhotoDb").remove();
+				reloadData();
+			}else{
+				alert("{%trans '保存失败'%}");
+				$("#PhotoDb").remove();
+			}
+		}
+    };
+    
+    $('#frmPhotoDb').submit(function() {
+                var f=$("#id_fileUpload").val();
+                if(f=="")
+                	{
+                		alert("{%trans '请选择平面图'%}");
+                		return false;
+                	}
+                  else
+                	{
+                        $(this).ajaxSubmit(opts); 
+                        
+                	}
+    			return false;
+    		});    
+    
+}
+{% endblock %}
+
+
+{% block loadData %}
+	//html="<span id=id_opt_tree><input type='checkbox' id='id_cascadecheck_' checked/>{%trans '级联下级部门' %}</span>"
+	//$("#id_west .ui-widget-header").html(html)
+	inde_html="<div id='show_dept_tree_'>"
+		+"<ul id='showTree_"+g_activeTabID+"' class='ztree' style='margin-left: 0px;height:100%;'></ul>"
+		+"</div>" 
+	$("#west_content_tab_meeting_MeetLocation").html(inde_html)
+
+//	var h=$("#"+g_activeTabID+" #west_content").height()-20
+//	$('#showTree_'+g_activeTabID).css('height',h)
+
+        ShowMeetRoomData(g_activeTabID,true)
+        loadNULLPage('#id_grid_'+tblName[g_activeTabID]);
+	var zTree = $.fn.zTree.getZTreeObj("showTree_"+g_activeTabID);
+	zTree.setting.check.enable = false;
+	zTree.setting.callback.onClick = function onClick(e, treeId, treeNode){
+		var deptID=treeNode.id;
+		var deptName=treeNode.name;
+                if (deptID==0)
+                    var urlStr="/meeting/data/MeetLocation/"
+                else
+                    var urlStr="/meeting/data/MeetLocation/?id="+deptID
+                
+		savecookie("search_urlstr",urlStr);
+		 $("#id_grid_"+tblName[g_activeTabID]).jqGrid('setGridParam',{url:urlStr,datatype: "json"}).trigger("reloadGrid");
+	}
+
+
+{% endblock %}
+
+{% block extractButton %}
+<LI id="mPause"   onclick="batchOp('?action=roomPause',null,'{%trans "暂停使用"%}');"><SPAN class="icon iconfont icon-zantingshiyong"></SPAN>{%trans "暂停使用"%}</LI>
+<LI id="mReset"   onclick="batchOp('?action=roomReset',null,'{%trans "恢复使用"%}');"><SPAN class="icon iconfont icon-huifushiyong"></SPAN>{%trans "恢复使用"%}</LI>
+<LI id="id_add_participants"  onclick='batchOp(function(url){doAction_MeetLocation(url, "add_meet_devices")},undefined,"{%trans '添加参会设备' %}");'><SPAN class="icon iconfont icon-xinzeng"></SPAN>{%trans "添加参会设备"%}</LI>
+<LI id="mUpload"  onclick='batchOp(function(){uploadmap_dialog()},undefined,"{%trans '上传会议室平面图' %}");'><SPAN class="icon iconfont icon-daoru"></SPAN>{%trans "上传会议室平面图"%}</LI>
+	
+{% endblock %}

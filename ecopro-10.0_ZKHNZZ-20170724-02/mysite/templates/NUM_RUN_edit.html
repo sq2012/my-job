@@ -1,0 +1,34 @@
+{% extends "data_edit.html" %}
+{% load i18n %}
+{% load iclock_tags %}
+{% block form %}
+{% autoescape off %}
+<tr>
+    {{ form.Name|field_as_td_h:1}} 
+<td></td>
+</tr>
+<tr>
+    <th> <font color='red'>*</font>{{ form.StartDate.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.StartDate.as_widget }} </td>
+</tr>
+<tr>
+  <th> <font color='red'>*</font>{{ form.EndDate.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.EndDate.as_widget }} </td>
+</tr>
+<tr>
+    <th><font color='red'>*</font>{{ form.Cycle.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.Cycle.as_widget }} </td>
+</tr>
+<tr>
+    <th><font color='red'>*</font>{{ form.Units.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.Units.as_widget }} </td>
+</tr>
+<tr>
+    <th>{{ form.h_unit.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.h_unit.as_widget }} </td>
+</tr>
+<tr>
+    <th>{{ form.Num_RunOfDept.label_tag }} </th>  <td style='vertical-align:top;'> {{ form.Num_RunOfDept.as_widget }} </td>
+</tr>
+
+
+{% endautoescape %}
+{% endblock %}
+{% block add_contents %}
+{% endblock %}
+

@@ -1,0 +1,55 @@
+{% load iclock_tags %}
+{% load i18n %}
+{% autoescape off %}
+
+<div id="id_form" >
+
+<form method="post" id="id_edit_form" enctype="multipart/form-data">
+<table>
+<tr><th></th><td>
+	<span  style="display:none" id="id_span_title">
+		{% if add %}{% trans "Add" %}  {% else %} {% trans "Edit" %} {% endif %} {{ dataOpt.verbose_name|escape }}</span>
+</td></tr>
+	<tr><th><label for="id_userID2">{% trans "借调人员:" %}</label> </th><td><input type="text" id="id_userID2" style="background:#E3E3E3;color:#B8AF9F;" value="" readonly="readonly"/></td></tr>
+	<tr><th><label for="id_fromDept2">{% trans "被借调单位:" %}</label> </th><td><input type="text" id="id_fromDept2" style="background:#E3E3E3;color:#B8AF9F;" value="" readonly="readonly"/></td></tr>
+	<tr><th><label for="id_toDept2">{% trans "借调单位:" %}</label> </th><td><input type="text" id="id_toDept2" style="background:#E3E3E3;color:#B8AF9F;" value="" readonly="readonly"/></td></tr>
+	<tr><th> {{ form.userID.label_tag }} </th><td>{{form.userID.as_widget }}</td></tr>
+	<tr><th> {{ form.fromDept.label_tag }} </th><td>{{form.fromDept.as_widget }}</td></tr>
+	<tr><th> {{ form.toDept.label_tag }} </th><td>{{form.toDept.as_widget }}</td></tr>
+	<tr><th> {{ form.fromTitle.label_tag }} </th><td>{{form.fromTitle.as_widget }}</td></tr>
+	<tr><th> {{ form.toTitle.label_tag }} </th><td>{{form.toTitle.as_widget }}</td></tr>
+	<tr><th> {{ form.fromDate.label_tag }} </th><td>{{form.fromDate.as_widget }}</td></tr>
+	<tr><th> {{ form.toDate.label_tag }} </th><td>{{form.toDate.as_widget }}</td></tr>
+	<tr><th> {{ form.remark.label_tag }} </th><td>{{form.remark.as_widget }}</td></tr>
+	<tr><th> {{ form.reason.label_tag }} </th><td>{{form.reason.as_widget }}</td></tr>
+	<tr><th> {{ form.OpTime.label_tag }} </th><td>{{form.OpTime.as_widget }}</td></tr>
+</table>
+</form>
+<script>
+var fdept='{{ fdept }}'
+var tdept='{{ tdept }}'
+var uname='{{ uname }}'
+$(function(){
+	var tpickerOptions=copyObj(datetimepickerOptions)
+	tpickerOptions.showSecond=true
+	tpickerOptions.timeFormat='HH:mm:ss'
+	$("#id_toDate").datetimepicker(tpickerOptions);
+	$("#id_userID").parent().parent().hide()
+	$("#id_fromDept").parent().parent().hide()
+	$("#id_toDept").parent().parent().hide()
+	$("#id_fromTitle").prop('readonly',true).css({'background-color':'#E3E3E3','color':'#B8AF9F'});
+	$("#id_toTitle").prop('readonly',true).css({'background-color':'#E3E3E3','color':'#B8AF9F'});;
+	$("#id_OpTime").parent().parent().hide();
+	$("#id_fromDate").prop('readonly',true).css({'background-color':'#E3E3E3','color':'#B8AF9F'});;
+});
+	$("#id_fromDept2").val(fdept)
+	$("#id_toDept2").val(tdept)
+	$("#id_userID2").val(uname)
+</script>
+{% endautoescape %}
+
+<div id="id_error"></div>
+
+
+</div>
+ 

@@ -1,0 +1,92 @@
+{% load i18n %}
+{% load iclock_tags %}
+<script>
+
+var page_tab=""
+
+jqOptions=copyObj(jq_Options);
+jqOptions.rowNum={{limit}}
+jqOptions.pager='#id_pager';
+jqOptions.colModel=[
+			{'name':'id','hidden':true},
+			{'name':'pin','index':'pin','width':120,'label':'{%trans 'PIN' %}'},
+			{'name':'name','index':'name','width':120,'label':'{%trans 'Emp Name' %}'},
+			{'name':'dept','index':'name','width':120,'label':'{%trans 'department' %}'},			
+			{'name':'sex','index':'name','width':100,'label':'{%trans 'sex' %}'},
+			{'name':'Birthday','index':'Birthday','width':100,'label':'{%trans 'Birthday' %}'}
+			]
+
+function canEdit()
+{
+
+}
+
+
+$(function(){
+	var info='<p>1.人员日期提醒用于提醒关于人员的各种类型信息,其中包含生日提醒、合同提醒、入离职提醒以及请假到期提醒等,为管理考勤人员提供较为便利的操作</p>'
+        renderLeftInformation(info);
+var user_ihrremined_html="<div id='toolbar' style='width:100%;'></div>"
++"<table id='changelist' border='0' style=' float: left; width: 100%;'>"
++"<tr><td>"
++"<span style='padding-left:350px;' ><label class='required'>{%trans 'Date:'%}</label></span><span><input type='text' size='11' id='id_ComeTime' maxlength='10' name='ComeTime'/></span>"
+
++"</td><td width='60px'><ul id='nav' class='nav'><li id='id_search'><span class='searchlink'></span><a href='#'>{%trans 'Query'%}</a></li></ul></td>"
+
++"<td width='60px'><div id='toolbar' style='float:left;width:70px;margin-top: 0px;'><ul class='nav'>"
++"<li id='id_export' style='border:1px solid #77B7DE;'><span class='exportlink' ></span><a href='#'>{%trans 'Export'%}</a></li></td>"
++"</ul></div>"
+
+
++"<td width='35%'><span id='id_error'></span></td>"
++"</tr>"
++"<tr>"
++"<td colspan=4 style='vertical-align:top;'><div id='id_hrreminditems'></div></td>"
++"</td></tr>"
+
++"</table>"
+
+	$("#hrreminded_tab").html(user_ihrremined_html)
+    $("#"+g_activeTabID+" #id_search").click(function(){
+            
+            Showihrremined();
+    });
+	page_tab='id_hrreminditems'
+    $("#"+g_activeTabID+" #id_ComeTime").datepicker(datepickerOptions);
+	gethrreminddiaplay(600);
+	
+});
+
+//显示详细的项目信息
+function showhrreminddetail(event, TreeID, treeNode, clickFlag){	
+			var ComeTime=$("#"+g_activeTabID+" #id_ComeTime").val();
+			uid=treeNode.id
+			queryStr="cometime="+ComeTime+"&uid="+uid;
+			$.ajax({
+				type:"GET",
+				url:"/iclock/att/ihrreminddetail/",
+				dataType:"json",
+				sync:false,
+				data:queryStr,
+				success:function(json){
+					jqOptions.colModel=json['colModel']
+					urlStr="/iclock/att/ihrreminddetail/?cometime="+ComeTime+"&uid="+uid;
+					jqOptions.url=urlStr	;
+					jqOptions.pager='#id_pager_'+page_tab;
+					
+					$("#id_grid_"+page_tab).jqGrid('GridUnload');
+					//$.jgrid.gridUnload("#id_grid_"+page_tab);
+					$("#id_grid_"+page_tab).jqGrid(jqOptions);
+				}
+			});
+			
+			
+	}
+
+
+$("#id_export").click(function(){
+clickexport(grid_disabledfields);
+
+});
+</script>
+
+<div id='hrreminded_tab' style='height:100px;'></div>
